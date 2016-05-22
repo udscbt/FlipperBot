@@ -1,0 +1,30 @@
+Job: "process"
+Checkpoint: "safe" point from which to restart
+Task: part of process that should run in a single scheduling time (can timeout)
+Subtask: atomic operation that CAN'T be interrupted
+
+The scheduler runs a job at a time, one task per cycle. Can break tasks if they
+timeout and later restarts from last checkpoint.
+Tasks queue other tasks to set the program flow.
+
+There are local and global timeouts.
+Local timeout => task breaks and next job gains control
+Global timeout => job breaks and cycle restart
+
+Jobs have:
+- name
+- id
+- current task handle
+- current checkpoint handle
+- cycle delay
+- elapsed cycles
+- priority
+
+Jobs are sorted by priority, such that when a cycle breaks only the less
+important jobs skip a cycle.
+
+Tasks have:
+- local timeout
+- expected time
+If the remaining time for the cycle is less than the expected time, the job
+skips a cycle
