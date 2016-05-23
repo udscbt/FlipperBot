@@ -47,6 +47,12 @@
 
 #define SCHEMO_JVAR(var, job) job##_var_##var
 
+#define SCHEMO_SET_JVAR(var, job) \
+  SCHEMO_JVAR(var, job) = var;
+
+#define SCHEMO_GET_JVAR(var, job, type) \
+  type var = SCHEMO_JVAR(var, job);
+
 #define SCHEMO_DECLARE_JVAR(var, job, type) \
   type SCHEMO_JVAR(var, job);
 
@@ -94,10 +100,6 @@
 #define SCHEMO_PARAM_STACK(param, function) \
   function ## _param_ ## param ## _stack
 
-#define SCHEMO_PARAM(param, function) \
-  SCHEMO_PARAM_STACK(param, function)[schemo::current_job->job->id].top()
-
-
 #define SCHEMO_DECLARE_PARAM_STACK(type, param, function) \
   std::stack<type> SCHEMO_PARAM_STACK(param, function)[schemo::MAX_JOBS];
 
@@ -110,13 +112,17 @@
 #define SCHEMO_GETBACK(ret, function) \
   SCHEMO_RETURN_STACK(function)[schemo::current_job->job->id].push(ret); \
   schemo::run_task(*SCHEMO_GETBACK_STACK(function)[schemo::current_job->job->id].top()); \
-  SCHEMO_GETBACK_STACK(function)[schemo::current_job->job->id].pop();
-
-#define SCHEMO_RETURN \
+  SCHEMO_GETBACK_STACK(function)[schemo::current_job->job->id].pop(); \
   return;
 
 #define SCHEMO_PUSH_PARAM(param, function, set) \
   SCHEMO_PARAM_STACK(param, function)[schemo::current_job->job->id].push(set);
+
+#define SCHEMO_SET_PARAM(param, function) \
+  SCHEMO_PARAM_STACK(param, function)[schemo::current_job->job->id].top() = param;
+
+#define SCHEMO_GET_PARAM(type, param, function) \
+  type param = SCHEMO_PARAM_STACK(param, function)[schemo::current_job->job->id].top();
 
 #define SCHEMO_DELETE_PARAM(param, function) \
   SCHEMO_PARAM_STACK(param, function)[schemo::current_job->job->id].pop();
@@ -137,11 +143,17 @@
   std::stack<type> SCHEMO_JVAR(var, fun)[schemo::MAX_JOBS];
 
 #define SCHEMO_FVAR(var, fun) \
-  SCHEMO_JVAR(var, fun)[schemo::current_job->job->id].top()
+  SCHEMO_JVAR(var, fun)[schemo::current_job->job->id]
 
 #define SCHEMO_INIT_FVAR(var, fun, type) \
   type var; \
-  SCHEMO_JVAR(var, fun)[schemo::current_job->job->id].push(var);
+  SCHEMO_FVAR(var, fun).push(var);
+
+#define SCHEMO_SET_FVAR(var, fun) \
+  SCHEMO_FVAR(var, fun).top() = var;
+  
+#define SCHEMO_GET_FVAR(var, fun, type) \
+  type var = SCHEMO_FVAR(var, fun).top();
 
 #define SCHEMO_DELETE_FVAR(var, fun) \
   SCHEMO_FVAR(var, function).pop();

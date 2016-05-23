@@ -3,59 +3,46 @@
 
 @DECLARE
 
-@JOB(job1)
-{
-  @JDELAY(3)
 
-  @WHILE
+@FUNCTION(fatt)
+@PARAM(n:int)
+@RETURN(int)
+{
+  @MEMORY
   {
-    printf("Ciao");
-    
-    @TBREAK
-    
-    printf(" come ");
-    
-    @TBREAK
-    
-    printf("va?\n");
+    @VAR(n:int);
+    @VAR(ret:int);
   }
+  
+  @IF (@PARAM(n) == 0)
+  {
+    @RETURN(1);
+  }
+  
+  @CALL(fatt;@PARAM(n)-1):ret;
+  
+  @VAR(ret) = ret;
+  
+  @VAR(n) = @PARAM(n);
+  @RETURN(@VAR(n)*@VAR(ret));
 }
 
 @JOB
 {
   @MEMORY
   {
-    int @VAR(i), @VAR(j);
+    @VAR(i:int)
   }
   
   @VAR(i) = 0;
-  @WHILE (@VAR(i) < 100)
+  @WHILE (@VAR(i) < 10)
   {
-    @VAR(j) = 0;
-    @IF (@VAR(i) < 50)
-    {
-      @WHILE (@VAR(j) < @VAR(i))
-      {
-        printf("*");
-        @VAR(j)++;
-      }
-    }
-    printf(" %d\n", @VAR(i));
-    @TBREAK
-    @VAR(i)++;    
+    @CALL(fatt;@VAR(i)):ret;
+    printf("%d: %d\n", @VAR(i)++, ret);
   }
-  
-  schemo::deschedule_job(job1);
 }
 
-/*
-Notes:
-Each function has stacks for return values and parameters. Each stack level is
-a call of the function. They need a current depth level variable too.
-@CALLing a function means running a related task. A function task extracts
-parameters from the stack and puts the return value in the stack. @CALLing
-increments the depth level, @RETURNing decreases it.
-*/
+#include <stack>
 
 int main()
 {

@@ -94,6 +94,8 @@ JMEM      = CMD('MEMORY')
 JMEM_O    = CMD_O('JOB_MEMORY')
 JVAR      = CMD('VAR')
 JVAR_O    = CMD_O('JVAR')
+GETJVAR   = CMD('GET_JVAR')
+GETJVAR_O = CMD_O('GET_JVAR')
 DECJVAR   = CMD('DECLARE_JVAR')
 DECJVAR_O = CMD_O('DECLARE_JVAR')
 WHILE     = CMD('WHILE')
@@ -130,6 +132,10 @@ GETBACK   = CMD('GETBACK')
 GETBACK_O = CMD_O('GETBACK')
 PSHPAR    = CMD('PUSH_PARAM')
 PSHPAR_O  = CMD_O('PUSH_PARAM')
+SETPAR    = CMD('SET_PARAM')
+SETPAR_O  = CMD_O('SET_PARAM')
+GETPAR    = CMD('GET_PARAM')
+GETPAR_O  = CMD_O('GET_PARAM')
 DELPAR    = CMD('DELETE_PARAM')
 DELPAR_O  = CMD_O('DELETE_PARAM')
 FVAR      = CMD('FVAR')
@@ -140,6 +146,10 @@ INTFVAR   = CMD('INIT_FVAR')
 INTFVAR_O = CMD_O('INIT_FVAR')
 PSHFVAR   = CMD('PUSH_FVAR')
 PSHFVAR_O = CMD_O('PUSH_FVAR')
+SETFVAR   = CMD('SET_FVAR')
+SETFVAR_O = CMD_O('SET_FVAR')
+GETFVAR   = CMD('GET_FVAR')
+GETFVAR_O = CMD_O('GET_FVAR')
 DELFVAR   = CMD('DELETE_FVAR')
 DELFVAR_O = CMD_O('DELETE_FVAR')
 
@@ -209,6 +219,12 @@ def getBlock(buf, open="{", close="}"):
 JVAR_PATTERN = re.compile(JVAR+"\((.+?)\)", flags=re.DOTALL)
 JDELAY_PATTERN = re.compile(JDELAY+"\((\d+?)\)")
 
+def getJobMem(job):
+  jvars = ""
+  for var, t in JOBS[job]['mem'].items():
+    jvars = jvars + GETJVAR_O + "(%s, %s, %s)" % (var, job, t)
+  return jvars
+
 def parseJob(buf, start, job):
   global TASKS_UNNAMED
   
@@ -252,7 +268,7 @@ def parseJob(buf, start, job):
         sys.exit(1)
       JOBS[job]['mem'][m.group(1)] = m.group(2)
       memblock = replace(memblock, m.start(), m.end(), "")
-    block = replace(block, match.start(), ee+1, "")
+    block = replace(block, match.start(), ee+1, getJobMem(job))
   # Delay
   match = JDELAY_PATTERN.search(block)
   
@@ -307,7 +323,9 @@ def parseJob(buf, start, job):
     ss, ee = ret
     ss = ss+e
     ee = ee+e
+    block = replace(block, ee+1, ee+1, getJobMem(job))
     block = replace(block, ee, ee+1, LOOP_O+"(%s, %s)" % (task_bk, task_fw))
+    block = replace(block, ss+1, ss+1, getJobMem(job))
     block = replace(block, match.start(), ss+1, WHILE_O+"(%s, %s, %s)" % (task_bk, task_fw, condition))
   
   # IF
@@ -352,16 +370,13 @@ def parseJob(buf, start, job):
     block = replace(block, ee, ee+1, ENDIF_O+"(%s)" % (task_after))
     block = replace(block, ss+1, ss+1, getJobMem(job))
     block = replace(block, match.start(), ss+1, IF_O+"(%s, %s, %s)" % (task_if, task_after, condition))
-    
-  block = JVAR_PATTERN.sub(JVAR_O + "(\\1, %s)" % job, block)
 
   return replace(buf, start+blockstart, start+blockend, block)
 
 FUNCTION_PATTERN = re.compile(FUN+"\((.+?)\)")
-PARAM_PATTERN    = re.compile("[^{]*?("+PAR+"\((.+?):(.+?)\))")
-PARAM_PATTERN2   = re.compile(PAR+"\((.+?)\)")
+PARAM_PATTERN    = re.compile("[^{]*?("+PAR+"\(([^)]+?):(.+?)\))")
 RETURN_PATTERN   = re.compile("[^{]*?("+RET+"\((.+?)\))")
-RETURN_PATTERN2  = re.compile(RET+"\((.+?)\);")
+RETURN_PATTERN2  = re.compile(RET+"\((.+?)\)")
 CALL_PATTERN     = re.compile(CALL+"\((.+?(;.+?)*?)\):(.+?);")
 FVAR_PATTERN     = re.compile(JVAR+"\((.+?):(.+?)\)")
 
@@ -372,6 +387,33 @@ def pushParams(fun, params):
   for par, val in zip(FUNCTIONS[fun]['params'], params):
       fparams = fparams + PSHPAR_O + "(%s,%s,%s)\n" % (par[0], fun, val)
   return fparams
+
+def setParams(fun):
+  fparams = ""
+  for par in FUNCTIONS[fun]['params'].keys:
+      fparams = fparams + SETPAR_O + "(%s,%s)\n" % (par, fun)
+  return fparams
+
+def getParams(fun):
+  fparams = ""
+  for param, t in FUNCTIONS[fun]['params'].items():
+    fparams = fparams + GETPAR_O + "(%s,%s,%s)\n" % (t, param, fun)
+  return fparams
+
+def setVars(fun):
+  fvars = ""
+  for var in FUNCTIONS[fun]['mem'].keys():
+    fvars = fvars + SETFVAR_O + "(%s,%s)\n" % (var, fun)
+  return fvars
+
+def getVars(fun):
+  fvars = ""
+  for var, t in FUNCTIONS[fun]['mem'].items():
+    fvars = fvars + GETFVAR_O + "(%s,%s,%s)\n" % (var, fun, t)
+  return fvars
+
+def getAll(fun):
+  return getParams(fun)+getVars(fun)
 
 def popParams(fun):
   fparams = ""
@@ -428,7 +470,7 @@ def parseFunction(buf, start, fun):
   block = subbuf[s:e]
   
   GBstr = popAll(fun)
-  GBstr = GETBACK_O+"(\\1, %s)\n" % fun + GBstr + RET_O
+  GBstr = GBstr + GETBACK_O+"(\\1, %s)\n" % fun
   
   block = RETURN_PATTERN2.sub(GBstr, block)
   
@@ -469,6 +511,7 @@ def parseFunction(buf, start, fun):
         sys.exit(1)
       FUNCTIONS[fun]['mem'][m.group(1)] = m.group(2)
       memblock = replace(memblock, m.start(), m.end(), "")
+      meminit = meminit + INTFVAR_O+"(%s, %s, %s)" % (var, fun, t)
     block = replace(block, match.start(), ee+1, meminit)
   
   # WHILE
@@ -479,6 +522,8 @@ def parseFunction(buf, start, fun):
     stderr("%s statements are currently unsupported inside functions" % WHILE)
     stderr("I'm %ssorry" % ("really "*int(random()*10)))
     sys.exit(1)
+    #TODO
+    """
     if checkBlockStart(subbuf[match.end():], "\("):
       ret = getBlock(subbuf[match.end():], "(", ")")
       if ret is None:
@@ -512,8 +557,9 @@ def parseFunction(buf, start, fun):
     ss, ee = ret
     ss = ss+e
     ee = ee+e
-    subbuf = replace(subbuf, ee, ee+1, LOOP_O+"(%s, %s)\n" % (task_bk, task_fw))
-    subbuf = replace(subbuf, match.start(), ss+1, WHILE_O+"(%s, %s, %s)\n" % (task_bk, task_fw, condition))
+    subbuf = replace(subbuf, ee, ee+1, LOOP_O+"(%s, %s)" % (task_bk, task_fw))
+    subbuf = replace(subbuf, match.start(), ss+1, WHILE_O+"(%s, %s, %s)" % (task_bk, task_fw, condition))
+    """
   
   # IF
   while True:
@@ -553,8 +599,10 @@ def parseFunction(buf, start, fun):
     ss, ee = ret
     ss = ss+e
     ee = ee+e
-    block = replace(block, ee, ee+1, ENDIF_O+"(%s)\n" % (task_after))
-    block = replace(block, match.start(), ss+1, IF_O+"(%s, %s, %s)\n" % (task_if, task_after, condition))
+    block = replace(block, ee+1, ee+1, getAll(fun))
+    block = replace(block, ee, ee+1, ENDIF_O+"(%s)" % (task_after))
+    block = replace(block, ss+1, ss+1, getAll(fun))
+    block = replace(block, match.start(), ss+1, IF_O+"(%s, %s, %s)" % (task_if, task_after, condition))
   
   # TBREAK
   pos = 0
@@ -572,16 +620,16 @@ def parseFunction(buf, start, fun):
     block = replace(block, match.end(), match.end(), getAll(fun))
     pos = match.end()
   
-  block = JVAR_PATTERN.sub(FVAR_O + "(\\1, %s)" % fun, block)
-  block = PARAM_PATTERN2.sub(PAR_O + "(\\1, %s)" % fun, block)
-  
   # FUNCTION CALLS
   pos = 0
   while True:
     match = CALL_PATTERN.search(block[pos:])
     if match is None:
       break
+    block = replace(block, match.end(), match.end(), getAll(fun))
     pos = match.end()
+    
+  block = getParams(fun)+block
   subbuf = replace(subbuf, blockstart, blockend, block)
   
   return replace(buf, start, len(buf), subbuf)
@@ -686,10 +734,7 @@ for name in args.files:
     TASKS_UNNAMED = TASKS_UNNAMED + 1
     TASKS.append(newtask)
     fcall = pushParams(fun, params)
-    meminit = ""
-    for var, t in FUNCTIONS[fun]['mem'].items():
-      meminit = meminit + INTFVAR_O+"(%s, %s, %s)\n" % (var, fun, t)
-    fcall = fcall + meminit + CALL_O + "(%s, %s, %s, %s)\n" % (FUNCTIONS[fun]['return'], fun, newtask, ret)
+    fcall = fcall + CALL_O + "(%s, %s, %s, %s)\n" % (FUNCTIONS[fun]['return'], fun, newtask, ret)
     buf = replace(buf, match.start(), match.end(), fcall)
   
   # DECLARATIONS
