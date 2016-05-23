@@ -144,7 +144,7 @@
   SCHEMO_JVAR(var, fun)[schemo::current_job->job->id].push(var);
 
 #define SCHEMO_DELETE_FVAR(var, fun) \
-  SCHEMO_FVAR(var, function).pop();
+  SCHEMO_JVAR(var, fun)[schemo::current_job->job->id].pop();
 
 namespace schemo {
 

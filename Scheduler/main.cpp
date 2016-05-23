@@ -3,28 +3,35 @@
 
 @DECLARE
 
+int global_i = 0;
 
-@FUNCTION(fatt)
+@FUNCTION(fibonacci)
 @PARAM(n:int)
 @RETURN(int)
 {
   @MEMORY
   {
-    @VAR(n:int);
-    @VAR(ret:int);
+    @VAR(ret1:int)
+    @VAR(ret2:int)
   }
-  
+  @IF (@PARAM(n) < 0)
+  {
+    @RETURN(-1);
+  }
   @IF (@PARAM(n) == 0)
   {
     @RETURN(1);
   }
+  @IF (@PARAM(n) == 1)
+  {
+    @RETURN(1);
+  }
   
-  @CALL(fatt;@PARAM(n)-1):ret;
-  
-  @VAR(ret) = ret;
-  
-  @VAR(n) = @PARAM(n);
-  @RETURN(@VAR(n)*@VAR(ret));
+  @CALL(fibonacci; @PARAM(n)-1):ret1;
+  @VAR(ret1) = ret1;
+  @CALL(fibonacci; @PARAM(n)-2):ret2;
+  @VAR(ret2) = ret2;
+  @RETURN(@VAR(ret1)+@VAR(ret2));
 }
 
 @JOB
@@ -34,15 +41,29 @@
     @VAR(i:int)
   }
   
+  printf("Fibonacci numbers:\n");
+  
   @VAR(i) = 0;
   @WHILE (@VAR(i) < 10)
   {
-    @CALL(fatt;@VAR(i)):ret;
-    printf("%d: %d\n", @VAR(i)++, ret);
+    @CALL(fibonacci; @VAR(i)):ret;
+    global_i = @VAR(i);
+    printf("#%d: %d\n", @VAR(i)++, ret);
   }
+  
+  schemo::deschedule_job(job_5);
 }
 
-#include <stack>
+@JOB(job_5)
+{
+  @WHILE
+  {
+    @IF (global_i == 5)
+    {
+      printf("5 reached!\n");
+    }
+  }
+}
 
 int main()
 {

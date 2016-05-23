@@ -348,9 +348,7 @@ def parseJob(buf, start, job):
     ss, ee = ret
     ss = ss+e
     ee = ee+e
-    block = replace(block, ee+1, ee+1, getJobMem(job))
     block = replace(block, ee, ee+1, ENDIF_O+"(%s)" % (task_after))
-    block = replace(block, ss+1, ss+1, getJobMem(job))
     block = replace(block, match.start(), ss+1, IF_O+"(%s, %s, %s)" % (task_if, task_after, condition))
     
   block = JVAR_PATTERN.sub(JVAR_O + "(\\1, %s)" % job, block)
@@ -427,19 +425,6 @@ def parseFunction(buf, start, fun):
   s, e = ret
   block = subbuf[s:e]
   
-  GBstr = popAll(fun)
-  GBstr = GETBACK_O+"(\\1, %s)\n" % fun + GBstr + RET_O
-  
-  block = RETURN_PATTERN2.sub(GBstr, block)
-  
-  subbuf = replace(subbuf, s, e, block)
-  
-  s, e = getBlock(subbuf)
-  
-  block = subbuf[s:e]
-  blockstart = s
-  blockend = e
-  
   # Memory block
   while True:
     match = re.search(JMEM, block)
@@ -468,17 +453,29 @@ def parseFunction(buf, start, fun):
         stderr("Multiple definitions of variable '%s' in memory block of function %s" % (var, fun))
         sys.exit(1)
       FUNCTIONS[fun]['mem'][m.group(1)] = m.group(2)
-      memblock = replace(memblock, m.start(), m.end(), "")
+      meminit = ""
+      for var, t in FUNCTIONS[fun]['mem'].items():
+        meminit = meminit + INTFVAR_O+"(%s, %s, %s)\n" % (var, fun, t)
+      memblock = replace(memblock, m.start(), m.end(), meminit)
     block = replace(block, match.start(), ee+1, meminit)
+  
+  GBstr = GETBACK_O+"(\\1, %s)\n" % fun + popAll(fun) + RET_O
+  
+  block = RETURN_PATTERN2.sub(GBstr, block)
+  
+  subbuf = replace(subbuf, s, e, block)
+  
+  s, e = getBlock(subbuf)
+  blockstart = s
+  blockend = e
+  
+  block = subbuf[s:e]
   
   # WHILE
   while True:
     match = re.search(WHILE, block)
     if match is None:
       break
-    stderr("%s statements are currently unsupported inside functions" % WHILE)
-    stderr("I'm %ssorry" % ("really "*int(random()*10)))
-    sys.exit(1)
     if checkBlockStart(subbuf[match.end():], "\("):
       ret = getBlock(subbuf[match.end():], "(", ")")
       if ret is None:
@@ -575,13 +572,6 @@ def parseFunction(buf, start, fun):
   block = JVAR_PATTERN.sub(FVAR_O + "(\\1, %s)" % fun, block)
   block = PARAM_PATTERN2.sub(PAR_O + "(\\1, %s)" % fun, block)
   
-  # FUNCTION CALLS
-  pos = 0
-  while True:
-    match = CALL_PATTERN.search(block[pos:])
-    if match is None:
-      break
-    pos = match.end()
   subbuf = replace(subbuf, blockstart, blockend, block)
   
   return replace(buf, start, len(buf), subbuf)
@@ -686,10 +676,7 @@ for name in args.files:
     TASKS_UNNAMED = TASKS_UNNAMED + 1
     TASKS.append(newtask)
     fcall = pushParams(fun, params)
-    meminit = ""
-    for var, t in FUNCTIONS[fun]['mem'].items():
-      meminit = meminit + INTFVAR_O+"(%s, %s, %s)\n" % (var, fun, t)
-    fcall = fcall + meminit + CALL_O + "(%s, %s, %s, %s)\n" % (FUNCTIONS[fun]['return'], fun, newtask, ret)
+    fcall = fcall + CALL_O + "(%s, %s, %s, %s)\n" % (FUNCTIONS[fun]['return'], fun, newtask, ret)
     buf = replace(buf, match.start(), match.end(), fcall)
   
   # DECLARATIONS
