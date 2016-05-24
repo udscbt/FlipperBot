@@ -142,6 +142,14 @@ PSHFVAR   = CMD('PUSH_FVAR')
 PSHFVAR_O = CMD_O('PUSH_FVAR')
 DELFVAR   = CMD('DELETE_FVAR')
 DELFVAR_O = CMD_O('DELETE_FVAR')
+MUTEXS    = CMD('MUTEX_START')
+MUTEXS_O  = CMD_O('MUTEX_START')
+MUTEXE    = CMD('MUTEX_END')
+MUTEXE_O  = CMD_O('MUTEX_END')
+CRITSEC   = CMD('CRITSEC')
+CRITSEC_O = CMD_O('CRITSEC')
+DECMUT    = CMD('DECLARE_MUTEX')
+DECMUT_O  = CMD_O('DECLARE_MUTEX')
 
 COMMENT_1_PATTERN = re.compile("/\*.*?\*/", flags=re.DOTALL)
 COMMENT_2_PATTERN = re.compile("//.*?(\n|$)", flags=re.DOTALL)
@@ -178,7 +186,7 @@ def TBREAK_FULL(task):
   return TBREAK_O+"("+task+")"
 
 TASKS = []
-TASKS_UNNAMED = 0
+UNNAMED_TASKS = 0
 
 DEC_PATTERN = re.compile(DEC)
 INIT_PATTERN = re.compile(INIT)
@@ -210,7 +218,7 @@ JVAR_PATTERN = re.compile(JVAR+"\((.+?)\)", flags=re.DOTALL)
 JDELAY_PATTERN = re.compile(JDELAY+"\((\d+?)\)")
 
 def parseJob(buf, start, job):
-  global TASKS_UNNAMED
+  global UNNAMED_TASKS
   
   subbuf = buf[start:]
   # Code block
@@ -299,10 +307,10 @@ def parseJob(buf, start, job):
       stderr("Missing } in %s statement" % WHILE)
       sys.exit(1)
     task_bk = TASK_NAME()
-    TASKS_UNNAMED = TASKS_UNNAMED + 1
+    UNNAMED_TASKS = UNNAMED_TASKS + 1
     TASKS.append(task_bk)
     task_fw = TASK_NAME()
-    TASKS_UNNAMED = TASKS_UNNAMED + 1
+    UNNAMED_TASKS = UNNAMED_TASKS + 1
     TASKS.append(task_fw)
     ss, ee = ret
     ss = ss+e
@@ -340,10 +348,10 @@ def parseJob(buf, start, job):
       stderr("Missing } in %s statement" % IF)
       sys.exit(1)
     task_after = TASK_NAME()
-    TASKS_UNNAMED = TASKS_UNNAMED + 1
+    UNNAMED_TASKS = UNNAMED_TASKS + 1
     TASKS.append(task_after)
     task_if = TASK_NAME()
-    TASKS_UNNAMED = TASKS_UNNAMED + 1
+    UNNAMED_TASKS = UNNAMED_TASKS + 1
     TASKS.append(task_if)
     ss, ee = ret
     ss = ss+e
@@ -387,7 +395,7 @@ def popAll(fun):
   return popParams(fun)+popVars(fun)
 
 def parseFunction(buf, start, fun):
-  global TASKS_UNNAMED
+  global UNNAMED_TASKS
   
   FUNCTIONS[fun] = {'params': OrderedDict({}), 'mem': {}}
   subbuf = buf[start:]
@@ -501,10 +509,10 @@ def parseFunction(buf, start, fun):
       stderr("Missing } in %s statement" % WHILE)
       sys.exit(1)
     task_bk = TASK_NAME()
-    TASKS_UNNAMED = TASKS_UNNAMED + 1
+    UNNAMED_TASKS = UNNAMED_TASKS + 1
     TASKS.append(task_bk)
     task_fw = TASK_NAME()
-    TASKS_UNNAMED = TASKS_UNNAMED + 1
+    UNNAMED_TASKS = UNNAMED_TASKS + 1
     TASKS.append(task_fw)
     ss, ee = ret
     ss = ss+e
@@ -542,10 +550,10 @@ def parseFunction(buf, start, fun):
       stderr("Missing } in %s statement" % IF)
       sys.exit(1)
     task_after = TASK_NAME()
-    TASKS_UNNAMED = TASKS_UNNAMED + 1
+    UNNAMED_TASKS = UNNAMED_TASKS + 1
     TASKS.append(task_after)
     task_if = TASK_NAME()
-    TASKS_UNNAMED = TASKS_UNNAMED + 1
+    UNNAMED_TASKS = UNNAMED_TASKS + 1
     TASKS.append(task_if)
     ss, ee = ret
     ss = ss+e
@@ -575,6 +583,9 @@ def parseFunction(buf, start, fun):
   subbuf = replace(subbuf, blockstart, blockend, block)
   
   return replace(buf, start, len(buf), subbuf)
+
+CRITSEC_PATTERN = re.compile(CRITSEC+"\((.+?)\)")
+MUTEXES = []
 
 # PARSING
 for name in args.files:
@@ -620,7 +631,7 @@ for name in args.files:
     if match is None:
       break
     task = TASK_NAME()
-    TASKS_UNNAMED = TASKS_UNNAMED + 1
+    UNNAMED_TASKS = UNNAMED_TASKS + 1
     TASKS.append(task)
     buf = replace(buf, match.regs[1][0], match.regs[1][1], TBREAK_FULL(task))
   
@@ -634,7 +645,7 @@ for name in args.files:
       stderr("Error: multiple uses of job name '%s'" % job)
       sys.exit(1)
     task = TASK_NAME()
-    TASKS_UNNAMED = TASKS_UNNAMED + 1
+    UNNAMED_TASKS = UNNAMED_TASKS + 1
     JOBS.update({job:{'task': task, 'mem': {}}})
     TASKS.append(task)
     buf = parseJob(buf, match.end(), job)
@@ -648,7 +659,7 @@ for name in args.files:
     job  = JOB_NAME()
     task = TASK_NAME()
     JOBS_UNNAMED = JOBS_UNNAMED + 1
-    TASKS_UNNAMED = TASKS_UNNAMED + 1
+    UNNAMED_TASKS = UNNAMED_TASKS + 1
     JOBS.update({job:{'task': task, 'mem': {}}})
     TASKS.append(task)
     buf = parseJob(buf, match.regs[1][1], job)
@@ -673,11 +684,36 @@ for name in args.files:
       stderr("Expected %d, got %d" % (rightn, gotn))
       sys.exit(1)
     newtask = TASK_NAME()
-    TASKS_UNNAMED = TASKS_UNNAMED + 1
+    UNNAMED_TASKS = UNNAMED_TASKS + 1
     TASKS.append(newtask)
     fcall = pushParams(fun, params)
     fcall = fcall + CALL_O + "(%s, %s, %s, %s)\n" % (FUNCTIONS[fun]['return'], fun, newtask, ret)
     buf = replace(buf, match.start(), match.end(), fcall)
+  
+  # CRITICAL SECTIONS
+  while True:
+    match = CRITSEC_PATTERN.search(buf)
+    if match is None:
+      break
+    mutex = match.group(1)
+    task = TASK_NAME()
+    if not checkBlockStart(buf[match.end():]):
+      stderr("Void critical section exists")
+      stderr("Ignoring...")
+      continue
+    if mutex not in MUTEXES:
+      MUTEXES.append(mutex)
+    TASKS.append(task)
+    UNNAMED_TASKS = UNNAMED_TASKS + 1
+    ret = getBlock(buf[match.end():])
+    if ret is None:
+      stderr("Missing '}' in critical section")
+      sys.exit(1)
+    s, e = ret
+    s = s+match.end()
+    e = e+match.end()
+    buf = replace(buf, e, e+1, MUTEXE_O+"(%s)" % mutex)
+    buf = replace(buf, match.start(), s, MUTEXS_O+"(%s, %s)" % (mutex, task))
   
   # DECLARATIONS
   match = DEC_PATTERN.search(buf)
@@ -696,6 +732,8 @@ for name in args.files:
         dec = dec + DECFVAR_O + "(%s, %s, %s)\n" % (var, fun, t)
       dec = dec + DRETSTK_O + "(%s,%s)\n" % (info['return'], fun)
       dec = dec + DGBSTK_O + "(%s)\n" % fun
+    for mutex in MUTEXES:
+      dec = dec + DECMUT_O + "(%s)\n" % mutex
     buf = replace(buf, match.start(), match.end(), dec)
   buf = buf.replace(DEC, DEC_O)
 
@@ -727,8 +765,8 @@ for name in args.files:
     'njobn': len(JOBS)-JOBS_UNNAMED,
     'ujobn': JOBS_UNNAMED,
     'taskn': len(TASKS),
-    'ntaskn': len(TASKS)-TASKS_UNNAMED,
-    'utaskn': TASKS_UNNAMED,
+    'ntaskn': len(TASKS)-UNNAMED_TASKS,
+    'utaskn': UNNAMED_TASKS,
   }
   header = FILE_HEADER.format(**head_dict)
   buf = header+buf

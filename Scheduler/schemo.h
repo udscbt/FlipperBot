@@ -6,6 +6,7 @@
 #define SCHEMO_H
 
 #include <stack>
+#include <queue>
 
 /* Defines */
 
@@ -146,6 +147,28 @@
 #define SCHEMO_DELETE_FVAR(var, fun) \
   SCHEMO_JVAR(var, fun)[schemo::current_job->job->id].pop();
 
+#define SCHEMO_MUTEX(resource) \
+  resource ## _mutex
+
+#define SCHEMO_DECLARE_MUTEX(resource) \
+  schemo::MUTEX SCHEMO_MUTEX(resource);
+
+#define SCHEMO_MUTEX_START(resource, task) \
+    schemo::lock_mutex(SCHEMO_MUTEX(resource), task); \
+    schemo::run_task(task); \
+  } \
+  void SCHEMO_TASK_HANDLE(task)() \
+  { \
+    if (!schemo::check_mutex(SCHEMO_MUTEX(resource), task)) \
+    { \
+      schemo::run_task(task); \
+      return; \
+    }
+
+#define SCHEMO_MUTEX_END(resource) \
+  schemo::unlock_mutex(SCHEMO_MUTEX(resource));
+  
+
 namespace schemo {
 
   /**
@@ -189,6 +212,8 @@ namespace schemo {
     ERROR_NO_CHECKPOINT,
     ERROR_COUNT
   } ERROR_CODE;
+  
+  typedef std::queue<TASK*> MUTEX;
 
   /**
    * Global variables
@@ -223,6 +248,9 @@ namespace schemo {
   
   bool run_task(TASK&);
   bool check_timeout();
+  bool lock_mutex(MUTEX&, TASK&);
+  bool unlock_mutex(MUTEX&);
+  bool check_mutex(MUTEX&, TASK&);
   
   ERROR_CODE last_error();
   bool set_error(ERROR_CODE ec, const char em[]);

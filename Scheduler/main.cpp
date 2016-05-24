@@ -1,37 +1,45 @@
 #include "schemo.h"
 #include <cstdio>
+#include <vector>
 
 @DECLARE
 
-int global_i = 0;
+int global_count = 0;
+std::vector<int> fibonacci_results;
 
 @FUNCTION(fibonacci)
 @PARAM(n:int)
-@RETURN(int)
+@RETURN(unsigned int)
 {
   @MEMORY
   {
-    @VAR(ret1:int)
-    @VAR(ret2:int)
-  }
-  @IF (@PARAM(n) < 0)
-  {
-    @RETURN(-1);
-  }
-  @IF (@PARAM(n) == 0)
-  {
-    @RETURN(1);
-  }
-  @IF (@PARAM(n) == 1)
-  {
-    @RETURN(1);
+    @VAR(ret1:unsigned int)
+    @VAR(ret2:unsigned int)
   }
   
-  @CALL(fibonacci; @PARAM(n)-1):ret1;
-  @VAR(ret1) = ret1;
-  @CALL(fibonacci; @PARAM(n)-2):ret2;
-  @VAR(ret2) = ret2;
-  @RETURN(@VAR(ret1)+@VAR(ret2));
+  @IF (@PARAM(n) < 0)
+  {
+    @RETURN(0);
+  }
+  
+  @CRITSEC(fibonacci)
+  {
+    @IF (fibonacci_results.size() <= @PARAM(n))
+    {
+      @IF (@PARAM(n) == 0)
+      {
+        fibonacci_results.push_back(1);
+      }
+      
+      @CALL(fibonacci; @PARAM(n)-1):ret1;
+      @VAR(ret1) = ret1;
+      @CALL(fibonacci; @PARAM(n)-2):ret2;
+      @VAR(ret2) = ret2;
+      fibonacci_results.push_back(@VAR(ret1)+@VAR(ret2));
+    }
+  }
+  
+  @RETURN(fibonacci_results[@PARAM(n)]);
 }
 
 @JOB
@@ -44,11 +52,14 @@ int global_i = 0;
   printf("Fibonacci numbers:\n");
   
   @VAR(i) = 0;
-  @WHILE (@VAR(i) < 10)
+  @WHILE (@VAR(i) < 50)
   {
     @CALL(fibonacci; @VAR(i)):ret;
-    global_i = @VAR(i);
-    printf("#%d: %d\n", @VAR(i)++, ret);
+    printf("#%d: %u\n", @VAR(i)++, ret);
+    @CRITSEC(count)
+    {
+      global_count++;
+    }
   }
   
   schemo::deschedule_job(job_5);
@@ -58,9 +69,14 @@ int global_i = 0;
 {
   @WHILE
   {
-    @IF (global_i == 5)
+    @CRITSEC(count)
     {
-      printf("5 reached!\n");
+      @IF(global_count == 5)
+      {
+        printf("BANG!\n");
+        @TBREAK
+        global_count = 0;
+      }
     }
   }
 }
@@ -70,6 +86,8 @@ int main()
   @INIT
   
   @SCHEDULE_ALL
+  
+  global_count = 0;
 
   schemo::start_cycle();
   

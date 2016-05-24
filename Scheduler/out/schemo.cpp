@@ -11,8 +11,8 @@ namespace schemo
   int new_job_id = 0;
   CYCLE_NODE job_queue[MAX_JOBS];
   CYCLE_NODE NULL_NODE;
-  CYCLE_NODE* first_job = &NULL_NODE;
-  CYCLE_NODE* current_job = &NULL_NODE;
+  CYCLE_NODE* first_job;
+  CYCLE_NODE* current_job;
   
   char ERROR_STR[ERROR_COUNT][MAX_ERROR_NAME_LENGTH] = {};
   char ERROR_MSG[MAX_ERROR_MSG_LENGTH] = "";
@@ -29,6 +29,7 @@ bool schemo::cycle_setup()
   NULL_NODE.prev = &NULL_NODE;
   NULL_NODE.next = &NULL_NODE;
   first_job = &NULL_NODE;
+  current_job = &NULL_NODE;
   
   new_job_id = 0;
   return true;
@@ -179,6 +180,25 @@ bool schemo::run_task(TASK& t)
 bool schemo::check_timeout()
 {
   return false;
+}
+
+
+bool schemo::lock_mutex(MUTEX& mutex, TASK& task)
+{
+  mutex.push(&task);
+}
+
+bool schemo::unlock_mutex(MUTEX& mutex)
+{
+  mutex.pop();
+}
+
+bool schemo::check_mutex(MUTEX& mutex, TASK& task)
+{
+  if (mutex.front() == &task)
+    return true;
+  else
+    return false;
 }
 
 schemo::ERROR_CODE schemo::last_error()
