@@ -376,7 +376,7 @@ FUNCTIONS = {}
 def pushParams(fun, params):
   fparams = ""
   for par, val in zip(FUNCTIONS[fun]['params'], params):
-      fparams = fparams + PSHPAR_O + "(%s,%s,%s)\n" % (par[0], fun, val)
+    fparams = fparams + PSHPAR_O + "(%s,%s,%s)\n" % (par, fun, val)
   return fparams
 
 def popParams(fun):
@@ -484,15 +484,15 @@ def parseFunction(buf, start, fun):
     match = re.search(WHILE, block)
     if match is None:
       break
-    if checkBlockStart(subbuf[match.end():], "\("):
-      ret = getBlock(subbuf[match.end():], "(", ")")
+    if checkBlockStart(block[match.end():], "\("):
+      ret = getBlock(block[match.end():], "(", ")")
       if ret is None:
         stderr("Missing ) in %s statement" % WHILE)
         sys.exit(1)
       s, e = ret
       s = match.end()+s
       e = match.end()+e
-      condition = "("+subbuf[s:e]+")"
+      condition = "("+block[s:e]+")"
       e = e+1
     else:
       condition = "(true)"
@@ -501,10 +501,10 @@ def parseFunction(buf, start, fun):
       stderr("Continuing...")
       s = match.start()
       e = match.end()
-    if not checkBlockStart(subbuf[e:]):
+    if not checkBlockStart(block[e:]):
       stderr("%s statement without attached block of code exists" % WHILE)
       sys.exit(1)
-    ret = getBlock(subbuf[e:])
+    ret = getBlock(block[e:])
     if ret is None:
       stderr("Missing } in %s statement" % WHILE)
       sys.exit(1)
@@ -517,8 +517,9 @@ def parseFunction(buf, start, fun):
     ss, ee = ret
     ss = ss+e
     ee = ee+e
-    subbuf = replace(subbuf, ee, ee+1, LOOP_O+"(%s, %s)\n" % (task_bk, task_fw))
-    subbuf = replace(subbuf, match.start(), ss+1, WHILE_O+"(%s, %s, %s)\n" % (task_bk, task_fw, condition))
+    block = replace(block, ee, ee+1, LOOP_O+"(%s, %s)\n" % (task_bk, task_fw))
+    block = replace(block, match.start(), ss+1, WHILE_O+"(%s, %s, %s)\n" % (task_bk, task_fw, condition))
+    
   
   # IF
   while True:
