@@ -23,6 +23,8 @@ namespace fbcp
     COMMAND* command;
     std::map<std::string, std::string> params;
   } COMMAND_LINE;
+  
+  
   COMMAND* NULL_COMMAND = (COMMAND*) 0;
 }
 
