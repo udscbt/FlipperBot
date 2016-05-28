@@ -18,6 +18,10 @@ std::string fbcp::writeCommand(COMMAND_LINE& cmdline)
     result += " ";
     result += it->second;
   }
+  if (!cmdline.other.empty())
+  {
+    result += " " + cmdline.other;
+  }
   result += "\n";
   return result;
 }
@@ -47,6 +51,10 @@ bool fbcp::parseCommand(const std::string line, COMMAND_LINE& result)
       return false;
     
     result.params[*it] = line.substr(pos_old, pos_new-pos_old);
+  }
+  if (line[pos_new] != '\n')
+  {
+    result.other = line.substr(pos_new+1);
   }
   return true;
 }

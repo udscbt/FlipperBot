@@ -7,25 +7,32 @@
 
 namespace fbcp
 {
-  typedef const struct
+  typedef struct
   {
+    const int code;
     const std::string id;
     std::vector<std::string> params;
-  } COMMAND;
+  } COMMAND_t;
   
-  typedef const struct
+  typedef const COMMAND_t COMMAND;
+  
+  typedef struct
   {
+    const int code;
     std::string str;
-  } PARAM;
+  } PARAM_t;
+  
+  typedef const PARAM_t PARAM;
   
   typedef struct
   {
     COMMAND* command;
     std::map<std::string, std::string> params;
+    std::string other;
   } COMMAND_LINE;
   
   
-  COMMAND* NULL_COMMAND = (COMMAND*) 0;
+  extern COMMAND* NULL_COMMAND;
 }
 
 #endif // FBCP_TYPES_H

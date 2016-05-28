@@ -6,9 +6,6 @@
 namespace fbcp
 {
   extern const std::string SERIAL;
-  extern COMMAND* Q_COMMANDS[];
-  extern COMMAND* A_COMMANDS[];
-  extern PARAM* STD_PARAMS[];
   
   bool parseCommand(const std::string line, COMMAND_LINE& result);
   std::string  writeCommand(COMMAND_LINE& cmd);

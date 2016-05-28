@@ -2,7 +2,14 @@
 import sys
 
 ext_in = ".command.list"
-ext_out = ".command.h"
+ext_out1 = ".command.h"
+ext_out2 = ".command.cpp"
+
+__code = 0
+def code():
+  global __code
+  __code = __code + 1
+  return __code
 
 for arg in sys.argv[1:]:
   if not arg.endswith(ext_in):
@@ -19,21 +26,25 @@ for arg in sys.argv[1:]:
   A_COMMANDS = []
   PARAMS     = []
 
-  output = ""
+  output1 = ""
+  output2 = ""
   for line in content.split("\n"):
     line_s = line.strip()
-    output = output + "  "
+    output1 = output1 + "  "
+    output2 = output2 + "  "
     if line_s.startswith("/"):
-      output = output + line + "\n"
+      output1 = output1 + line + "\n"
+      output2 = output2 + line + "\n"
       continue
     if line_s == "":
-      output = output + line + "\n"
+      output1 = output1 + line + "\n"
+      output2 = output2 + line + "\n"
       continue
     tokens = line.split("|")
-    cmd = tokens[0].strip()
-    id  = '"'+tokens[1].strip()+'"'
+    cmd = tokens[0].strip().replace(" ", "_")
+    id  = ('"'+tokens[1].strip()+'"').replace(" ", "_")
     try:
-      params = tokens[2].strip()
+      params = tokens[2].strip().replace(" ", "_")
       params = '"'+'","'.join(params.split(","))+'"'
     except:
       params = ""
@@ -44,20 +55,33 @@ for arg in sys.argv[1:]:
       A_COMMANDS.append(cmd)
     else:
       PARAMS.append(cmd)
-      output = output + "PARAM %s = {%s};\n" % (cmd, id)
+      output1 = output1 + "extern PARAM %s;\n" % cmd
+      output2 = output2 + "PARAM %s = {%d, %s};\n" % (cmd, code(), id)
       continue
-    output = output + "COMMAND %s = {%s, %s};\n" % (cmd, id, params)
+    output1 = output1 + "extern COMMAND %s;\n" % cmd
+    output2 = output2 + "COMMAND %s = {%d, %s, %s};\n" % (cmd, code(), id, params)
 
-  output = output + "  COMMAND* Q_COMMANDS[] = {\n    &" + ",\n    &".join(Q_COMMANDS) + "\n  };\n"
-  output = output + "  COMMAND* A_COMMANDS[] = {\n    &" + ",\n    &".join(A_COMMANDS) + "\n  };\n"
-  output = output + "  PARAM* STD_PARAMS[] = {\n    &" + ",\n    &".join(PARAMS) + "\n  };\n"
+  output1 = output1 + "  extern COMMAND* Q_COMMANDS[%d];\n" % len(Q_COMMANDS)
+  output2 = output2 + "  COMMAND* Q_COMMANDS[] = {\n    &" + ",\n    &".join(Q_COMMANDS) + "\n  };\n"
+  output1 = output1 + "  extern COMMAND* A_COMMANDS[%d];\n" % len(A_COMMANDS)
+  output2 = output2 + "  COMMAND* A_COMMANDS[] = {\n    &" + ",\n    &".join(A_COMMANDS) + "\n  };\n"
+  output1 = output1 + "  extern PARAM* STD_PARAMS[%d];\n" % len(PARAMS)
+  output2 = output2 + "  PARAM* STD_PARAMS[] = {\n    &" + ",\n    &".join(PARAMS) + "\n  };\n"
 
   f = open("fbcp.template.command.h", "r")
   before = f.read()
   f.close()
-  name = arg.split("/")[-1]
-  name = name.replace(ext_in, ext_out)
-  f = open(name, "w")
-  name = name.upper().replace(".", "_")
-  f.write(before % (name, name, output, name))
+  name1 = arg.split("/")[-1]
+  name1 = name1.replace(ext_in, ext_out1)
+  f = open(name1, "w")
+  name = name1.upper().replace(".", "_")
+  f.write(before % (name, name, output1, name))
+  f.close()
+  
+  f = open("fbcp.template.command.cpp", "r")
+  before = f.read()
+  f.close()
+  name2 = name1.replace(ext_out1, ext_out2)
+  f = open(name2, "w")
+  f.write(before % (name1, output2))
   f.close()
