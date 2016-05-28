@@ -8,7 +8,8 @@ void debugCommand(fbcp::COMMAND_LINE& cmd)
   std::cout << "Params:\n";
   for (std::vector<std::string>::const_iterator it = cmd.command->params.begin(); it != cmd.command->params.end(); ++it)
   {
-    std::cout << "  [" << *it << "] = " << cmd.params.find(*it)->second << "\n";
+    std::map<std::string, std::string>::iterator found = cmd.params.find(*it);
+    std::cout << "  [" << *it << "] = " << (found==cmd.params.end()?"<missing>":found->second) << "\n";
   }
   std::cout << "Other:\n  " << cmd.other << std::endl;
 }
@@ -56,11 +57,16 @@ int main()
     std::cout << "> ";
     std::getline(std::cin, msg);
     fbcp::parseCommand(msg+"\n", cmd_q);
+    if (cmd_q.command != fbcp::NULL_COMMAND)
+    {
+      debugCommand(cmd_q);
+    }
     if (cmd_q.command == fbcp::NULL_COMMAND or !fbcp::common::handleRequest(cmd_q, cmd_a))
     {
       fbcp::common::handleNotFound(msg, cmd_a);
     }
     std::cout << fbcp::writeCommand(cmd_a);
+    debugCommand(cmd_a);
   }
 
   return 0;
