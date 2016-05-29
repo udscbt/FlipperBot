@@ -1,7 +1,5 @@
 #include "fbcp.h"
 
-#include <iostream>
-
 fbcp::string fbcp::writeCommand(COMMAND_LINE& cmdline)
 {
   COMMAND* cmd = cmdline.command;

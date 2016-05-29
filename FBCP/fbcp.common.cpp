@@ -1,7 +1,5 @@
 #include "fbcp.common.h"
 
-#include <iostream>
-
 bool fbcp::common::handleRequest(fbcp::COMMAND_LINE& in, fbcp::COMMAND_LINE& out)
 {
   if (in.command->code ==  fbcp::Q_LIST.code)
