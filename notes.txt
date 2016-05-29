@@ -1,0 +1,4 @@
+In file:
+  /root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/platform.txt
+you have to add "-lstdc++" to the "compiler.c.elf.libs" line otherwise you 
+can't use the standard c++ classes.

@@ -1,0 +1,4 @@
+#!/bin/bash
+backup/schemop -sq ESP_TEST.ino
+mv ESP_TEST.ino backup/
+mv __schemo_ESP_TEST.ino ESP_TEST.ino
