@@ -1,5 +1,8 @@
-fbcp_test: main.cpp fbcp.command.h fbcp.o fbcp.common.o fbcp.types.o fbcp.command.o
-	g++ -o fbcp_test main.cpp fbcp.o fbcp.common.o fbcp.types.o fbcp.command.o
+fbcp_test: main.cpp fbcp.command.h fbcp.o fbcp.common.o fbcp.types.o fbcp.string.o fbcp.command.o
+	g++ -o fbcp_test main.cpp fbcp.o fbcp.common.o fbcp.types.o fbcp.string.o fbcp.command.o
+
+fbcp.string.o: fbcp.string.cpp
+	g++ -c -o fbcp.string.o fbcp.string.cpp
 
 fbcp.types.o: fbcp.types.cpp
 	g++ -c -o fbcp.types.o fbcp.types.cpp

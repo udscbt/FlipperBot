@@ -33,7 +33,7 @@ bool fbcp::common::handleRequest(fbcp::COMMAND_LINE& in, fbcp::COMMAND_LINE& out
     }
     out.command = &fbcp::A_DATA;
     out.other = "Usage: " + cmd->id;
-    for (std::vector<std::string>::const_iterator it = cmd->params.begin(); it != cmd->params.end(); ++it)
+    for (std::vector<fbcp::string>::const_iterator it = cmd->params.begin(); it != cmd->params.end(); ++it)
     {
       out.other += " <" + *it + ">";
     }
@@ -45,7 +45,7 @@ bool fbcp::common::handleRequest(fbcp::COMMAND_LINE& in, fbcp::COMMAND_LINE& out
   }
 }
 
-bool fbcp::common::handleNotFound(std::string in, fbcp::COMMAND_LINE& out)
+bool fbcp::common::handleNotFound(fbcp::string in, fbcp::COMMAND_LINE& out)
 {
   out.command = &fbcp::A_ERROR;
   return true;

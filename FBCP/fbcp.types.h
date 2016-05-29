@@ -1,8 +1,8 @@
 #ifndef FBCP_TYPES_H
 #define FBCP_TYPES_H
 
+#include "fbcp.string.h"
 #include <vector>
-#include <string>
 #include <map>
 
 namespace fbcp
@@ -10,8 +10,8 @@ namespace fbcp
   typedef struct
   {
     const int code;
-    const std::string id;
-    std::vector<std::string> params;
+    const fbcp::string id;
+    std::vector<fbcp::string> params;
   } COMMAND_t;
   
   typedef const COMMAND_t COMMAND;
@@ -19,7 +19,7 @@ namespace fbcp
   typedef struct
   {
     const int code;
-    std::string str;
+    fbcp::string str;
   } PARAM_t;
   
   typedef const PARAM_t PARAM;
@@ -27,8 +27,8 @@ namespace fbcp
   typedef struct
   {
     COMMAND* command;
-    std::map<std::string, std::string> params;
-    std::string other;
+    std::map<fbcp::string, fbcp::string> params;
+    fbcp::string other;
   } COMMAND_LINE;
   
   

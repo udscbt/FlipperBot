@@ -4,53 +4,53 @@
 
 void debugCommand(fbcp::COMMAND_LINE& cmd)
 {
-  std::cout << "Command: " << cmd.command->id << "\n";
-  std::cout << "Params:\n";
-  for (std::vector<std::string>::const_iterator it = cmd.command->params.begin(); it != cmd.command->params.end(); ++it)
+  printf("Command: %s\n", &(cmd.command->id[0]));
+  printf("Params:\n");
+  for (std::vector<fbcp::string>::const_iterator it = cmd.command->params.begin(); it != cmd.command->params.end(); ++it)
   {
-    std::map<std::string, std::string>::iterator found = cmd.params.find(*it);
-    std::cout << "  [" << *it << "] = " << (found==cmd.params.end()?"<missing>":found->second) << "\n";
+    std::map<fbcp::string, fbcp::string>::iterator found = cmd.params.find(*it);
+    printf("  [%s] = %s\n", &((*it)[0]), (found==cmd.params.end()?"<missing>":&(found->second[0])));
   }
-  std::cout << "Other:\n  " << cmd.other << std::endl;
+  printf("Other:\n  %s\n", &(cmd.other[0]));
+  fflush(stdout);
 }
 
 int main()
 {
-  /*
   fbcp::COMMAND_LINE cmd;
   cmd.command = &fbcp::Q_LIST;
   cmd.params["type"] = fbcp::LIST_CMD.str;
   
-  std::string msg = fbcp::writeCommand(cmd);
-  std::cout << msg;
+  fbcp::string msg = fbcp::writeCommand(cmd);
+  printf(&msg[0]);
   
-  std::cout << "---" << std::endl;
+  printf("---\n");
   
   if (fbcp::parseCommand(msg, cmd))
   {
     msg = fbcp::writeCommand(cmd);
     
-    std::cout << msg;
+    printf(&msg[0]);
   }
   else
   {
-    std::cout << "Can't interpret message" << std::endl;
+    printf("Can't interpret message\n");
   }
   
   fbcp::COMMAND_LINE cmd2;
   if (fbcp::common::handleRequest(cmd, cmd2))
   {
-    std::cout << fbcp::writeCommand(cmd2) << std::endl;
+    printf("%s\n", &fbcp::writeCommand(cmd2)[0]);
   }
   else
   {
-    std::cout << "Ahi ahi ahi" << std::endl;
+    printf("Ahi ahi ahi\n");
   }
   
   debugCommand(cmd);
   debugCommand(cmd2);
-  */
-  std::string msg;
+  
+  /*fbcp::string msg;
   while (true)
   {
     fbcp::COMMAND_LINE cmd_q, cmd_a;
@@ -67,7 +67,7 @@ int main()
     }
     std::cout << fbcp::writeCommand(cmd_a);
     debugCommand(cmd_a);
-  }
+  }*/
 
   return 0;
 }

@@ -1,6 +1,4 @@
 #include "fbcp.types.h"
 
-namespace fbcp
-{
-  COMMAND* NULL_COMMAND = (COMMAND*) 0;
-}
+fbcp::COMMAND* fbcp::NULL_COMMAND = (COMMAND*) 0;
+

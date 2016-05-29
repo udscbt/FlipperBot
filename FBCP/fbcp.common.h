@@ -8,7 +8,7 @@ namespace fbcp
   namespace common
   {
     bool handleRequest(fbcp::COMMAND_LINE& in, fbcp::COMMAND_LINE& out);
-    bool handleNotFound(std::string in, fbcp::COMMAND_LINE& out);
+    bool handleNotFound(fbcp::string in, fbcp::COMMAND_LINE& out);
   }
 }
 

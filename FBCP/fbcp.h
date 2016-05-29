@@ -5,13 +5,13 @@
 
 namespace fbcp
 {
-  extern const std::string SERIAL;
+  extern const fbcp::string SERIAL;
   
-  bool parseCommand(const std::string line, COMMAND_LINE& result);
-  std::string  writeCommand(COMMAND_LINE& cmd);
-  COMMAND* findQCommand(const std::string line);
-  COMMAND* findACommand(const std::string line);
-  COMMAND* findCommand(const std::string line);
+  bool parseCommand(const fbcp::string& line, COMMAND_LINE& result);
+  fbcp::string  writeCommand(COMMAND_LINE& cmd);
+  COMMAND* findQCommand(const fbcp::string& line);
+  COMMAND* findACommand(const fbcp::string& line);
+  COMMAND* findCommand(const fbcp::string& line);
 }
 
 #endif // FBCP_H
