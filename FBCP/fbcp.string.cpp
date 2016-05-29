@@ -130,6 +130,36 @@ namespace fbcp
     const_iterator it(*this, length());
     return it;
   }
+  
+  int string::compare (const string& str) const
+  {
+    const char *p1, *p2;
+    p1 = this->buf;
+    p2 = str.buf;
+    while (*p1++ && *p2++)
+    {
+      if (*p1 < *p2) return -1;
+      if (*p1 > *p2) return 1;
+    }
+    if (*p2) return -1;
+    if (*p1) return 1;
+    return 0;
+  }
+
+  int string::compare (const char* c_str) const
+  {
+    const char *p1, *p2;
+    p1 = this->buf;
+    p2 = c_str;
+    while (*p1 && *p2)
+    {
+      if (*p1 < *p2) return -1;
+      if (*p1 > *p2) return 1;
+    }
+    if (*p2) return -1;
+    if (*p1) return 1;
+    return 0;
+  }
 
   bool string::empty () const
   {
@@ -172,35 +202,11 @@ namespace fbcp
     
     return str;
   }
-
-  int string::compare (const string& str) const
+  
+  const char* string::c_str () const
   {
-    const char *p1, *p2;
-    p1 = this->buf;
-    p2 = str.buf;
-    while (*p1++ && *p2++)
-    {
-      if (*p1 < *p2) return -1;
-      if (*p1 > *p2) return 1;
-    }
-    if (*p2) return -1;
-    if (*p1) return 1;
-    return 0;
-  }
-
-  int string::compare (const char* c_str) const
-  {
-    const char *p1, *p2;
-    p1 = this->buf;
-    p2 = c_str;
-    while (*p1 && *p2)
-    {
-      if (*p1 < *p2) return -1;
-      if (*p1 > *p2) return 1;
-    }
-    if (*p2) return -1;
-    if (*p1) return 1;
-    return 0;
+    buf[str_size] = '\0';
+    return buf;
   }
   /* END CLASS STRING */
 
