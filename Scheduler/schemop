@@ -316,7 +316,7 @@ def parseJob(buf, start, job):
     ss = ss+e
     ee = ee+e
     block = replace(block, ee, ee+1, LOOP_O+"(%s, %s)" % (task_bk, task_fw))
-    block = replace(block, match.start(), ss+1, WHILE_O+"(%s, %s, %s)" % (task_bk, task_fw, condition))
+    block = replace(block, match.start(), ss, WHILE_O+"(%s, %s, %s)" % (task_bk, task_fw, condition))
   
   # IF
   while True:
@@ -357,7 +357,7 @@ def parseJob(buf, start, job):
     ss = ss+e
     ee = ee+e
     block = replace(block, ee, ee+1, ENDIF_O+"(%s)" % (task_after))
-    block = replace(block, match.start(), ss+1, IF_O+"(%s, %s, %s)" % (task_if, task_after, condition))
+    block = replace(block, match.start(), ss, IF_O+"(%s, %s, %s)" % (task_if, task_after, condition))
     
   block = JVAR_PATTERN.sub(JVAR_O + "(\\1, %s)" % job, block)
 
@@ -518,7 +518,7 @@ def parseFunction(buf, start, fun):
     ss = ss+e
     ee = ee+e
     block = replace(block, ee, ee+1, LOOP_O+"(%s, %s)\n" % (task_bk, task_fw))
-    block = replace(block, match.start(), ss+1, WHILE_O+"(%s, %s, %s)\n" % (task_bk, task_fw, condition))
+    block = replace(block, match.start(), ss, WHILE_O+"(%s, %s, %s)\n" % (task_bk, task_fw, condition))
     
   
   # IF
@@ -560,7 +560,7 @@ def parseFunction(buf, start, fun):
     ss = ss+e
     ee = ee+e
     block = replace(block, ee, ee+1, ENDIF_O+"(%s)\n" % (task_after))
-    block = replace(block, match.start(), ss+1, IF_O+"(%s, %s, %s)\n" % (task_if, task_after, condition))
+    block = replace(block, match.start(), ss, IF_O+"(%s, %s, %s)\n" % (task_if, task_after, condition))
   
   # TBREAK
   pos = 0
