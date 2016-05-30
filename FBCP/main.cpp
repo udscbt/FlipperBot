@@ -10,14 +10,14 @@ void debugCommand(fbcp::COMMAND_LINE& cmd)
   }
   else
   {
-    printf("Command: %s\n", &(cmd.command->id[0]));
+    printf("Command: %s\n", cmd.command->id.c_str());
     printf("Params:\n");
     for (std::vector<fbcp::string>::const_iterator it = cmd.command->params.begin(); it != cmd.command->params.end(); ++it)
     {
       std::map<fbcp::string, fbcp::string>::iterator found = cmd.params.find(*it);
-      printf("  [%s] = %s\n", &((*it)[0]), (found==cmd.params.end()?"<missing>":&(found->second[0])));
+      printf("  [%s] = %s\n", it->c_str(), (found==cmd.params.end()?"<missing>":found->second.c_str()));
     }
-    printf("Other:\n  %s\n", &(cmd.other[0]));
+    printf("Other:\n  %s\n", cmd.other.c_str());
   }
   fflush(stdout);
 }
@@ -32,7 +32,7 @@ int main()
   cmd.other = "CIAO";
 
   fbcp::string msg = fbcp::writeCommand(cmd);
-  printf(msg.c_str());
+  printf(msg);
   
   printf("---\n");
   
@@ -40,7 +40,7 @@ int main()
   {
     msg = fbcp::writeCommand(cmd);
     
-    printf(msg.c_str());
+    printf(msg);
   }
   else
   {
@@ -50,7 +50,7 @@ int main()
   fbcp::COMMAND_LINE cmd2;
   if (fbcp::common::handleRequest(cmd, cmd2))
   {
-    printf("%s\n", &fbcp::writeCommand(cmd2)[0]);
+    printf("%s\n", fbcp::writeCommand(cmd2).c_str());
   }
   else
   {

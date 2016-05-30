@@ -151,6 +151,17 @@ namespace fbcp
     if (*p1) return 1;
     return 0;
   }
+  
+  const char* string::c_str () const
+  {
+    buf[str_size] = '\0';
+    return buf;
+  }
+  
+  string::operator const char* () const
+  {
+    return c_str();
+  }
 
   bool string::empty () const
   {
@@ -192,12 +203,6 @@ namespace fbcp
     }
     
     return str;
-  }
-  
-  const char* string::c_str () const
-  {
-    buf[str_size] = '\0';
-    return buf;
   }
   /* END CLASS STRING */
 
