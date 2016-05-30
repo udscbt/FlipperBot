@@ -5,10 +5,10 @@ bool fbcp::common::handleRequest(fbcp::COMMAND_LINE& in, fbcp::COMMAND_LINE& out
   if (in.command->code ==  fbcp::Q_LIST.code)
   {
     out.other = "";
-    if (in.params["type"].compare(fbcp::LIST_OPT.str) == 0)
+    if (in.params["type"] == fbcp::LIST_OPT.str)
     {
     }
-    else if (in.params["type"].compare(fbcp::LIST_CMD.str) == 0)
+    else if (in.params["type"] == fbcp::LIST_CMD.str)
     {
       for (int i = 0; i < sizeof(fbcp::Q_COMMANDS)/sizeof(fbcp::COMMAND*); i++)
         out.other += (i?", ":"") + fbcp::Q_COMMANDS[i]->id;

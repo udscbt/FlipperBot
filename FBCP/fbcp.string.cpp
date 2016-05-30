@@ -1,6 +1,5 @@
 #include "fbcp.string.h"
 
-
 namespace fbcp
 {
   /* CLASS STRING */
@@ -133,17 +132,7 @@ namespace fbcp
   
   int string::compare (const string& str) const
   {
-    const char *p1, *p2;
-    p1 = this->buf;
-    p2 = str.buf;
-    while (*p1++ && *p2++)
-    {
-      if (*p1 < *p2) return -1;
-      if (*p1 > *p2) return 1;
-    }
-    if (*p2) return -1;
-    if (*p1) return 1;
-    return 0;
+    return compare(str.buf);
   }
 
   int string::compare (const char* c_str) const
@@ -153,8 +142,10 @@ namespace fbcp
     p2 = c_str;
     while (*p1 && *p2)
     {
-      if (*p1 < *p2) return -1;
-      if (*p1 > *p2) return 1;
+      if (*p1 < *p2) return -2;
+      if (*p1 > *p2) return 2;
+      ++p1;
+      ++p2;
     }
     if (*p2) return -1;
     if (*p1) return 1;
@@ -192,8 +183,8 @@ namespace fbcp
   string string::substr (size_t pos, size_t len) const
   {
     if (pos >= str_size) return "";
+    if (len > str_size) len = str_size - pos;
     if (pos + len > str_size) len = str_size - pos;
-    
     string str(len);
     for (int i = 0; i < len; i++)
     {

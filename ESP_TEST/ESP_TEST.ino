@@ -101,24 +101,30 @@ SCHEMO_JOB(__schemo_job_1,__schemo_task_5)
     Serial.print("$ ");
     if (valid)
     {
-      Serial.print("Understood");
+      Serial.print("Understood\n\n");
+      if (fbcp::common::handleRequest(q_cmd, a_cmd))
+      {
+        Serial.print("$ Handled");
+      }
+      else
+      {
+        Serial.print("$ Not handled");
+        fbcp::common::handleNotFound(buf, a_cmd);
+      }
     }
     else
     {
       Serial.print("Not understood");
-    }
-    Serial.print("\n\n");
-    if (!valid or !fbcp::common::handleRequest(q_cmd, a_cmd))
-    {
-      Serial.print("$ Not handled\n\n");
       fbcp::common::handleNotFound(buf, a_cmd);
     }
+    Serial.print("\n\n");
     
     debugCommand(q_cmd);
 
     Serial.print("$ Response:\n");
     Serial.print(fbcp::writeCommand(a_cmd).c_str());
     Serial.print("\n");
+
     Serial.flush();
   SCHEMO_LOOPBACK(__schemo_task_6, __schemo_task_7)
 }

@@ -24,12 +24,15 @@ void debugCommand(fbcp::COMMAND_LINE& cmd)
 
 int main()
 {
+  setbuf(stdout, NULL);
+
   fbcp::COMMAND_LINE cmd;
   cmd.command = &fbcp::Q_LIST;
   cmd.params["type"] = fbcp::LIST_CMD.str;
-  
+  cmd.other = "CIAO";
+
   fbcp::string msg = fbcp::writeCommand(cmd);
-  printf(&msg[0]);
+  printf(msg.c_str());
   
   printf("---\n");
   
@@ -37,7 +40,7 @@ int main()
   {
     msg = fbcp::writeCommand(cmd);
     
-    printf(&msg[0]);
+    printf(msg.c_str());
   }
   else
   {
