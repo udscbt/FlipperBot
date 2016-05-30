@@ -52,6 +52,34 @@ SCHEMO_JOB(__schemo_job_0,__schemo_task_0)
 
 char buf[100];
 
+void debugCommand(fbcp::COMMAND_LINE& cmd)
+{
+  Serial.print("$ Interpreted as:\n");
+  if (cmd.command == fbcp::NULL_COMMAND)
+  {
+    Serial.print("NULL_COMMAND");
+  }
+  else
+  {
+    Serial.print("Command: ");
+    Serial.print(cmd.command->id.c_str());
+    Serial.print("\nParams:\n");
+    for (std::vector<fbcp::string>::const_iterator it = cmd.command->params.begin(); it != cmd.command->params.end(); ++it)
+    {
+      std::map<fbcp::string, fbcp::string>::iterator found = cmd.params.find(*it);
+      Serial.print("  [");
+      Serial.print((*it).c_str());
+      Serial.print("] = ");
+      Serial.print(found==cmd.params.end()?"<missing>":found->second.c_str());
+      Serial.print("\n");
+    }
+    Serial.print("Other:\n  ");
+    Serial.print(cmd.other.c_str());
+  }
+  Serial.print("\n\n");
+  Serial.flush();
+}
+
 SCHEMO_JOB(__schemo_job_1,__schemo_task_5)
 {
   Serial.begin(115200);
@@ -61,13 +89,37 @@ SCHEMO_JOB(__schemo_job_1,__schemo_task_5)
     SCHEMO_WHILE(__schemo_task_8, __schemo_task_9, (Serial.available() < 1))SCHEMO_LOOPBACK(__schemo_task_8, __schemo_task_9)
     digitalWrite(led2, LOW);
     
-    Serial.readBytesUntil('\n', buf, 100);
+    int nbytes = Serial.readBytesUntil('\n', buf, 100);
+    Serial.print("$ Received line:\n");
+    buf[nbytes] = '\n';
+    buf[nbytes+1] = '\0';
+    Serial.print(buf);
+    Serial.flush();
+    
     fbcp::COMMAND_LINE q_cmd, a_cmd;
-    if (!fbcp::parseCommand(buf, q_cmd) or !fbcp::common::handleRequest(q_cmd, a_cmd))
+    bool valid = fbcp::parseCommand(buf, q_cmd);
+    Serial.print("$ ");
+    if (valid)
     {
+      Serial.print("Understood");
+    }
+    else
+    {
+      Serial.print("Not understood");
+    }
+    Serial.print("\n\n");
+    if (!valid or !fbcp::common::handleRequest(q_cmd, a_cmd))
+    {
+      Serial.print("$ Not handled\n\n");
       fbcp::common::handleNotFound(buf, a_cmd);
     }
+    
+    debugCommand(q_cmd);
+
+    Serial.print("$ Response:\n");
     Serial.print(fbcp::writeCommand(a_cmd).c_str());
+    Serial.print("\n");
+    Serial.flush();
   SCHEMO_LOOPBACK(__schemo_task_6, __schemo_task_7)
 }
 

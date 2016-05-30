@@ -42,7 +42,8 @@ char buf[100];
     @WHILE(Serial.available() < 1) {}
     digitalWrite(led2, LOW);
     
-    Serial.readBytesUntil('\n', buf, 100);
+    int nbytes = Serial.readBytesUntil('\n', buf, 100);
+    buf[nbytes] = '\n';
     fbcp::COMMAND_LINE q_cmd, a_cmd;
     if (!fbcp::parseCommand(buf, q_cmd) or !fbcp::common::handleRequest(q_cmd, a_cmd))
     {
