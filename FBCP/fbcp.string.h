@@ -44,6 +44,7 @@ namespace fbcp
       size_t find (const string&, size_t pos = 0) const;
       size_t find (const char*  , size_t pos = 0) const;
       string substr (size_t pos = 0, size_t len = npos) const;
+      bool startsWith (const string&, const string& separators = "", bool useSeparator = false) const;
       
       static const size_t npos = -1;
       

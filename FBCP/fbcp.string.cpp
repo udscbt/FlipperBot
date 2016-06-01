@@ -175,20 +175,22 @@ namespace fbcp
 
   size_t string::find (const string& str, size_t pos) const
   {
-    return find(str.buf, pos);
-  }
-
-  size_t string::find (const char* c_str, size_t pos) const
-  {
-    while (pos < str_size)
+  	while (true)
     {
-      for (; buf[pos] && buf[pos] != *c_str; ++pos);
-      char *p1;
-      const char *p2;
-      for (p1 = &buf[pos], p2 = c_str; *p1 && *p2 && *p1 == *p2; ++p1, ++p2);
-      if (!(*p2)) return pos;
+      for (; pos < length() && buf[pos] != str[0]; ++pos);
+      if (pos >= length()) break;
+      int i, j;
+      for (i = pos, j = 0; i < length() && j < str.length() && buf[i] == str[j]; ++i, ++j);
+      if (j == str.length()) return pos;
+      else ++pos;
     }
     return npos;
+  }
+  
+  size_t string::find (const char* c_str, size_t pos) const
+  {
+  	string str(c_str);
+  	return find(str, pos);
   }
 
   string string::substr (size_t pos, size_t len) const
@@ -203,6 +205,26 @@ namespace fbcp
     }
     
     return str;
+  }
+  
+  bool string::startsWith (const string& other, const string& separators, bool useSeparator) const
+  {
+  	if (other.length() > length()) return false;
+  
+    int i;
+    for (i = 0; i < length() && i < other.length() && buf[i] == other[i]; ++i);
+
+    if (i != other.length()) return false;
+		else if (useSeparator)
+		{
+			int j;
+			for (j = 0; j < separators.length(); j++)
+			{
+				if (buf[i] == separators[j]) return true;
+			}
+			return false;
+		}
+		else return true;
   }
   /* END CLASS STRING */
 

@@ -57,20 +57,11 @@ bool fbcp::parseCommand(const fbcp::string& line, COMMAND_LINE& result)
   return true;
 }
 
-bool startsWith(const fbcp::string big, const fbcp::string small)
-{
-  fbcp::string::const_iterator it1, it2;
-  for (it1 = big.begin(), it2 = small.begin(); it1 != big.end() && it2 != small.end() && *it1 == *it2; ++it1, ++it2);
-  if (it2 == small.end() && (*it1 == ' ' || *it1 == '\n'))
-    return true;
-  return false;
-}
-
 fbcp::COMMAND* fbcp::findQCommand(const fbcp::string& line)
 {
   for (int i=0; i < sizeof(Q_COMMANDS)/sizeof(COMMAND*); i++)
   {
-    if (startsWith(line, Q_COMMANDS[i]->id))
+    if (line.startsWith(Q_COMMANDS[i]->id, " \n", true))
       return Q_COMMANDS[i];
   }
   return NULL_COMMAND;
@@ -80,7 +71,7 @@ fbcp::COMMAND* fbcp::findACommand(const fbcp::string& line)
 {
   for (int i=0; i < sizeof(A_COMMANDS)/sizeof(COMMAND*); i++)
   {
-    if (startsWith(line, A_COMMANDS[i]->id))
+    if (line.startsWith(A_COMMANDS[i]->id, " \n", true))
       return A_COMMANDS[i];
   }
   return NULL_COMMAND;
