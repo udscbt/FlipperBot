@@ -68,7 +68,7 @@ for arg in sys.argv[1:]:
   output1 = output1 + "  extern PARAM* STD_PARAMS[%d];\n" % len(PARAMS)
   output2 = output2 + "  PARAM* STD_PARAMS[] = {\n    &" + ",\n    &".join(PARAMS) + "\n  };\n"
 
-  f = open("fbcp.template.command.h", "r")
+  f = open("templates/fbcp.template.command.h", "r")
   before = f.read()
   f.close()
   name1 = arg.split("/")[-1]
@@ -78,7 +78,7 @@ for arg in sys.argv[1:]:
   f.write(before % (name, name, output1, name))
   f.close()
   
-  f = open("fbcp.template.command.cpp", "r")
+  f = open("templates/fbcp.template.command.cpp", "r")
   before = f.read()
   f.close()
   name2 = name1.replace(ext_out1, ext_out2)
