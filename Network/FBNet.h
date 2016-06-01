@@ -1,8 +1,28 @@
-#include <ESP8266WiFi.h>
+#ifndef FBNET_H
+#define FBNET_H
 
-namespace FlipperBot
+#include "fbcp.h"
+
+namespace FBNet
 {
-  bool net_find(const char* pattern, char* ssid);
-  bool net_connect(const char* ssid);
-  WiFiClient host_connect(const char* host, int port);
+  const char BOARD_PREFIX[] = "FlipperBot-Board-";
+  const char ROBOT_PREFIX[] = "FlipperBot-Robot-";
+
+  class Network
+  {
+    public:
+      Network ();
+      ~Network ();
+      bool start (const char*);
+      bool tryConnect (const char*);
+      const fbcp::string& getSSID () const;
+      bool isConnected () const;
+    private:
+      fbcp::string SSID;
+      bool connected;
+  };
+  
+  void manage ();
 }
+
+#endif // FBNET_H
