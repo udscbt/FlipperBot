@@ -5,6 +5,7 @@ do
   mkdir Projects/$i
   cd Projects/$i
   cp ../../ProjectTemplate/Makefile .
+  cp ../../ProjectTemplate/schemop .
   mkdir lib
   mkdir build
   mkdir src
