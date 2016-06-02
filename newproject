@@ -4,12 +4,8 @@ for i in $@
 do
   mkdir Projects/$i
   cd Projects/$i
-  cp ../../ProjectTemplate/Makefile .
-  cp ../../ProjectTemplate/schemop .
-  mkdir lib
-  mkdir build
-  mkdir src
-  mkdir include
-  touch src/main.ino
+  cp -R ../ProjectTemplate/* .
+  rm Makefile
+  ln -s ../ProjectTemplate/Makefile Makefile
   cd ../..
 done

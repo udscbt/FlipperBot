@@ -11,7 +11,7 @@ INO:=$(wildcard src/*.ino)
 INO:=$(notdir $(INO))
 INO:=$(patsubst %.ino,%,$(INO))
 
-LIBS=FBCP Scheduler
+LIBS=FBCP Scheduler Network
 
 default:
 	@echo "Specify target"
@@ -43,5 +43,5 @@ $(LIBS):
 clean:
 	-rm $(INC_DIR)/*
 	-rm $(LIB_DIR)/*
-	-rm $(BUILD_DIR)/*
+	-rm -R $(BUILD_DIR)/*
 	-rm -R $(INO)
