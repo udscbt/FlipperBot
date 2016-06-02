@@ -35,9 +35,9 @@ include: $(LIBS)
 src: $(LIBS)
 
 $(LIBS):
-	$(MAKE) -C ../$@ Makefile lib
-	cp ../$@/*.h $(INC_DIR)
-	cp ../$@/*.cpp $(LIB_DIR)
+	$(MAKE) -C ../../$@ Makefile lib
+	cp ../../$@/*.h $(INC_DIR)
+	cp ../../$@/*.cpp $(LIB_DIR)
 	-rm $(LIB_DIR)/main.cpp
 
 clean:
