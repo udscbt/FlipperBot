@@ -7,6 +7,9 @@ namespace fbcp
 {
   extern const fbcp::string SERIAL;
   
+  const char BOARD_PREFIX[] = "FlipperBot-Board-";
+  const char ROBOT_PREFIX[] = "FlipperBot-Robot-";
+  
   bool parseCommand(const fbcp::string& line, COMMAND_LINE& result);
   fbcp::string  writeCommand(COMMAND_LINE& cmd);
   COMMAND* findQCommand(const fbcp::string& line);
