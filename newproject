@@ -1,0 +1,14 @@
+#!/bin/bash
+
+for i in $@
+do
+  mkdir $i
+  cd $i
+  cp ../TestDir/Makefile .
+  mkdir lib
+  mkdir build
+  mkdir src
+  mkdir include
+  touch src/main.ino
+  cd ..
+done

@@ -11,7 +11,10 @@ INO:=$(wildcard src/*.ino)
 INO:=$(notdir $(INO))
 INO:=$(patsubst %.ino,%,$(INO))
 
-LIBS=FBCP Scheduler Network
+LIBS=FBCP Scheduler
+
+default:
+	@echo "Specify target"
 
 compile: include src
 	$(MAKE) common WHAT=--verify
@@ -24,7 +27,7 @@ common:
 	cp $(SRC_DIR)/* $(INO)
 	cp $(LIB_DIR)/* $(INO)
 	cp $(INC_DIR)/* $(INO)
-	./schemop -sq -f "" $(INO)/$(INO).ino
+	./schemop -sq -f "" $(INO)/*
 	$(COMMAND) $(WHAT); rm -R $(INO)
 
 include: $(LIBS)
