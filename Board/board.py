@@ -137,37 +137,42 @@ def show(digit, value, dot=False):
 
 totems = {
   'DL' : {
-    'led' : 7,
+    'select' : 5,
     'hit' : 8
   },
   'DR' : {
-    'led' : 15,
+    'select' : 15,
     'hit' : 16
   },
-  'C'  : {
-    'led' : 21,
+  'UR'  : {
+    'select' : 21,
     'hit' : 22
   },
   'UL' : {
-    'led' : 23,
+    'select' : 23,
     'hit' : 24
   },
-  'UR' : {
-    'led' : 3,
-    'hit' : 5
+  'C' : {
+    'select' : 3,
+    'hit' : 7
   }
 }
 
 for tot in totems.values():
-  gpio.setup(tot['led'], gpio.OUT, initial=gpio.LOW)
+  gpio.setup(tot['select'], gpio.OUT, initial=gpio.LOW)
   gpio.setup(tot['hit'], gpio.IN)
+
+# OTHER GPIOs
+everythingButton = 18
+gpio.setup(everythingButton, gpio.IN, pull_up_down=gpio.PUD_DOWN)
+speaker = 19
+gpio.setup(speaker, gpio.OUT)
 
 # GAME PARAMETERS
 deltat = 13
 mint   = 0.5
 blinkt = 5
 period = 0.25
-ledon  = False
 
 def test(text, i):
   for j in range(int(10/(4*i))):
@@ -188,7 +193,7 @@ def displayThread():
   while shownText is not None:
     show(0, shownText[0])
     sleep(dispt)
-    show(1, shownText[1], True)
+    show(1, shownText[1])
     sleep(dispt)
     show(2, shownText[2])
     sleep(dispt)
@@ -198,36 +203,54 @@ def displayThread():
     shownText = text
     textLock.release()
   show(0, " ")
-  print("displayThread stop")
+  print("displayThread stopped")
 
 points = 0
+
+anim_deltat = 0.1
+anim_duration = 2
+
+totemList = [totems['DL'], totems['C'], totems['DR']]
+
+stopped = False
 
 def gameThread():
   global text
   global textLock
-  global ledon
   global points
+  global totemList
+  global stopped
+  global paused
   points = 0
   lose = False
-  while points is not None:
-    for tot in [totems['DL']]:#totems.values():
+  while not stopped:
+    for tot in totemList:#totems.values():
+      selectOn = False
       blink = False
-      gpio.output(tot['led'], gpio.HIGH)
+      gpio.output(tot['select'], gpio.HIGH)
       last = time()
       lasthit = last
+      missing = deltat
       while True:
+        sleep(0.01)
         now = time()
         missing = deltat+last-now
         textLock.acquire()
         text = [points/10, points%10, int(missing)/10, int(missing)%10]
         textLock.release()
+        while paused and not stopped:
+          pass
+        now = time()
+        last = now+missing-deltat
+        if stopped:
+          break
         if not blink and missing < blinkt:
           blink = True
           lastblink = now
         if blink and now - lastblink > period:
-          ledon = not ledon
+          selectOn = not selectOn
           lastblink = now
-          gpio.output(tot['led'], ledon)
+          gpio.output(tot['select'], selectOn)
         if gpio.input(tot['hit']):
           if now-lasthit >= mint:
             points = points + 1
@@ -240,29 +263,31 @@ def gameThread():
             textLock.acquire()
             text = "._-^"
             textLock.release()
-            sleep(0.2)
+            sleep(anim_deltat)
             textLock.acquire()
             text = "_._-"
             textLock.release()
-            sleep(0.2)
+            sleep(anim_deltat)
             textLock.acquire()
             text = "-_._"
             textLock.release()
-            sleep(0.2)
+            sleep(anim_deltat)
             textLock.acquire()
             text = "^-_."
             textLock.release()
-            sleep(0.2)
+            sleep(anim_deltat)
             textLock.acquire()
             text = "-^-_"
             textLock.release()
-            sleep(0.2)
+            sleep(anim_deltat)
             textLock.acquire()
             text = "_-^-"
             textLock.release()
-            sleep(0.2)
+            sleep(anim_deltat)
           break
-      gpio.output(tot['led'], gpio.LOW)
+      gpio.output(tot['select'], gpio.LOW)
+      if stopped:
+        break
       if lose:
         points = 0
         lose = False
@@ -270,14 +295,50 @@ def gameThread():
   textLock.acquire()
   text = None
   textLock.release()
-  print("gameThread stop")
+  print("gameThread stopped")
+
+paused = True
+
+def pauseThread():
+  global paused
+  global stopped
+  pressed = False
+  resuming = False
+  while not stopped:
+    if not pressed and gpio.input(everythingButton):
+      if paused:
+        resuming = True
+      else:
+        paused = True
+        resuming = False
+    if resuming and not gpio.input(everythingButton):
+      paused = False
+      resuming = False
+    
+    if gpio.input(everythingButton):
+      pressed = True
+    else:
+      pressed = False
+    sleep(0.05)
+  print("pauseThread stopped")
 
 t1 = None
 t2 = None
+t3 = None
 def start():
   global t1
   global t2
+  global t3
   t1 = Thread(target=displayThread)
   t2 = Thread(target=gameThread)
+  t3 = Thread(target=pauseThread)
   t1.start()
   t2.start()
+  t3.start()
+
+def stop():
+  global stopped
+  stopped = True
+  gpio.cleanup()
+
+start()
