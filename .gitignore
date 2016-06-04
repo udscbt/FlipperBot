@@ -2,3 +2,4 @@
 **/*.a
 **/*.pyc
 **/__pycache__
+RPi
