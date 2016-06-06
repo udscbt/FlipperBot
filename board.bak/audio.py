@@ -11,10 +11,12 @@ class Audio:
   START = join(audio_root, "songs", "start.ogg")
   
   def __init__(self):
-    call(["amixer", "set", "PCM", "100%"])
+    return
+    call(["amixer", "set", "100%"])
     self.pid = None
   
   def start(self, song):
+    return
     self.stop()
     self.log = open(join(audio_root, "{:d}.log".format(int(time()))), "w")
     proc = Popen(["ogg123", song], shell=False, stdout=self.log, stderr=self.log)

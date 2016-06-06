@@ -77,7 +77,7 @@ class Display (Thread):
     'd' : "bcdeg",
     'E' : "adefg",
     'e' : "abgdef",
-    'F' : "aefg",
+    'F' : "adef",
     'H' : "bcefg",
     'h' : "cefg",
     'I' : "bc",
@@ -181,10 +181,13 @@ class Display (Thread):
             self.tIndex = self.tIndex+1
             self.animT = time()
             self.textLock.release()
+        s = ""
         for d in range(4):
           index = (d+tIndex)%len(text)
           self._show(d, text[index], dots[index])
           sleep(0.25/self.updateF)
+          s = s + text[index]
+        print(s)
       else:
         values = self._get_values()
         if values is not None:

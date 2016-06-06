@@ -16,7 +16,7 @@ class Game (Thread):
   blinkT  = 5    # Missing time when totem starts blinking
   blinkF  = 4    # Totem blinking frequency
   cycleT  = 0.01 # Time between cycles
-  updateF = 80   # Update frequency of display
+  updateF = 60   # Update frequency of display
   scrollF = 2    # Scroll frequency of display
   
   # MODES
