@@ -8,5 +8,5 @@ from . import audio
 from .game import Game
 from .totems import totems
 
-g = Game(totems.values())
+g = Game(list(totems.values()))
 g.start()

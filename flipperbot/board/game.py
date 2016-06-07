@@ -2,7 +2,10 @@ from .shared import text, textLock, gpio, Thread, sleep, time
 from .totems import totems
 from .display import Display
 from .everythingButton import EverythingButton
-from .audio import Audio
+from .audio import Audio, SoundEffect
+
+LED1 = 26
+LED2 = 29
 
 from math import ceil
 
@@ -66,7 +69,8 @@ class Game (Thread):
     self.totem = self.totemList[self.totIndex%len(self.totemList)]
     self.totIndex = self.totIndex+1
   
-  def run(self):    
+  def run(self):
+   
     while not self._stopped:
       self.totIndex = 0
       self._nextTotem()
@@ -82,9 +86,11 @@ class Game (Thread):
         break
       
       s = time()
-      self.audio.start(self.audio.START)
-      while time() - s < 4:
-        self.display.show("._-^-_")
+      sound = SoundEffect(self.audio.START)
+      self.audio.stop()
+      self.display(show("._-^-_")
+      sound.start()
+      sound.wait()
       
       self.audio.start(self.audio.GAME)
       
