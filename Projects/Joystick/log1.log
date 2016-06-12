@@ -1,0 +1,312 @@
+make -C ../../FBCP Makefile lib
+make[1]: Entering directory '/data/uni/terzo_anno/secondo_semestre/progetto/Software/git/FBCP'
+make[1]: Nothing to be done for 'Makefile'.
+make[1]: Nothing to be done for 'lib'.
+make[1]: Leaving directory '/data/uni/terzo_anno/secondo_semestre/progetto/Software/git/FBCP'
+cp ../../FBCP/*.h include
+cp ../../FBCP/*.cpp lib
+rm lib/main.cpp
+make -C ../../Scheduler Makefile lib
+make[1]: Entering directory '/data/uni/terzo_anno/secondo_semestre/progetto/Software/git/Scheduler'
+make[1]: Nothing to be done for 'Makefile'.
+make[1]: Nothing to be done for 'lib'.
+make[1]: Leaving directory '/data/uni/terzo_anno/secondo_semestre/progetto/Software/git/Scheduler'
+cp ../../Scheduler/*.h include
+cp ../../Scheduler/*.cpp lib
+rm lib/main.cpp
+make -C ../../Network Makefile lib
+make[1]: Entering directory '/data/uni/terzo_anno/secondo_semestre/progetto/Software/git/Network'
+make[1]: Nothing to be done for 'Makefile'.
+make -C ../FBCP/ lib
+make[2]: Entering directory '/data/uni/terzo_anno/secondo_semestre/progetto/Software/git/FBCP'
+make[2]: Nothing to be done for 'lib'.
+make[2]: Leaving directory '/data/uni/terzo_anno/secondo_semestre/progetto/Software/git/FBCP'
+g++ -c -o FBNet.o -I include -I ../FBCP/include FBNet.cpp
+ar r lib/libfbnet.a FBNet.o
+make[1]: Leaving directory '/data/uni/terzo_anno/secondo_semestre/progetto/Software/git/Network'
+cp ../../Network/*.h include
+cp ../../Network/*.cpp lib
+rm lib/main.cpp
+make common WHAT=--verify
+make[1]: Entering directory '/data/uni/terzo_anno/secondo_semestre/progetto/Software/git/Projects/Joystick'
+rm -R main
+mkdir main
+cp src/* main
+cp lib/* main
+cp include/* main
+./schemop -sq -f "" main/*
+Missing condition in @WHILE statement
+Assuming '(true)'
+Continuing...
+Missing condition in @WHILE statement
+Assuming '(true)'
+Continuing...
+/data/arduino-1.6.5-r5-linux/arduino --board esp8266:esp8266:generic --port /dev/ttyUSB0 --verbose-build --verbose-upload --preserve-temp-files --pref build.path=build main/main.ino --verify; #rm -R main
+Picked up JAVA_TOOL_OPTIONS: 
+Loading configuration...
+Initializing packages...
+Preparing boards...
+Verifying...
+Using library ESP8266WiFi in folder: /root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/libraries/ESP8266WiFi 
+
+/root/.arduino15/packages/esp8266/tools/xtensa-lx106-elf-gcc/1.20.0-26-gb404fb9-2/bin/xtensa-lx106-elf-g++ -D__ets__ -DICACHE_FLASH -U__STRICT_ANSI__ -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/tools/sdk/include -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/tools/sdk/lwip/include -c -w -Os -g -mlongcalls -mtext-section-literals -fno-exceptions -fno-rtti -falign-functions=4 -std=c++11 -MMD -ffunction-sections -fdata-sections -DF_CPU=80000000L -DARDUINO=10605 -DARDUINO_ESP8266_ESP01 -DARDUINO_ARCH_ESP8266 -DESP8266 -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/cores/esp8266 -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/variants/generic -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/libraries/ESP8266WiFi/src /home/fabio/progetto/Software/git/Projects/Joystick/build/fbcp.command.cpp -o /home/fabio/progetto/Software/git/Projects/Joystick/build/fbcp.command.cpp.o 
+/root/.arduino15/packages/esp8266/tools/xtensa-lx106-elf-gcc/1.20.0-26-gb404fb9-2/bin/xtensa-lx106-elf-g++ -D__ets__ -DICACHE_FLASH -U__STRICT_ANSI__ -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/tools/sdk/include -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/tools/sdk/lwip/include -c -w -Os -g -mlongcalls -mtext-section-literals -fno-exceptions -fno-rtti -falign-functions=4 -std=c++11 -MMD -ffunction-sections -fdata-sections -DF_CPU=80000000L -DARDUINO=10605 -DARDUINO_ESP8266_ESP01 -DARDUINO_ARCH_ESP8266 -DESP8266 -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/cores/esp8266 -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/variants/generic -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/libraries/ESP8266WiFi/src /home/fabio/progetto/Software/git/Projects/Joystick/build/fbcp.common.cpp -o /home/fabio/progetto/Software/git/Projects/Joystick/build/fbcp.common.cpp.o 
+/root/.arduino15/packages/esp8266/tools/xtensa-lx106-elf-gcc/1.20.0-26-gb404fb9-2/bin/xtensa-lx106-elf-g++ -D__ets__ -DICACHE_FLASH -U__STRICT_ANSI__ -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/tools/sdk/include -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/tools/sdk/lwip/include -c -w -Os -g -mlongcalls -mtext-section-literals -fno-exceptions -fno-rtti -falign-functions=4 -std=c++11 -MMD -ffunction-sections -fdata-sections -DF_CPU=80000000L -DARDUINO=10605 -DARDUINO_ESP8266_ESP01 -DARDUINO_ARCH_ESP8266 -DESP8266 -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/cores/esp8266 -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/variants/generic -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/libraries/ESP8266WiFi/src /home/fabio/progetto/Software/git/Projects/Joystick/build/fbcp.cpp -o /home/fabio/progetto/Software/git/Projects/Joystick/build/fbcp.cpp.o 
+/root/.arduino15/packages/esp8266/tools/xtensa-lx106-elf-gcc/1.20.0-26-gb404fb9-2/bin/xtensa-lx106-elf-g++ -D__ets__ -DICACHE_FLASH -U__STRICT_ANSI__ -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/tools/sdk/include -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/tools/sdk/lwip/include -c -w -Os -g -mlongcalls -mtext-section-literals -fno-exceptions -fno-rtti -falign-functions=4 -std=c++11 -MMD -ffunction-sections -fdata-sections -DF_CPU=80000000L -DARDUINO=10605 -DARDUINO_ESP8266_ESP01 -DARDUINO_ARCH_ESP8266 -DESP8266 -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/cores/esp8266 -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/variants/generic -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/libraries/ESP8266WiFi/src /home/fabio/progetto/Software/git/Projects/Joystick/build/fbcp.string.cpp -o /home/fabio/progetto/Software/git/Projects/Joystick/build/fbcp.string.cpp.o 
+/home/fabio/progetto/Software/git/Projects/Joystick/build/fbcp.string.cpp: In member function 'size_t fbcp::string::find(const fbcp::string&, size_t) const':
+/home/fabio/progetto/Software/git/Projects/Joystick/build/fbcp.string.cpp:140:15: note: candidate 1: const char& fbcp::string::operator[](size_t) const
+   const char& string::operator[] (size_t pos) const
+               ^
+/home/fabio/progetto/Software/git/Projects/Joystick/build/fbcp.string.cpp:217:49: note: candidate 2: operator[](const char*, int) <built-in>
+       for (; pos < length() && buf[pos] != str[0]; ++pos);
+                                                 ^
+/home/fabio/progetto/Software/git/Projects/Joystick/build/fbcp.string.cpp:140:15: note: candidate 1: const char& fbcp::string::operator[](size_t) const
+   const char& string::operator[] (size_t pos) const
+               ^
+/home/fabio/progetto/Software/git/Projects/Joystick/build/fbcp.string.cpp:217:49: note: candidate 2: operator[](const char*, int) <built-in>
+       for (; pos < length() && buf[pos] != str[0]; ++pos);
+                                                 ^
+/home/fabio/progetto/Software/git/Projects/Joystick/build/fbcp.string.cpp:140:15: note: candidate 1: const char& fbcp::string::operator[](size_t) const
+   const char& string::operator[] (size_t pos) const
+               ^
+/home/fabio/progetto/Software/git/Projects/Joystick/build/fbcp.string.cpp:220:79: note: candidate 2: operator[](const char*, int) <built-in>
+       for (i = pos, j = 0; i < length() && j < str.length() && buf[i] == str[j]; ++i, ++j);
+                                                                               ^
+/home/fabio/progetto/Software/git/Projects/Joystick/build/fbcp.string.cpp:140:15: note: candidate 1: const char& fbcp::string::operator[](size_t) const
+   const char& string::operator[] (size_t pos) const
+               ^
+/home/fabio/progetto/Software/git/Projects/Joystick/build/fbcp.string.cpp:220:79: note: candidate 2: operator[](const char*, int) <built-in>
+       for (i = pos, j = 0; i < length() && j < str.length() && buf[i] == str[j]; ++i, ++j);
+                                                                               ^
+/home/fabio/progetto/Software/git/Projects/Joystick/build/fbcp.string.cpp: In member function 'bool fbcp::string::startsWith(const fbcp::string&, const fbcp::string&, bool) const':
+/home/fabio/progetto/Software/git/Projects/Joystick/build/fbcp.string.cpp:140:15: note: candidate 1: const char& fbcp::string::operator[](size_t) const
+   const char& string::operator[] (size_t pos) const
+               ^
+/home/fabio/progetto/Software/git/Projects/Joystick/build/fbcp.string.cpp:252:72: note: candidate 2: operator[](const char*, int) <built-in>
+     for (i = 0; i < length() && i < other.length() && buf[i] == other[i]; ++i);
+                                                                        ^
+/home/fabio/progetto/Software/git/Projects/Joystick/build/fbcp.string.cpp:140:15: note: candidate 1: const char& fbcp::string::operator[](size_t) const
+   const char& string::operator[] (size_t pos) const
+               ^
+/home/fabio/progetto/Software/git/Projects/Joystick/build/fbcp.string.cpp:252:72: note: candidate 2: operator[](const char*, int) <built-in>
+     for (i = 0; i < length() && i < other.length() && buf[i] == other[i]; ++i);
+                                                                        ^
+/home/fabio/progetto/Software/git/Projects/Joystick/build/fbcp.string.cpp:140:15: note: candidate 1: const char& fbcp::string::operator[](size_t) const
+   const char& string::operator[] (size_t pos) const
+               ^
+/home/fabio/progetto/Software/git/Projects/Joystick/build/fbcp.string.cpp:260:35: note: candidate 2: operator[](const char*, int) <built-in>
+         if (buf[i] == separators[j]) return true;
+                                   ^
+/home/fabio/progetto/Software/git/Projects/Joystick/build/fbcp.string.cpp:140:15: note: candidate 1: const char& fbcp::string::operator[](size_t) const
+   const char& string::operator[] (size_t pos) const
+               ^
+/home/fabio/progetto/Software/git/Projects/Joystick/build/fbcp.string.cpp:260:35: note: candidate 2: operator[](const char*, int) <built-in>
+         if (buf[i] == separators[j]) return true;
+                                   ^
+/root/.arduino15/packages/esp8266/tools/xtensa-lx106-elf-gcc/1.20.0-26-gb404fb9-2/bin/xtensa-lx106-elf-g++ -D__ets__ -DICACHE_FLASH -U__STRICT_ANSI__ -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/tools/sdk/include -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/tools/sdk/lwip/include -c -w -Os -g -mlongcalls -mtext-section-literals -fno-exceptions -fno-rtti -falign-functions=4 -std=c++11 -MMD -ffunction-sections -fdata-sections -DF_CPU=80000000L -DARDUINO=10605 -DARDUINO_ESP8266_ESP01 -DARDUINO_ARCH_ESP8266 -DESP8266 -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/cores/esp8266 -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/variants/generic -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/libraries/ESP8266WiFi/src /home/fabio/progetto/Software/git/Projects/Joystick/build/fbcp.types.cpp -o /home/fabio/progetto/Software/git/Projects/Joystick/build/fbcp.types.cpp.o 
+/root/.arduino15/packages/esp8266/tools/xtensa-lx106-elf-gcc/1.20.0-26-gb404fb9-2/bin/xtensa-lx106-elf-g++ -D__ets__ -DICACHE_FLASH -U__STRICT_ANSI__ -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/tools/sdk/include -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/tools/sdk/lwip/include -c -w -Os -g -mlongcalls -mtext-section-literals -fno-exceptions -fno-rtti -falign-functions=4 -std=c++11 -MMD -ffunction-sections -fdata-sections -DF_CPU=80000000L -DARDUINO=10605 -DARDUINO_ESP8266_ESP01 -DARDUINO_ARCH_ESP8266 -DESP8266 -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/cores/esp8266 -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/variants/generic -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/libraries/ESP8266WiFi/src /home/fabio/progetto/Software/git/Projects/Joystick/build/FBNet.cpp -o /home/fabio/progetto/Software/git/Projects/Joystick/build/FBNet.cpp.o 
+/root/.arduino15/packages/esp8266/tools/xtensa-lx106-elf-gcc/1.20.0-26-gb404fb9-2/bin/xtensa-lx106-elf-g++ -D__ets__ -DICACHE_FLASH -U__STRICT_ANSI__ -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/tools/sdk/include -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/tools/sdk/lwip/include -c -w -Os -g -mlongcalls -mtext-section-literals -fno-exceptions -fno-rtti -falign-functions=4 -std=c++11 -MMD -ffunction-sections -fdata-sections -DF_CPU=80000000L -DARDUINO=10605 -DARDUINO_ESP8266_ESP01 -DARDUINO_ARCH_ESP8266 -DESP8266 -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/cores/esp8266 -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/variants/generic -I/root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/libraries/ESP8266WiFi/src /home/fabio/progetto/Software/git/Projects/Joystick/build/main.cpp -o /home/fabio/progetto/Software/git/Projects/Joystick/build/main.cpp.o 
+main.ino:79:19: error: expected constructor, destructor, or type conversion before '(' token
+In file included from main.ino:14:0:
+main.ino:80:21: error: 'readCommand_handle' was not declared in this scope
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:25:46: note: in definition of macro 'SCHEMO_JOIN_STRINGS_'
+ #define SCHEMO_JOIN_STRINGS_(prefix, suffix) prefix ## suffix
+                                              ^
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:27:34: note: in expansion of macro 'SCHEMO_JOIN_STRINGS'
+ #define SCHEMO_TASK_HANDLE(task) SCHEMO_JOIN_STRINGS(task, SCHEMO_TASK_HANDLE_SUFFIX)
+                                  ^
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:43:35: note: in expansion of macro 'SCHEMO_TASK_HANDLE'
+   schemo::TASK task = {.handle = &SCHEMO_TASK_HANDLE(task), .checkpoint = true};
+                                   ^
+main.ino:80:1: note: in expansion of macro 'SCHEMO_DECLARE_TASK'
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:114:72: error: array bound is not an integer constant before ']' token
+   std::stack<type> SCHEMO_PARAM_STACK(param, function)[schemo::NUM_JOBS];
+                                                                        ^
+main.ino:149:1: note: in expansion of macro 'SCHEMO_DECLARE_PARAM_STACK'
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:149:58: error: array bound is not an integer constant before ']' token
+   std::stack<type> SCHEMO_JVAR(var, fun)[schemo::NUM_JOBS];
+                                                          ^
+main.ino:150:1: note: in expansion of macro 'SCHEMO_DECLARE_FVAR'
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:104:66: error: array bound is not an integer constant before ']' token
+   std::stack<type> SCHEMO_RETURN_STACK(function)[schemo::NUM_JOBS];
+                                                                  ^
+main.ino:151:1: note: in expansion of macro 'SCHEMO_DECLARE_RETURN_STACK'
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:120:76: error: array bound is not an integer constant before ']' token
+   std::stack<schemo::TASK*> SCHEMO_GETBACK_STACK(function)[schemo::NUM_JOBS];
+                                                                            ^
+main.ino:152:1: note: in expansion of macro 'SCHEMO_DECLARE_GETBACK_STACK'
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:114:72: error: array bound is not an integer constant before ']' token
+   std::stack<type> SCHEMO_PARAM_STACK(param, function)[schemo::NUM_JOBS];
+                                                                        ^
+main.ino:153:1: note: in expansion of macro 'SCHEMO_DECLARE_PARAM_STACK'
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:114:72: error: array bound is not an integer constant before ']' token
+   std::stack<type> SCHEMO_PARAM_STACK(param, function)[schemo::NUM_JOBS];
+                                                                        ^
+main.ino:154:1: note: in expansion of macro 'SCHEMO_DECLARE_PARAM_STACK'
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:114:72: error: array bound is not an integer constant before ']' token
+   std::stack<type> SCHEMO_PARAM_STACK(param, function)[schemo::NUM_JOBS];
+                                                                        ^
+main.ino:155:1: note: in expansion of macro 'SCHEMO_DECLARE_PARAM_STACK'
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:104:66: error: array bound is not an integer constant before ']' token
+   std::stack<type> SCHEMO_RETURN_STACK(function)[schemo::NUM_JOBS];
+                                                                  ^
+main.ino:156:1: note: in expansion of macro 'SCHEMO_DECLARE_RETURN_STACK'
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:120:76: error: array bound is not an integer constant before ']' token
+   std::stack<schemo::TASK*> SCHEMO_GETBACK_STACK(function)[schemo::NUM_JOBS];
+                                                                            ^
+main.ino:157:1: note: in expansion of macro 'SCHEMO_DECLARE_GETBACK_STACK'
+main.ino: In function 'void readCommand_handle()':
+main.ino:174:27: error: 'readCommand_return_stack' was not declared in this scope
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:101:3: note: in definition of macro 'SCHEMO_RETURN_STACK'
+   function ## _return_stack
+   ^
+main.ino:174:5: note: in expansion of macro 'SCHEMO_GETBACK'
+main.ino:174:27: error: 'readCommand_getback_stack' was not declared in this scope
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:117:3: note: in definition of macro 'SCHEMO_GETBACK_STACK'
+   function ## _getback_stack
+   ^
+main.ino:174:5: note: in expansion of macro 'SCHEMO_GETBACK'
+main.ino:175:26: error: 'readCommand_param_sock_stack' was not declared in this scope
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:107:3: note: in definition of macro 'SCHEMO_PARAM_STACK'
+   function ## _param_ ## param ## _stack
+   ^
+main.ino:175:1: note: in expansion of macro 'SCHEMO_DELETE_PARAM'
+main.ino:176:25: error: 'readCommand_param_cmd_stack' was not declared in this scope
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:107:3: note: in definition of macro 'SCHEMO_PARAM_STACK'
+   function ## _param_ ## param ## _stack
+   ^
+main.ino:176:1: note: in expansion of macro 'SCHEMO_DELETE_PARAM'
+main.ino:177:29: error: 'readCommand_param_timeout_stack' was not declared in this scope
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:107:3: note: in definition of macro 'SCHEMO_PARAM_STACK'
+   function ## _param_ ## param ## _stack
+   ^
+main.ino:177:1: note: in expansion of macro 'SCHEMO_DELETE_PARAM'
+main.ino: In function 'void wait_handle()':
+main.ino:186:24: error: 'wait_var_t0' was not declared in this scope
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:60:31: note: in definition of macro 'SCHEMO_JVAR'
+ #define SCHEMO_JVAR(var, job) job##_var_##var
+                               ^
+main.ino:186:3: note: in expansion of macro 'SCHEMO_INIT_FVAR'
+main.ino: In function 'void __schemo_task_0_handle()':
+main.ino:189:78: error: 'wait_var_t0' was not declared in this scope
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:86:11: note: in definition of macro 'SCHEMO_WHILE'
+     if (! condition) \
+           ^
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:152:3: note: in expansion of macro 'SCHEMO_JVAR'
+   SCHEMO_JVAR(var, fun)[schemo::current_job->job->id].top()
+   ^
+main.ino:189:62: note: in expansion of macro 'SCHEMO_FVAR'
+main.ino:189:103: error: 'wait_param_dt_stack' was not declared in this scope
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:86:11: note: in definition of macro 'SCHEMO_WHILE'
+     if (! condition) \
+           ^
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:110:3: note: in expansion of macro 'SCHEMO_PARAM_STACK'
+   SCHEMO_PARAM_STACK(param, function)[schemo::current_job->job->id].top()
+   ^
+main.ino:189:86: note: in expansion of macro 'SCHEMO_PARAM'
+main.ino: In function 'void __schemo_task_1_handle()':
+main.ino:192:21: error: 'wait_return_stack' was not declared in this scope
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:101:3: note: in definition of macro 'SCHEMO_RETURN_STACK'
+   function ## _return_stack
+   ^
+main.ino:192:3: note: in expansion of macro 'SCHEMO_GETBACK'
+main.ino:192:21: error: 'wait_getback_stack' was not declared in this scope
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:117:3: note: in definition of macro 'SCHEMO_GETBACK_STACK'
+   function ## _getback_stack
+   ^
+main.ino:192:3: note: in expansion of macro 'SCHEMO_GETBACK'
+main.ino:193:24: error: 'wait_param_dt_stack' was not declared in this scope
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:107:3: note: in definition of macro 'SCHEMO_PARAM_STACK'
+   function ## _param_ ## param ## _stack
+   ^
+main.ino:193:1: note: in expansion of macro 'SCHEMO_DELETE_PARAM'
+main.ino:194:23: error: 'wait_var_t0' was not declared in this scope
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:60:31: note: in definition of macro 'SCHEMO_JVAR'
+ #define SCHEMO_JVAR(var, job) job##_var_##var
+                               ^
+main.ino:194:1: note: in expansion of macro 'SCHEMO_DELETE_FVAR'
+main.ino: In function 'void __schemo_task_9_handle()':
+main.ino:259:64: error: 'wait_param_dt_stack' was not declared in this scope
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:107:3: note: in definition of macro 'SCHEMO_PARAM_STACK'
+   function ## _param_ ## param ## _stack
+   ^
+main.ino:259:43: note: in expansion of macro 'SCHEMO_PUSH_PARAM'
+main.ino:260:19: error: 'wait_getback_stack' was not declared in this scope
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:117:3: note: in definition of macro 'SCHEMO_GETBACK_STACK'
+   function ## _getback_stack
+   ^
+main.ino:260:1: note: in expansion of macro 'SCHEMO_CALL'
+main.ino: In function 'void __schemo_task_40_handle()':
+main.ino:260:19: error: 'wait_return_stack' was not declared in this scope
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:101:3: note: in definition of macro 'SCHEMO_RETURN_STACK'
+   function ## _return_stack
+   ^
+main.ino:260:1: note: in expansion of macro 'SCHEMO_CALL'
+main.ino: In function 'void __schemo_task_24_handle()':
+main.ino:329:40: error: 'readCommand_param_sock_stack' was not declared in this scope
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:107:3: note: in definition of macro 'SCHEMO_PARAM_STACK'
+   function ## _param_ ## param ## _stack
+   ^
+main.ino:329:17: note: in expansion of macro 'SCHEMO_PUSH_PARAM'
+main.ino:330:23: error: 'readCommand_param_cmd_stack' was not declared in this scope
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:107:3: note: in definition of macro 'SCHEMO_PARAM_STACK'
+   function ## _param_ ## param ## _stack
+   ^
+main.ino:330:1: note: in expansion of macro 'SCHEMO_PUSH_PARAM'
+main.ino:331:27: error: 'readCommand_param_timeout_stack' was not declared in this scope
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:107:3: note: in definition of macro 'SCHEMO_PARAM_STACK'
+   function ## _param_ ## param ## _stack
+   ^
+main.ino:331:1: note: in expansion of macro 'SCHEMO_PUSH_PARAM'
+main.ino:332:19: error: 'readCommand_getback_stack' was not declared in this scope
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:117:3: note: in definition of macro 'SCHEMO_GETBACK_STACK'
+   function ## _getback_stack
+   ^
+main.ino:332:1: note: in expansion of macro 'SCHEMO_CALL'
+main.ino: In function 'void __schemo_task_41_handle()':
+main.ino:332:19: error: 'readCommand_return_stack' was not declared in this scope
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:101:3: note: in definition of macro 'SCHEMO_RETURN_STACK'
+   function ## _return_stack
+   ^
+main.ino:332:1: note: in expansion of macro 'SCHEMO_CALL'
+main.ino: In function 'void __schemo_task_11_handle()':
+main.ino:385:30: error: 'wait_param_dt_stack' was not declared in this scope
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:107:3: note: in definition of macro 'SCHEMO_PARAM_STACK'
+   function ## _param_ ## param ## _stack
+   ^
+main.ino:385:9: note: in expansion of macro 'SCHEMO_PUSH_PARAM'
+main.ino:386:19: error: 'wait_getback_stack' was not declared in this scope
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:117:3: note: in definition of macro 'SCHEMO_GETBACK_STACK'
+   function ## _getback_stack
+   ^
+main.ino:386:1: note: in expansion of macro 'SCHEMO_CALL'
+main.ino: In function 'void __schemo_task_42_handle()':
+main.ino:386:19: error: 'wait_return_stack' was not declared in this scope
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:101:3: note: in definition of macro 'SCHEMO_RETURN_STACK'
+   function ## _return_stack
+   ^
+main.ino:386:1: note: in expansion of macro 'SCHEMO_CALL'
+main.ino: In function 'void __schemo_task_36_handle()':
+main.ino:509:28: error: 'wait_param_dt_stack' was not declared in this scope
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:107:3: note: in definition of macro 'SCHEMO_PARAM_STACK'
+   function ## _param_ ## param ## _stack
+   ^
+main.ino:509:7: note: in expansion of macro 'SCHEMO_PUSH_PARAM'
+main.ino:510:19: error: 'wait_getback_stack' was not declared in this scope
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:117:3: note: in definition of macro 'SCHEMO_GETBACK_STACK'
+   function ## _getback_stack
+   ^
+main.ino:510:1: note: in expansion of macro 'SCHEMO_CALL'
+main.ino: In function 'void __schemo_task_43_handle()':
+main.ino:510:19: error: 'wait_return_stack' was not declared in this scope
+/home/fabio/progetto/Software/git/Projects/Joystick/build/schemo.h:101:3: note: in definition of macro 'SCHEMO_RETURN_STACK'
+   function ## _return_stack
+   ^
+main.ino:510:1: note: in expansion of macro 'SCHEMO_CALL'
+expected constructor, destructor, or type conversion before '(' token
+
+Makefile:26: recipe for target 'common' failed
+make[1]: *** [common] Error 1
+make[1]: Leaving directory '/data/uni/terzo_anno/secondo_semestre/progetto/Software/git/Projects/Joystick'
+Makefile:20: recipe for target 'compile' failed
+make: *** [compile] Error 2

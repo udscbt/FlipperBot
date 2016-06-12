@@ -23,12 +23,13 @@ upload: include src
 	$(MAKE) common WHAT=--upload
 
 common:
+	-rm -R $(INO)
 	mkdir $(INO)
 	cp $(SRC_DIR)/* $(INO)
 	cp $(LIB_DIR)/* $(INO)
 	cp $(INC_DIR)/* $(INO)
 	./schemop -sq -f "" $(INO)/*
-	$(COMMAND) $(WHAT); rm -R $(INO)
+	$(COMMAND) $(WHAT); #rm -R $(INO)
 
 include: $(LIBS)
 

@@ -1,0 +1,12 @@
+/home/fabio/progetto/Software/git/Projects/ESPTest/build/core_esp8266_si2c.c.o: \
+ /root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/cores/esp8266/core_esp8266_si2c.c \
+ /root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/cores/esp8266/twi.h \
+ /root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/cores/esp8266/Arduino.h \
+ /root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/cores/esp8266/stdlib_noniso.h \
+ /root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/cores/esp8266/binary.h \
+ /root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/cores/esp8266/esp8266_peri.h \
+ /root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/tools/sdk/include/c_types.h \
+ /root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/cores/esp8266/core_esp8266_features.h \
+ /root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/variants/generic/pins_arduino.h \
+ /root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/variants/generic/common.h \
+ /root/.arduino15/packages/esp8266/hardware/esp8266/2.2.0/cores/esp8266/wiring_private.h
