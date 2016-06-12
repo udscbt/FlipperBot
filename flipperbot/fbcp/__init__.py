@@ -74,7 +74,11 @@ class CommandLine:
     
   def parse (self, msg):
     self.clear()
-    
+
+    if msg.endswith('\n'):
+      msg = msg[:-1]
+    else:
+      raise ProtocolException("Missing separator", "Expected \\n at end of message")
     for cmd in Command.Q+Command.A:
       if msg.startswith(cmd.id):
         cmdlen = len(cmd.id)
@@ -103,7 +107,7 @@ class CommandLine:
       s += " %s" % self.params[par]
     if self.other != "":
       s += " %s" % self.other
-    return s
+    return s+"\n"
   
   def __str__ (self):
     return self.write()
