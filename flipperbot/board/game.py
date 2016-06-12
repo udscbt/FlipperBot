@@ -88,7 +88,7 @@ class Game (Thread):
       s = time()
       sound = SoundEffect(self.audio.START)
       self.audio.stop()
-      self.display(show("._-^-_")
+      self.display.show("._-^-_")
       sound.start()
       sound.wait()
       
