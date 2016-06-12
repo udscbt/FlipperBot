@@ -90,7 +90,7 @@
   function ## _return_stack
 
 #define SCHEMO_DECLARE_RETURN_STACK(type, function) \
-  std::stack<type> SCHEMO_RETURN_STACK(function)[schemo::NUM_JOBS];
+  std::stack<type> SCHEMO_RETURN_STACK(function)[schemo::MAX_JOBS];
 
 #define SCHEMO_PARAM_STACK(param, function) \
   function ## _param_ ## param ## _stack
@@ -100,13 +100,13 @@
 
 
 #define SCHEMO_DECLARE_PARAM_STACK(type, param, function) \
-  std::stack<type> SCHEMO_PARAM_STACK(param, function)[schemo::NUM_JOBS];
+  std::stack<type> SCHEMO_PARAM_STACK(param, function)[schemo::MAX_JOBS];
 
 #define SCHEMO_GETBACK_STACK(function) \
   function ## _getback_stack
 
 #define SCHEMO_DECLARE_GETBACK_STACK(function) \
-  std::stack<schemo::TASK*> SCHEMO_GETBACK_STACK(function)[schemo::NUM_JOBS];
+  std::stack<schemo::TASK*> SCHEMO_GETBACK_STACK(function)[schemo::MAX_JOBS];
 
 #define SCHEMO_GETBACK(ret, function) \
   SCHEMO_RETURN_STACK(function)[schemo::current_job->job->id].push(ret); \
@@ -135,7 +135,7 @@
     SCHEMO_RETURN_STACK(function)[schemo::current_job->job->id].pop();
 
 #define SCHEMO_DECLARE_FVAR(var, fun, type) \
-  std::stack<type> SCHEMO_JVAR(var, fun)[schemo::NUM_JOBS];
+  std::stack<type> SCHEMO_JVAR(var, fun)[schemo::MAX_JOBS];
 
 #define SCHEMO_FVAR(var, fun) \
   SCHEMO_JVAR(var, fun)[schemo::current_job->job->id].top()
@@ -167,9 +167,7 @@
 
 #define SCHEMO_MUTEX_END(resource) \
   schemo::unlock_mutex(SCHEMO_MUTEX(resource));
-
-#define SCHEMO_SET_NUM_JOBS(nj) \
-  const unsigned int schemo::NUM_JOBS = nj;
+  
 
 namespace schemo {
 
@@ -220,9 +218,8 @@ namespace schemo {
   /**
    * Global variables
    */
-  void * const NULL = 0;
-  const unsigned int MAX_JOBS = 10;
-  extern const unsigned int NUM_JOBS;
+  const int NULL = 0;
+  const int MAX_JOBS = 10;
   extern int new_job_id;
   extern CYCLE_NODE job_queue[MAX_JOBS];
   extern CYCLE_NODE NULL_NODE;

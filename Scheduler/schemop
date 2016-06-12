@@ -6,6 +6,17 @@ from collections import OrderedDict
 
 from random import random
 
+termColors = {
+    'PURPLE' : '\033[95m',
+    'BLUE' : '\033[94m',
+    'GREEN' : '\033[92m',
+    'YELLOW' : '\033[93m',
+    'RED' : '\033[91m',
+    'END' : '\033[0m',
+    'BOLD' : '\033[1m',
+    'UNDERLINE' : '\033[4m'
+ }
+
 def stderr(*args, **kwargs):
   print(*args, file=sys.stderr, **kwargs)
 
@@ -150,6 +161,8 @@ CRITSEC   = CMD('CRITSEC')
 CRITSEC_O = CMD_O('CRITSEC')
 DECMUT    = CMD('DECLARE_MUTEX')
 DECMUT_O  = CMD_O('DECLARE_MUTEX')
+SETNUM    = CMD('SET_NUM_JOBS')
+SETNUM_O  = CMD_O('SET_NUM_JOBS')
 
 COMMENT_1_PATTERN = re.compile("/\*.*?\*/", flags=re.DOTALL)
 COMMENT_2_PATTERN = re.compile("//.*?(\n|$)", flags=re.DOTALL)
@@ -169,7 +182,7 @@ def JOB_FULL(job, task):
   return JOB_O+"("+job+","+task+")"
 
 JOBS = {}
-JOBS_UNNAMED = 0
+UNNAMED_JOBS = 0
 
 TASK_PREFIX = 'task_'
 TASK_INDEX  = 0
@@ -562,7 +575,7 @@ def parseFunction(buf, start, fun):
     block = replace(block, ee, ee+1, ENDIF_O+"(%s)\n" % (task_after))
     block = replace(block, match.start(), ss, IF_O+"(%s, %s, %s)\n" % (task_if, task_after, condition))
   
-  # TBREAK
+  """# TBREAK
   pos = 0
   while True:
     match = TBREAK_PATTERN_NAMED.search(block[pos:])
@@ -577,6 +590,7 @@ def parseFunction(buf, start, fun):
       break
     block = replace(block, match.end(), match.end(), getAll(fun))
     pos = match.end()
+  """
   
   block = JVAR_PATTERN.sub(FVAR_O + "(\\1, %s)" % fun, block)
   block = PARAM_PATTERN2.sub(PAR_O + "(\\1, %s)" % fun, block)
@@ -594,6 +608,12 @@ for name in args.files:
   buf = fin.read()
   fin.close()
   
+  # INITIALIZE GLOBALS
+  TASKS = []
+  UNNAMED_TASKS = 0
+  JOBS = {}
+  UNNAMED_JOBS = 0
+  
   # REMOVE COMMENTS
   buf = clean(buf)
   
@@ -609,6 +629,15 @@ for name in args.files:
     fun = match.group(1).replace(" ", "")
     if fun in TASKS:
       stderr("Error: multiple uses of task name '%s' (note: %ss are tasks)" % (fun, FUN))
+      stderr(
+        buf[match.start()-100:match.start()]+
+        termColors['RED']+
+        termColors['BOLD']+
+          buf[match.start():match.end()]+
+        termColors['END']+
+        buf[match.end():match.end()+100]
+      )
+      
       sys.exit(1)
     TASKS.append(fun)
     buf = parseFunction(buf, match.end(), fun)
@@ -659,7 +688,7 @@ for name in args.files:
       break
     job  = JOB_NAME()
     task = TASK_NAME()
-    JOBS_UNNAMED = JOBS_UNNAMED + 1
+    UNNAMED_JOBS = UNNAMED_JOBS + 1
     UNNAMED_TASKS = UNNAMED_TASKS + 1
     JOBS.update({job:{'task': task, 'mem': {}}})
     TASKS.append(task)
@@ -719,7 +748,7 @@ for name in args.files:
   # DECLARATIONS
   match = DEC_PATTERN.search(buf)
   if match is not None:
-    dec = ""
+    dec = SETNUM_O + "({})\n".format(len(JOBS))
     for task in TASKS:
       dec = dec + DECTSK_O + "(" + task + ")\n"
     for job, info in JOBS.items():
@@ -763,8 +792,8 @@ for name in args.files:
     'name': name,
     'newname': newname,
     'jobn': len(JOBS),
-    'njobn': len(JOBS)-JOBS_UNNAMED,
-    'ujobn': JOBS_UNNAMED,
+    'njobn': len(JOBS)-UNNAMED_JOBS,
+    'ujobn': UNNAMED_JOBS,
     'taskn': len(TASKS),
     'ntaskn': len(TASKS)-UNNAMED_TASKS,
     'utaskn': UNNAMED_TASKS,
