@@ -7,11 +7,14 @@ namespace fbcp
 {
   class string
   {
-    public:
+    public:  
+      static const size_t npos = -1;
+    
       // Constructors and destructors
       string ();
       string (const string&);
-      string (const char*  );
+      string (const char*, size_t size=npos);
+      string (const char&);
       ~string ();
       
       // Operators
@@ -45,8 +48,6 @@ namespace fbcp
       size_t find (const char*  , size_t pos = 0) const;
       string substr (size_t pos = 0, size_t len = npos) const;
       bool startsWith (const string&, const string& separators = "", bool useSeparator = false) const;
-      
-      static const size_t npos = -1;
       
     private:
       char* buf;

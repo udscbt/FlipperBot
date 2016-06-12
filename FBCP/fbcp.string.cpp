@@ -15,9 +15,33 @@ namespace fbcp
   
   string::string (const string& str) : string(str.buf) {}
 
-  string::string (const char* c_str) : string()
+  string::string (const char* c_str, size_t size) : string(size)
   {
-    *this = c_str;
+    if (size == npos)
+    {
+      const char *p1;
+      char *p2;
+      for (str_size = 0, p1 = c_str; *p1; ++str_size, ++p1);
+      delete[] buf;
+      buf_size = str_size+1;
+      buf = new char[buf_size];
+      for (p1 = c_str, p2 = buf; *p2 = *p1; ++p1, ++p2);
+    }
+    else
+    {
+      int i;
+      for (i = 0; i < size && c_str[i]; i++)
+      {
+        buf[i] = c_str[i];
+      }
+      buf[i] = '\0';
+      str_size = i;
+    }
+  }
+  
+  string::string (const char& c) : string((size_t) 1)
+  {
+    buf[0] = c;
   }
 
   string::~string ()
