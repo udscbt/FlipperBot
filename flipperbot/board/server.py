@@ -43,8 +43,11 @@ class ClientThread (Thread):
     cmd = fbcp.CommandLine()
     cmd.command = fbcp.Command.Q_CLEAN
     s = cmd.write()
-    self.sockOut.send(s.encode("UTF-8"))
-    self.debug("Sent:", s)
+    try:
+      self.sockOut.send(s.encode("UTF-8"))
+      self.debug("Sent:", s)
+    except BrokenPipeError:
+      pass
     self.sockIn.close()
     self.sockOut.close()
     self.debug("Thread stopped")
@@ -70,26 +73,43 @@ class ClientThread (Thread):
       accepted = False
       if serial.startswith("FlipperBot-Robot-"):
         self.server.robLock.acquire()
-        if len(self.server.robots) < 2:          
+
+        old = False
+        if serial in self.server.robots:
+          self.debug("Warning: replacing robot")
+          accepted = True
+          self.server.robots[serial]['thread'].stop()
+          old = True
+        
+        if old or len(self.server.robots) < 2:          
           self.debug("Robot connected:", serial)
           accepted = True
           self.sockOut = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
           self.debug("Creating connection to {}:{}".format(self.address, self.server.port))
           self.sockOut.connect((self.address, self.server.port))
-          self.server.robots[serial] = {'in': self.sockIn, 'out': self.sockOut}
+          self.server.robots[serial] = {'thread': self, 'in': self.sockIn, 'out': self.sockOut}
           robot = True
         else:
           self.debug("Too many robots")
         self.server.robLock.release()
       elif serial.startswith("FlipperBot-Controller-"):
         self.server.conLock.acquire()
-        if len(self.server.robots) < 2:          
+
+        old = False
+        if serial in self.server.robots:
+          self.debug("Warning: replacing controller")
+          accepted = True
+          self.server.robots[serial]['in'].close()
+          self.server.robots[serial]['out'].close()
+          old = True
+        
+        if old or len(self.server.robots) < 2:          
           self.debug("Controller connected:", serial)
           accepted = True
           self.sockOut = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
           #self.debug("Creating connection to {}:{}".format(self.address, self.server.port))
           #self.sockOut.connect((self.address, self.server.port))
-          self.server.controllers[serial] = {'in': self.sockIn, 'out': self.sockOut}
+          self.server.controllers[serial] = {'thread': self, 'in': self.sockIn, 'out': self.sockOut}
           robot = False
         else:
           self.debug("Too many controllers")
@@ -164,10 +184,10 @@ class Server (Thread):
   
   def run(self):
     serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    serversocket.bind(("0.0.0.0", self.port))
+    serversocket.bind(("192.168.1.1", self.port))
     serversocket.listen(10)
     serversocket.settimeout(0.5)
-    print("Server started on 0.0.0.0:{}".format(self.port))
+    print("Server started on 192.168.1.1:{}".format(self.port))
     while not self._stopped:
       try:
         sock, address = serversocket.accept()
