@@ -1,0 +1,30 @@
+#!/usr/bin/env python
+import socket
+from flipperbot import fbcp
+
+fbcp.loadCommands()
+
+sock = socket.socket()
+sock.bind(("192.168.1.2", 10000))
+sock.listen(1)
+
+print("Server started")
+
+s, a = sock.accept()
+
+cmd = fbcp.CommandLine()
+
+while cmd.command != fbcp.Command.Q_CLEAN and cmd.command != fbcp.Command.A_CLEAN:
+  msg = s.recv(256).decode("UTF-8")
+  if not cmd.parse(msg):
+    cmd.clear()
+    print("Couldn't understand message")
+  print("Received:", msg)
+  print("Command:  ", end="")
+  msg = input()
+  if not msg.endswith("\n"):
+    msg = msg + "\n"
+  sock.send(msg.encode("UTF-8"))
+  print("Sent:", msg)
+
+sock.close()
