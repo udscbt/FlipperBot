@@ -6,6 +6,7 @@
 
 const int INTER_AXIS_INTERVAL = 10;
 const int INTER_READ_INTERVAL = INTER_AXIS_INTERVAL;
+const int WAIT_AFTER_REFUSED  = 1000;
 
 const char inPin = A0;
 const char selPin = 12;
@@ -18,6 +19,15 @@ char lOut;
 char rOut;
 char uOut;
 char dOut;
+
+enum
+{
+  SEND_INIT,
+  SEND_BUSY,
+  SEND_FAIL,
+  SEND_NEW,
+  SEND_OK
+} sendStatus = SEND_INIT;
 
 fbcp::string fbcp::serial;
 const char serial[] = "00001";
@@ -377,6 +387,7 @@ enum
   
   @WHILE (sockOut.connected())
   {
+    @VAR(t) = millis();
     @VAR(cmd).command = &fbcp::Q_ROBOT_COMMAND;
 
     digitalWrite(selPin, LOW);
@@ -384,6 +395,11 @@ enum
     @CALL(wait;INTER_AXIS_INTERVAL):null;
     digitalWrite(selPin, HIGH);
     verticalValue = analogRead(inPin);
+    lOut_old = lOut;
+    rOut_old = rOut;
+    uOut_old = uOut;
+    dOut_old = dOut;
+    
     lOut = LOW;
     rOut = LOW;
     uOut = LOW;
@@ -461,33 +477,59 @@ enum
       }
     }
 
-    Serial.print("Sent: ");
-    fbcp::string s = fbcp::writeCommand(@VAR(cmd));
-    Serial.println(s.c_str());
-    sockOut.print(s.c_str());
-
-    @VAR(t) = millis();
-    @CALL(readCommand;&sockOut;&@VAR(cmd);INTER_READ_INTERVAL):understood;
-    if (understood)
+    if (
+      lOut != lOut_old ||
+      rOut != rOut_old ||
+      uOut != uOut_old ||
+      dOut != uOut_old
+    )
     {
-      if (@VAR(cmd).command->code == fbcp::A_ACCEPT.code)
+      sendStatus = SEND_NEW;
+    }
+
+    @IF (sendStatus != SEND_INIT || sendStatus == SEND_FAIL || sendStatus == SEND_NEW)
+    {
+      Serial.print("Sent: ");
+      fbcp::string s = fbcp::writeCommand(@VAR(cmd));
+      Serial.println(s.c_str());
+      sockOut.print(s.c_str());
+
+      @CALL(readCommand;&sockOut;&@VAR(cmd);INTER_READ_INTERVAL):understood;
+      if (understood)
       {
-        Serial.println("Command was accepted");
-      }
-      else if (@VAR(cmd).command->code == fbcp::A_REFUSE.code)
-      {
-        Serial.println("Command was refused");
-      }
-      else if (@VAR(cmd).command->code == fbcp::A_ERROR.code)
-      {
-        Serial.println("Server didn't understand command");
+        if (@VAR(cmd).command->code == fbcp::A_ACCEPT.code)
+        {
+          Serial.println("Command was accepted");
+          sendStatus = SEND_OK;
+        }
+        else if (@VAR(cmd).command->code == fbcp::A_REFUSE.code)
+        {
+          Serial.println("Command was refused");
+          sendStatus = SEND_BUSY;
+        }
+        else if (@VAR(cmd).command->code == fbcp::A_ERROR.code)
+        {
+          Serial.println("Server didn't understand command");
+          sendStatus = SEND_FAIL;
+        }
+        else
+        {
+          Serial.println("Server answered something strange");
+          sendStatus = SEND_FAIL;
+        }
       }
       else
       {
-        Serial.println("Server answered something strange");
+        sendStatus = SEND_FAIL;
       }
     }
     @CALL(wait;@VAR(t)+INTER_READ_INTERVAL-millis()):null;
+
+    @IF (sendStatus == SEND_BUSY)
+    {
+      @CALL(wait;WAIT_AFTER_REFUSED):null;
+      sendStatus = SEND_OK;
+    }
   }
   
   mode = MODE_IDLE;
