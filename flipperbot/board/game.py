@@ -1,4 +1,4 @@
-from .shared import text, textLock, gpio, Thread, sleep, time
+from .shared import gpio, Thread, sleep, time
 from .totems import totems
 from .display import Display
 from .everythingButton import EverythingButton

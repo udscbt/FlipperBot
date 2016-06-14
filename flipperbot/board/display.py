@@ -13,10 +13,19 @@ class Display (Thread):
       'dp': 40
     }
     self.cathode = {
-      0 : 10,
-      1 : 11,
-      2 : 12,
-      3 : 13
+      # Label numbering
+      # From right to left
+      '0' : 10,
+      '1' : 11,
+      '2' : 12,
+      '3' : 13,
+      
+      # Software numbering
+      # From left to right
+      0 : 13,
+      1 : 12,
+      2 : 11,
+      3 : 10
     }
     for seg in self.segment.values():
       gpio.setup(seg, gpio.OUT, initial=gpio.LOW)
