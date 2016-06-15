@@ -1,57 +1,52 @@
 from .shared import gpio, Thread, sleep, time
 
-class EverythingButton (Thread):
+class EverythingButton:
   def __init__(self, game):
     self.game = game
     self.everythingButton = 18
     gpio.setup(self.everythingButton, gpio.IN, pull_up_down=gpio.PUD_DOWN)
+    self._lastPress = None
+    self._started = False
     self._stopped = False
-    self._actually_stopped = False
-    self._down = None
-    
     super(self.__class__, self).__init__()
   
+  def start(self):
+    if not self._started:
+      gpio.add_event_detect(self.everythingButton, gpio.BOTH, callback=self._managePress, bouncetime=10)
+      self._started = True
+  
   def stop(self):
+    gpio.remove_event_detect(self.everythingButton)
     self._stopped = True
   
+  def started(self):
+    return self._started
+  
   def stopped(self):
-    return self._actually_stopped
+    return self._stopped
   
-  def pressed(self):
-    return gpio.input(self.everythingButton)
-  
-  def run(self):
-    press = None
-    while not self._stopped:
-      
-      if self.game.mode == self.game.MENU:
-        to = gpio.wait_for_edge(self.everythingButton, gpio.FALLING, timeout=100)
-        if to is None:
-          continue
+  def _managePress(self, channel):
+    if gpio.input(channel):
+      rising = True
+      falling = False
+    else:
+      rising = False
+      falling = True
+    if self.game.mode == self.game.IDLE:
+      return
+    elif self.game.mode == self.game.MENU or self.game.mode == self.game.LOST:
+      if falling:
         self.game.setMode(self.game.GAME)
-        
-      elif self.game.mode == self.game.GAME:
-        to = gpio.wait_for_edge(self.everythingButton, gpio.RISING, timeout=100)
-        if to is None:
-          continue
+    elif self.game.mode == self.game.GAME:
+      if rising:
         self.game.setMode(self.game.PAUSE)
-        
-      elif self.game.mode == self.game.PAUSE:
-        if press is None:
-          to = gpio.wait_for_edge(self.everythingButton, gpio.RISING, timeout=100)
-          if to is None:
-            continue
-          press = time()
-        to = gpio.wait_for_edge(self.everythingButton, gpio.FALLING, timeout=100)
-        if to is None:
-          continue
-        if time() - press < 3:
+    elif self.game.mode == self.game.PAUSE:
+      if rising:
+        self._lastPress = time()
+      if falling and self._lastPress is not None:
+        if time()-self._lastPress < 3:
           self.game.setMode(self.game.GAME)
         else:
           self.game.setMode(self.game.MENU)
-        press = None
-      
-      sleep(0.1)
-    print("pauseThread stopped")
-    self._actually_stopped = True
+        self._lastPress = None
 

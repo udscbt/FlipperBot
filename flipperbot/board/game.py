@@ -1,4 +1,4 @@
-from .shared import gpio, Thread, sleep, time
+from .shared import gpio, ThreadEx, sleep, time, SharedVariable
 from .totems import totems
 from .display import Display
 from .everythingButton import EverythingButton
@@ -13,136 +13,180 @@ from math import ceil
 anim_deltat = 0.1
 anim_duration = 2
 
-class Game (Thread):
-  deltaT  = 13   # Time before totem changes
-  minT    = 0.5  # Minimum time between hits
-  blinkT  = 5    # Missing time when totem starts blinking
-  blinkF  = 4    # Totem blinking frequency
-  cycleT  = 0.01 # Time between cycles
-  updateF = 80   # Update frequency of display
-  scrollF = 2    # Scroll frequency of display
+class Game (ThreadEx):
+  deltaT  = SharedVariable(13)   # Time before totem changes
+  minT    = SharedVariable(0.5)  # Minimum time between hits
+  blinkT  = SharedVariable(5)    # Missing time when totem starts blinking
+  blinkF  = SharedVariable(4)    # Totem blinking frequency
+  cycleT  = SharedVariable(0.01) # Time between cycles
+  updateF = SharedVariable(80)   # Update frequency of display
+  scrollF = SharedVariable(2)    # Scroll frequency of display
   
   # MODES
+  IDLE  = -1
   MENU  = 0
   GAME  = 1
   PAUSE = 2
+  LOST  = 3
+  
+  totemList = SharedVariable()
+  mode = SharedVariable(MENU)
   
   def __init__(self, totemList):
-    self._stopped = False
-    self._actually_stopped = False
-    self.totemList = totemList
-    self.mode = self.MENU
+    self.mode = self.IDLE
+    self.totemList = list(totemList)
     self.display = Display(self.updateF, self.scrollF)
     self.everythingButton = EverythingButton(self)
     self.audio = Audio()
-    
-    super(self.__class__, self).__init__()
+    self.menuThread  = MenuThread(self)
+    self.gameThread  = GameThread(self)
+    self.pauseThread = PauseThread(self)
+    super(self.__class__, self).__init__(name="main")
+    for t in totemList:
+      self.addChild(t)
+    self.addChild(self.display)
+    self.addChild(self.everythingButton)
+    self.addChild(self.audio)
   
   def setMode(self, mode):
-    if mode == self.MENU:
+    if mode == self.IDLE:
+      print("IDLE")
+      self.display.show("OoOoOo")
+      self.audio.stop()
+    elif mode == self.MENU:
       print("MENU")
-      self.display.show(["F", "li"]+list("pperbot    "))
-      self.audio.start(self.audio.MENU)
+      self.gameThread.stop()
+      self.pauseThread.stop()
+      self.menuThread = MenuThread(self)
+      self.menuThread.start()
     elif mode == self.GAME:
       print("GAME")
-      self.audio.start(self.audio.GAME)
+      self.menuThread.stop()
+      self.pauseThread.stop()
+      if self.gameThread is None or self.gameThread.stopped():
+        self.gameThread = GameThread(self)
+        self.gameThread.start()
+      elif not self.gameThread.started():
+        self.gameThread.start()
+      elif self.gameThread.paused():
+        self.gameThread.resume()
     elif mode == self.PAUSE:
       print("PAUSE")
-      self.audio.start(self.audio.PAUSE)
+      self.gameThread.pause()
+      self.menuThread.stop()
+      self.pauseThread = PauseThread(self)
+      self.pauseThread.start()
+    elif mode == self.LOST:
+      print("LOST")
+      self.gameThread.stop()
+      self.pauseThread.stop()
+      self.menuThread = MenuThread(self, lost=True)
+      self.menuThread.start()
     self.mode = mode
   
-  def start(self):
+  def setup(self):
     self.display.start()
     for t in self.totemList:
       t.start()
     self.everythingButton.start()
     self.setMode(self.MENU)
-    super(Game, self).start()
-  
-  def stop(self):
-    self._stopped = True
-  
-  def stopped(self):
-    return self._actually_stopped
   
   def _nextTotem(self):
     self.totem = self.totemList[self.totIndex%len(self.totemList)]
     self.totIndex = self.totIndex+1
   
-  def run(self):
-   
-    while not self._stopped:
-      self.totIndex = 0
-      self._nextTotem()
-      self.totem.on()
-         
-      while not self._stopped and self.mode != self.GAME:
-        self.totem.off()
-        self._nextTotem()
-        self.totem.on()
-        sleep(1)
-      
-      if self._stopped:
-        break
-      
-      s = time()
-      sound = SoundEffect(self.audio.START)
-      self.audio.stop()
-      self.display.show("._-^-_")
-      sound.start()
-      sound.wait()
-      
-      self.audio.start(self.audio.GAME)
-      
-      points = 0
-      last = time()
-      lasthit = last
-      
-      self.totIndex = 0
-      self._nextTotem()
-      self.totem.on()
-      
-      while not self._stopped and self.mode == self.GAME:
-        sleep(self.cycleT)
-        now = time()
-        missing = self.deltaT+last-now
-        text = "{:02d}{:02d}".format(points%100, int(ceil(missing))%100)
-        self.display.show(text)
-        while self.mode == self.PAUSE and not self._stopped:
-          pass
-        now = time()
-        last = now+missing-self.deltaT
-        if self._stopped or self.mode != self.GAME:
-          break
-        if not self.totem._blink and missing < self.blinkT:
-          self.totem.blink(self.blinkF)
-        if self.totem.isHit():
-          _lasthit = lasthit
-          lasthit = now
-          if lasthit-_lasthit >= self.minT:
-            points = points + 1
-            self.totem.off()
-            self._nextTotem()
-            self.totem.on()
-            last = now
-            continue
-        if missing < 0:
-          # Lose
-          self.setMode(self.MENU)
-          self.display.show("LOSE")
-          break
-      self.totem.off()
-    print("gameThread stopped")
-    self.display.stop()
-    for t in self.totemList:
-      t.stop()
-    self.everythingButton.stop()
-    self.audio.stop()
-    while not (self.display.stopped() and self.everythingButton.stopped()):
-      pass
-    for t in self.totemList:
-      while not t.stopped():
-        pass
+  def cleanup(self):
+    self.menuThread.stop()
+    self.gameThread.stop()
+    self.pauseThread.stop()
     gpio.cleanup()
-    self._actually_stopped = True
 
+class MenuThread (ThreadEx):
+  def __init__(self, game, lost=False):
+    self.game = game
+    self.lost = lost
+    super(self.__class__, self).__init__(name="menu")
+  
+  def setup(self):
+    print("Entering menu")
+    if self.lost:
+      self.game.display.show("LOSE")
+      self.game.audio.start(self.game.audio.LOST)
+    else:
+      self.game.display.show(["F", "li"]+list("pperbot    "))
+      self.game.audio.start(self.game.audio.MENU)
+  
+  def cleanup(self):
+    self.game.audio.stop()
+
+class GameThread (ThreadEx):
+  def __init__(self, game):
+    self.game = game
+    super(self.__class__, self).__init__(name="game")
+  
+  def setup(self):
+    print("Game started")
+    self.game.display.show("_-^-"*2)
+    sound = SoundEffect(self.game.audio.START)
+    self.game.audio.stop()
+    sound.start()
+    sound.wait()
+    
+    self.game.audio.start(self.game.audio.GAME)
+    self.game.totIndex = 0
+    self.game._nextTotem()
+    self.game.totem.on()
+    self.points = 0
+    self.lastHit = time()
+    self.lastLoop = self.lastHit
+    self.missing = self.game.deltaT
+  
+  def loop(self):
+    # Correcting for pause
+    self.lastHit = self.lastHit + time() - self.lastLoop
+    
+    # Slow down cycle
+    sleep(self.game.cycleT)
+    
+    # Update display
+    self.missing = self.game.deltaT + self.lastHit - time()
+    text = "{:02d}{:02d}".format(self.points%100, int(ceil(self.missing))%100)
+    self.game.display.show(text, [False, True, False, False])
+    
+    # Almost out of time!
+    if not self.game.totem._blink and self.missing < self.game.blinkT:
+      self.game.totem.blink(self.game.blinkF)
+    
+    # Check for hit
+    if self.game.totem.isHit():
+      self.points = self.points + 1
+      self.game.totem.off()
+      self.game._nextTotem()
+      self.game.totem.on()
+      self.lastHit = time()
+      self.lastLoop = self.lastHit
+      return
+    
+    # Lose
+    if self.missing < 0:
+      self.game.setMode(self.game.LOST)
+      return
+    
+    self.lastLoop = time()
+  
+  def cleanup(self):
+    if not self.game.totem.stopped():
+      self.game.totem.off()
+    self.game.audio.stop()
+
+class PauseThread (ThreadEx):
+  def __init__(self, game):
+    self.game = game
+    super(self.__class__, self).__init__(name="pause")
+  
+  def setup(self):
+    print("Entering pause")
+    self.game.audio.start(self.game.audio.PAUSE)
+  
+  def cleanup(self):
+    self.game.audio.stop()

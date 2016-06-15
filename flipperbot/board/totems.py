@@ -1,18 +1,17 @@
-from .shared import gpio, Thread, sleep
+from .shared import gpio, ThreadEx, sleep, SharedVariable
 
-class Totem (Thread):
+class Totem (ThreadEx):
+  _on = SharedVariable(False)
+  _blink = SharedVariable(False)
+  _bfreq = SharedVariable(0)
+  
   def __init__(self, dic):
-    self.select  = dic['select']
-    self.hit     = dic['hit']
-    self._on     = False
-    self._blink  = False
-    self._stopped = True
+    self.select = dic['select']
+    self.hit    = dic['hit']
+    self._hit   = False
     gpio.setup(self.select, gpio.OUT, initial=gpio.LOW)
     gpio.setup(self.hit, gpio.IN, pull_up_down=gpio.PUD_DOWN)
-    self._stopped = False
-    self._actually_stopped = False
-    
-    super(self.__class__, self).__init__()
+    super(self.__class__, self).__init__(name="totem")
   
   def on(self):
     self._on = True
@@ -22,29 +21,28 @@ class Totem (Thread):
     self._on = False
     self._blink = False
   
+  def _manageHit(self, channel):
+    self._hit = gpio.input(self.hit)
+  
   def isHit(self):
-    return gpio.input(self.hit)
+    return self._hit
   
   def blink(self, freq):
     self._blink = True
-    self.bfreq = freq
+    self._bfreq = freq
   
-  def stop(self):
+  def setup(self):
+    gpio.add_event_detect(self.hit, gpio.BOTH, callback=self._manageHit, bouncetime=50)
+  
+  def loop(self):
+    if self._blink:
+      self._on = not self._on
+      sleep(1.0/self._bfreq)
+    gpio.output(self.select, self._on)
+  
+  def cleanup(self):
     self.off()
-    self._stopped = True
-  
-  def stopped(self):
-    return self._actually_stopped
-  
-  def run(self):
-    while not self._stopped:
-      if self._blink:
-        self._on = not self._on
-        sleep(1.0/self.bfreq)
-      gpio.output(self.select, self._on)
-    print("totemThread stopped")
-    self._actually_stopped = True
-
+    gpio.remove_event_detect(self.hit)
 
 totems = {
   'DL' : Totem({
