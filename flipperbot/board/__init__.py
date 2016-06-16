@@ -4,9 +4,7 @@ from . import totems
 from . import game
 from . import everythingButton
 from . import audio
-
-from .game import Game
-from .totems import totems
+from . import server
 
 #g = Game(list(totems.values()))
 #g.start()

@@ -8,7 +8,7 @@ class EverythingButton:
     self._lastPress = None
     self._started = False
     self._stopped = False
-    super(self.__class__, self).__init__()
+    super(EverythingButton, self).__init__()
   
   def start(self):
     if not self._started:

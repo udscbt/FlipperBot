@@ -12,7 +12,7 @@ class Audio:
   START = join(audio_root, "sounds", "start.ogg")
   
   def __init__(self):
-    call(["amixer", "set", "PCM", "100%"])
+    #call(["amixer", "set", "PCM", "100%"])
     self.proc = None
     self._started = False
     self._stopped = False

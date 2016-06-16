@@ -3,15 +3,13 @@ from .totems import totems
 from .display import Display
 from .everythingButton import EverythingButton
 from .audio import Audio, SoundEffect
+from .robot import Robot
+from .controller import Controller
+from .led import LED
 
-LED1 = 26
-LED2 = 29
+from random import random
 
 from math import ceil
-
-# GAME PARAMETERS
-anim_deltat = 0.1
-anim_duration = 2
 
 class Game (ThreadEx):
   deltaT  = SharedVariable(13)   # Time before totem changes
@@ -21,8 +19,15 @@ class Game (ThreadEx):
   cycleT  = SharedVariable(0.01) # Time between cycles
   updateF = SharedVariable(80)   # Update frequency of display
   scrollF = SharedVariable(2)    # Scroll frequency of display
+
+  blinkR  = SharedVariable(5)   # Blinking frequency on robot connected
+  blinkC  = SharedVariable(10)  # Blinking frequency on controller connected
+  
+  LED1 = LED(26)
+  LED2 = LED(29)
   
   # MODES
+  WAIT  = -2
   IDLE  = -1
   MENU  = 0
   GAME  = 1
@@ -31,22 +36,26 @@ class Game (ThreadEx):
   
   totemList = SharedVariable()
   mode = SharedVariable(MENU)
+  robots = SharedVariable()
+  controllers = SharedVariable()
   
   def __init__(self, totemList):
     self.mode = self.IDLE
     self.totemList = list(totemList)
+    self.robots = [Robot(), Robot()]
+    self.controllers = [Controller(), Controller()]
     self.display = Display(self.updateF, self.scrollF)
     self.everythingButton = EverythingButton(self)
     self.audio = Audio()
     self.menuThread  = MenuThread(self)
     self.gameThread  = GameThread(self)
     self.pauseThread = PauseThread(self)
-    super(self.__class__, self).__init__(name="main")
+    super(Game, self).__init__(name="main")
     for t in totemList:
       self.addChild(t)
     self.addChild(self.display)
     self.addChild(self.everythingButton)
-    self.addChild(self.audio)
+    self.addChild(self.audio)    
   
   def setMode(self, mode):
     if mode == self.IDLE:
@@ -91,15 +100,54 @@ class Game (ThreadEx):
     self.everythingButton.start()
     self.setMode(self.MENU)
   
+  def loop(self):
+    if self.robots[0].active:
+      if self.controllers[0].active:
+        self.LED1.on()
+      else:
+        self.LED1.blink(self.blinkR)
+    else:
+      if self.controllers[0].active:
+        self.LED1.blink(self.blinkC)
+      else:
+        self.LED1.off()
+    
+    if self.robots[1].active:
+      if self.controllers[1].active:
+        self.LED2.on()
+      else:
+        self.LED2.blink(self.blinkR)
+    else:
+      if self.controllers[1].active:
+        self.LED2.blink(self.blinkC)
+      else:
+        self.LED2.off()
+  
   def _nextTotem(self):
+    self.totIndex = int(random()*len(self.totemList))
     self.totem = self.totemList[self.totIndex%len(self.totemList)]
-    self.totIndex = self.totIndex+1
+    #self.totIndex = self.totIndex+1
   
   def cleanup(self):
     self.menuThread.stop()
     self.gameThread.stop()
     self.pauseThread.stop()
     gpio.cleanup()
+  
+  def isHit2(self):
+    if self.controllers[0].active:
+      if self.totem.pos == 'DL' and self.controllers[0].direction == Controller.Direction.BACKWARD_LEFT:
+        return True
+      elif self.totem.pos == 'DR' and self.controllers[0].direction == Controller.Direction.BACKWARD_RIGHT:
+        return True
+      elif self.totem.pos == 'UR' and self.controllers[0].direction == Controller.Direction.FORWARD_RIGHT:
+        return True
+      elif self.totem.pos == 'UL' and self.controllers[0].direction == Controller.Direction.FORWARD_LEFT:
+        return True
+      elif self.totem.pos == 'C' and self.controllers[0].direction == Controller.Direction.STOP:
+        return True
+      else:
+        return False
 
 class MenuThread (ThreadEx):
   def __init__(self, game, lost=False):
@@ -114,7 +162,7 @@ class MenuThread (ThreadEx):
       self.game.audio.start(self.game.audio.LOST)
     else:
       self.game.display.show(["F", "li"]+list("pperbot    "))
-      self.game.audio.start(self.game.audio.MENU)
+      self.game.audio.start(self.game.audio.MENU)        
   
   def cleanup(self):
     self.game.audio.stop()
@@ -158,7 +206,7 @@ class GameThread (ThreadEx):
       self.game.totem.blink(self.game.blinkF)
     
     # Check for hit
-    if self.game.totem.isHit():
+    if self.game.totem.isHit() or self.game.isHit2():
       self.points = self.points + 1
       self.game.totem.off()
       self.game._nextTotem()
