@@ -1,5 +1,5 @@
 import tkinter as tk
-from .controller import Controller
+from ..controller import Controller
 
 class FakeJoystick:
   RADIUS_BG1_F = 1.0/5
@@ -14,12 +14,64 @@ class FakeJoystick:
   BG2_COLOR   = 'gray'
   BG_COLOR    = 'white'
   
-  def __init__(self, game):
+  def __init__(self, game, input=True, autostop=True):
     self.game = game
     self.root = tk.Tk()
     self.canvas = tk.Canvas(self.root)
     self.canvas['bg'] = self.BG_COLOR
     self.canvas.pack(fill=tk.BOTH, expand=tk.YES)
+    self._autostop = autostop
+    self.input(input)
+  
+  def input(self, value=None):
+    if value is None:
+      return self._input
+    else:
+      self._input = value
+    if self._input:
+      self.canvas.focus_set()
+      self.canvas.bind('<Left>', lambda e: self.setDirection(Controller.Direction.LEFT))
+      self.canvas.bind('<KP_4>', lambda e: self.setDirection(Controller.Direction.LEFT))
+      self.canvas.bind('<Up>', lambda e: self.setDirection(Controller.Direction.FORWARD))
+      self.canvas.bind('<KP_8>', lambda e: self.setDirection(Controller.Direction.FORWARD))
+      self.canvas.bind('<Right>', lambda e: self.setDirection(Controller.Direction.RIGHT))
+      self.canvas.bind('<KP_6>', lambda e: self.setDirection(Controller.Direction.RIGHT))
+      self.canvas.bind('<Down>', lambda e: self.setDirection(Controller.Direction.BACKWARD))
+      self.canvas.bind('<KP_2>', lambda e: self.setDirection(Controller.Direction.BACKWARD))
+      self.canvas.bind('<KP_5>', lambda e: self.setDirection(Controller.Direction.STOP))
+      self.canvas.bind('<KP_7>', lambda e: self.setDirection(Controller.Direction.FORWARD_LEFT))
+      self.canvas.bind('<KP_9>', lambda e: self.setDirection(Controller.Direction.FORWARD_RIGHT))
+      self.canvas.bind('<KP_1>', lambda e: self.setDirection(Controller.Direction.BACKWARD_LEFT))
+      self.canvas.bind('<KP_3>', lambda e: self.setDirection(Controller.Direction.BACKWARD_RIGHT))
+      self.autostop(self._autostop)
+    else:
+      self.canvas.unbind('<Left>')
+      self.canvas.unbind('<KP_4>')
+      self.canvas.unbind('<Up>')
+      self.canvas.unbind('<KP_8>')
+      self.canvas.unbind('<Right>')
+      self.canvas.unbind('<KP_6>')
+      self.canvas.unbind('<Down>')
+      self.canvas.unbind('<KP_2>')
+      self.canvas.unbind('<KP_5>')
+      self.canvas.unbind('<KP_7>')
+      self.canvas.unbind('<KP_9>')
+      self.canvas.unbind('<KP_1>')
+      self.canvas.unbind('<KP_3>')
+      self.autostop(False)
+  
+  def autostop(self, value=None):
+    if value is None:
+      return self._autostop
+    else:
+      self._autostop = value
+      if self._autostop:
+        self.canvas.bind('<KeyRelease>', lambda e: self.setDirection(Controller.Direction.STOP))
+      else:
+        self.canvas.unbind('<KeyRelease>')
+  
+  def setDirection(self, direction):
+    self.game.controllers[0].direction = direction
   
   def draw(self, pos):
     self.canvas.delete(tk.ALL)

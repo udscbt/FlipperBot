@@ -1,5 +1,5 @@
 import tkinter as tk
-from .totems import totems
+from ..totems import totems
 
 class FakeBoard:
   RADIUS_IN_F  = 1.0/10

@@ -42,17 +42,28 @@ class Display (ThreadEx):
       gpio.setup(cat, gpio.OUT, initial=gpio.HIGH)
     self.updateF = updateF
     self.scrollF = scrollF
+    self._raw_values = {}
+    self._raw_digits = {}
     super(self.__class__, self).__init__(name="display")
   
-  def _raw(self, digits, on):
-    for seg in self.segment.values():
+  def _raw(self, digits, on):    
+    for name, seg in self.segment.items():
       gpio.output(seg, gpio.LOW)
-    for cat in self.cathode.values():
+      self._raw_values[name] = False
+    for name, cat in self.cathode.items():
       gpio.output(cat, gpio.HIGH)
+      self._raw_values[name] = False
+      
     for seg in on:
       gpio.output(self.segment[seg], gpio.HIGH)
+      self._raw_values[seg] = True
     for digit in digits:
       gpio.output(self.cathode[digit], gpio.LOW)
+      self._raw_values[digit] = True
+    
+    for i in range(4):
+      if i in digits:
+        self._raw_digits[i] = self._raw_values
   
   valuemap = {
      0  : "abcdef",
