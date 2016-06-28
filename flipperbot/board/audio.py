@@ -11,6 +11,9 @@ class Audio:
   LOST  = join(audio_root, "songs", "spaceoutro.ogg")
   START = join(audio_root, "sounds", "start.ogg")
   
+  PLAYER = "ogg123"
+  PL_OPTIONS = ["-r"]
+  
   def __init__(self):
     #call(["amixer", "set", "PCM", "100%"])
     self.proc = None
@@ -20,7 +23,7 @@ class Audio:
   def start(self, song):
     self.stop()
     self.log = open(join(audio_root, "{:d}.log".format(int(time()))), "w")
-    self.proc = Popen(["ogg123", "-r", song], stdout=self.log, stderr=self.log)
+    self.proc = Popen([self.PLAYER, *self.PL_OPTIONS, song], stdout=self.log, stderr=self.log)
     self._started = True
     self._stopped = False
 
@@ -38,6 +41,9 @@ class Audio:
     return self._stopped
 
 class SoundEffect:
+  PLAYER = "ogg123"
+  PL_OPTIONS = []
+  
   def __init__(self, sound):
     self.sound = sound
     self.proc = None
@@ -46,7 +52,7 @@ class SoundEffect:
   
   def start(self):
     self.stop()
-    self.proc = Popen(["ogg123", self.sound])
+    self.proc = Popen([self.PLAYER, *self.PL_OPTIONS, self.sound])
     self._started = True
     self._stopped = False
   
