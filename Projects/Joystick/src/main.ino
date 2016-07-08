@@ -11,6 +11,7 @@ const int WAIT_AFTER_REFUSED  = 1000;
 const char inPin = A0;
 const char selPin = 12;
 const char ledPin = 15;
+const char btnPin = 16;
 
 int horizontalValue;
 int verticalValue;
@@ -24,6 +25,8 @@ char lOut_old;
 char rOut_old;
 char uOut_old;
 char dOut_old;
+
+bool pressed = false;
 
 enum
 {
@@ -403,6 +406,48 @@ enum
   {
     @WHILE (sockOut.connected())
     {
+      //Everything Button
+      bool old = pressed;
+      pressed = digitalRead(btnPin);
+      @IF (old != pressed)
+      {
+        if (pressed)
+        {
+          @VAR(cmd).command = &fbcp::Q_EVERYTHING_ON;
+        }
+        else
+        {
+          @VAR(cmd).command = &fbcp::Q_EVERYTHING_OFF;
+        }
+        Serial.print("Sent: ");
+        fbcp::string s = fbcp::writeCommand(@VAR(cmd));
+        Serial.println(s.c_str());
+        sockOut.print(s.c_str());
+
+        @CALL(readCommand;&sockOut;&@VAR(cmd);1000):understood;
+        if (understood)
+        {
+          if (@VAR(cmd).command->code == fbcp::A_ACCEPT.code)
+          {
+            Serial.println("Command was accepted");
+          }
+          else if (@VAR(cmd).command->code == fbcp::A_REFUSE.code)
+          {
+            Serial.println("Command was refused");
+          }
+          else if (@VAR(cmd).command->code == fbcp::A_ERROR.code)
+          {
+            Serial.println("Server didn't understand command");
+          }
+          else
+          {
+            Serial.println("Server answered something strange");
+          }
+        }
+        
+      }
+
+      //Direction
       @VAR(t) = millis();
       @VAR(cmd).command = &fbcp::Q_ROBOT_COMMAND;
 
@@ -617,21 +662,7 @@ enum
           }
           break;
         case MODE_STANDALONE:
-          @VAR(frame)++;
-          switch (@VAR(frame))
-          {
-            case 0:
-            case 1:
-              ledFreq = FREQ_FAST;
-              break;
-            case 2:
-              ledFreq = FREQ_SLOW;
-              break;
-            default:
-              @VAR(frame) = 0;
-              ledFreq = FREQ_FAST;            
-          }
-          break;
+          ledFreq = FREQ_ON;
         default:
           ledFreq = FREQ_OFF;          
       }
@@ -670,6 +701,7 @@ void setup()
   // Initialise pins
   pinMode(selPin, OUTPUT);
   pinMode(ledPin, OUTPUT);
+  pinMode(btnPin, INPUT);
   
   // FBCP
   Serial.println("FBCP");
