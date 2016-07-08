@@ -212,6 +212,21 @@ class ClientThread (ThreadEx):
             self.server.game.controllers[self.index].direction = Controller.Direction.RIGHT
           elif self.cmdIn.params['direction'] == fbcp.Param.DIRECTION_STOP:
             self.server.game.controllers[self.index].direction = Controller.Direction.STOP
+        elif self.cmdIn.command == fbcp.Command.Q_EVERYTHING_ON:
+          if self.server.game.mode == self.server.game.GAME:
+            self.pressStart = None
+            self.server.game.setMode(self.server.game.PAUSE)
+          elif self.server.game.mode == self.server.game.PAUSE:
+            self.pressStart = time()
+        elif self.cmdIn.command == fbcp.Command.Q_EVERYTHING_OFF:
+          if self.server.game.mode == self.server.game.MENU or self.server.game.mode == self.server.game.LOST:
+            self.server.game.setMode(self.server.game.GAME)
+          elif self.server.game.mode == self.server.game.PAUSE and self.pressStart is not None:
+            if time() - self.pressStart < 3:
+              self.server.game.setMode(self.server.game.GAME)
+            else:
+              self.server.game.setMode(self.server.game.MENU)
+            self.pressStart = None
 
 class RobotThread (ThreadEx):
   def __init__(self, server, sock, index):
@@ -222,30 +237,31 @@ class RobotThread (ThreadEx):
     super(RobotThread, self).__init__(name="client[robot{}]".format(self.index))
   
   def loop(self):
-    d = self.server.game.robots[index].direction
-    if d != self.direction:
-      cmd = fbcp.CommandLine()
-      cmd.command = fbcp.Command.Q_ROBOT_COMMAND
-      if d == Robot.Direction.BACKWARD:
-        cmd.params['direction'] = fbcp.Param.DIRECTION_BACKWARD
-      elif d == Robot.Direction.BACKWARD_LEFT:
-        cmd.params['direction'] = fbcp.Param.DIRECTION_BACKWARD_LEFT
-      elif d == Robot.Direction.BACKWARD_RIGHT:
-        cmd.params['direction'] = fbcp.Param.DIRECTION_BACKWARD_RIGHT
-      elif d == Robot.Direction.FORWARD:
-        cmd.params['direction'] = fbcp.Param.DIRECTION_FORWARD
-      elif d == Robot.Direction.FORWARD_LEFT:
-        cmd.params['direction'] = fbcp.Param.DIRECTION_FORWARD_LEFT
-      elif d == Robot.Direction.FORWARD_RIGHT:
-        cmd.params['direction'] = fbcp.Param.DIRECTION_FORWARD_RIGHT
-      elif d == Robot.Direction.LEFT:
-        cmd.params['direction'] = fbcp.Param.DIRECTION_LEFT
-      elif d == Robot.Direction.RIGHT:
-        cmd.params['direction'] = fbcp.Param.DIRECTION_RIGHT
-      elif d == Robot.Direction.STOP:
-        cmd.params['direction'] = fbcp.Param.DIRECTION_STOP
-      self.server.game.robots[index].direction = d
-      sock.send(cmd.write().encode("UTF-8"))
+    if self.server.game.mode == self.server.game.GAME:
+      d = self.server.game.robots[index].direction
+      if d != self.direction:
+        cmd = fbcp.CommandLine()
+        cmd.command = fbcp.Command.Q_ROBOT_COMMAND
+        if d == Robot.Direction.BACKWARD:
+          cmd.params['direction'] = fbcp.Param.DIRECTION_BACKWARD
+        elif d == Robot.Direction.BACKWARD_LEFT:
+          cmd.params['direction'] = fbcp.Param.DIRECTION_BACKWARD_LEFT
+        elif d == Robot.Direction.BACKWARD_RIGHT:
+          cmd.params['direction'] = fbcp.Param.DIRECTION_BACKWARD_RIGHT
+        elif d == Robot.Direction.FORWARD:
+          cmd.params['direction'] = fbcp.Param.DIRECTION_FORWARD
+        elif d == Robot.Direction.FORWARD_LEFT:
+          cmd.params['direction'] = fbcp.Param.DIRECTION_FORWARD_LEFT
+        elif d == Robot.Direction.FORWARD_RIGHT:
+          cmd.params['direction'] = fbcp.Param.DIRECTION_FORWARD_RIGHT
+        elif d == Robot.Direction.LEFT:
+          cmd.params['direction'] = fbcp.Param.DIRECTION_LEFT
+        elif d == Robot.Direction.RIGHT:
+          cmd.params['direction'] = fbcp.Param.DIRECTION_RIGHT
+        elif d == Robot.Direction.STOP:
+          cmd.params['direction'] = fbcp.Param.DIRECTION_STOP
+        self.server.game.robots[index].direction = d
+        sock.send(cmd.write().encode("UTF-8"))
   
   
 class Server (ThreadEx):

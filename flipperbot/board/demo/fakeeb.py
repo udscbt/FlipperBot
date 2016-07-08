@@ -21,7 +21,7 @@ class FakeEB (tk.Canvas):
       self.root = tk.Tk()
     else:
       self.root = master
-    tk.Canvas.__init__(self, master=self.root)
+    tk.Canvas.__init__(self, master=self.root, bd=0, highlightthickness=0)
     self.pressStart = None
     self.bind('<Configure>', self.config)
     if master is None:

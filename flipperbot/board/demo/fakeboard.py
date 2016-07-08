@@ -19,7 +19,7 @@ class FakeBoard (tk.Canvas):
       self.root = tk.Tk()
     else:
       self.root = master
-    tk.Canvas.__init__(self, master=self.root)
+    tk.Canvas.__init__(self, master=self.root, bd=0, highlightthickness=0)
     if master is None:
       self.pack(fill=tk.BOTH, expand=tk.YES)
     

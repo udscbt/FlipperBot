@@ -6,6 +6,7 @@ from .fakeboard import FakeBoard
 from .fakejoystick import FakeJoystick, VirtualJoystick
 from .fakeeb import FakeEB
 from .fakedisplay import FakeDisplay
+from .fakeled import FakeLED
 
 from time import sleep
 
@@ -36,28 +37,30 @@ class Demo:
   def __init__(self, remote=False):
     try:
       self.remote = remote
-      self.root = Tk()
+      self.front = Tk()
       self.g = Game(totems.values())
       self.g.start()
       sleep(1)
-      self.fb = FakeBoard(self.g, master=self.root)
-      self.fj = VirtualJoystick(self.g, master=self.root)
-      self.fe = FakeEB(self.g, master=self.root)
-      self.fd = FakeDisplay(self.g, master=self.root)
+      self.fb = FakeBoard(self.g)
+      self.fj = FakeJoystick(self.g)
+      self.fe = FakeEB(self.g, master=self.front)
+      self.fd = FakeDisplay(self.g, master=self.front)
+      self.fl1 = FakeLED(self.g.LED1, master=self.front)
+      self.fl2 = FakeLED(self.g.LED2, master=self.front)
       if self.remote:
         self.s = Server(self.g)
         self.s.start()
       else:
         self.g.controllers[0].active = True
-      self.root.columnconfigure(1, weight=1)
-      self.root.columnconfigure(2, weight=1)
-      self.root.rowconfigure(1, weight=1)
-      self.root.rowconfigure(2, weight=1)
-      self.root.rowconfigure(3, weight=1)
-      self.fb.grid(row=1, column=1, sticky="wens", rowspan=3)
-      self.fj.grid(row=1, column=2, sticky="wens")
-      self.fe.grid(row=2, column=2, sticky="wens")
-      self.fd.grid(row=3, column=2, sticky="wens")
+      self.front.columnconfigure(1, weight=8)
+      self.front.columnconfigure(2, weight=8)
+      self.front.columnconfigure(3, weight=4)
+      self.front.columnconfigure(4, weight=1)
+      self.front.rowconfigure(1, weight=1)
+      self.fl1.grid(row=1, column=1, sticky="wens")
+      self.fl2.grid(row=1, column=2, sticky="wens")
+      self.fe.grid(row=1, column=3, sticky="wens")
+      self.fd.grid(row=1, column=4, sticky="wens")
     except NameError as e:
       print(e)
       self.error = e

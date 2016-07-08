@@ -50,12 +50,14 @@ class Game (ThreadEx):
     self.menuThread  = MenuThread(self)
     self.gameThread  = GameThread(self)
     self.pauseThread = PauseThread(self)
+    self.randomThread = RandomThread(self)
     super(Game, self).__init__(name="main")
     for t in totemList:
       self.addChild(t)
     self.addChild(self.display)
     self.addChild(self.everythingButton)
-    self.addChild(self.audio)    
+    self.addChild(self.audio)
+    self.addChild(self.randomThread)
   
   def setMode(self, mode):
     if mode == self.IDLE:
@@ -79,6 +81,8 @@ class Game (ThreadEx):
         self.gameThread.start()
       elif self.gameThread.paused():
         self.gameThread.resume()
+        sound = SoundEffect(self.game.audio.RSME)
+        sound.start()
     elif mode == self.PAUSE:
       print("PAUSE")
       self.gameThread.pause()
@@ -98,6 +102,9 @@ class Game (ThreadEx):
     for t in self.totemList:
       t.start()
     self.everythingButton.start()
+    self.LED1.start()
+    self.LED2.start()
+    self.randomThread.start()
     self.setMode(self.MENU)
   
   def loop(self):
@@ -124,9 +131,10 @@ class Game (ThreadEx):
         self.LED2.off()
   
   def _nextTotem(self):
-    self.totIndex = int(random()*len(self.totemList))
-    self.totem = self.totemList[self.totIndex%len(self.totemList)]
-    #self.totIndex = self.totIndex+1
+    old = self.totIndex
+    while old == self.totIndex:
+      self.totIndex = int(random()*len(self.totemList))
+    self.totem = self.totemList[self.totIndex]
   
   def cleanup(self):
     self.menuThread.stop()
@@ -175,10 +183,12 @@ class GameThread (ThreadEx):
   def setup(self):
     print("Game started")
     self.game.display.show("_-^-"*2)
-    sound = SoundEffect(self.game.audio.START)
+    sound = SoundEffect(self.game.audio.READY)
     self.game.audio.stop()
     sound.start()
     sound.wait()
+    sound = SoundEffect(self.game.audio.START)
+    sound.start()
     
     self.game.audio.start(self.game.audio.GAME)
     self.game.totIndex = 0
@@ -203,10 +213,14 @@ class GameThread (ThreadEx):
     
     # Almost out of time!
     if not self.game.totem._blink and self.missing < self.game.blinkT:
+      sound = SoundEffect(self.game.audio.OOT)
+      sound.start()
       self.game.totem.blink(self.game.blinkF)
     
     # Check for hit
     if self.game.totem.isHit() or self.game.isHit2():
+      sound = SoundEffect(self.game.audio.HIT)
+      sound.start()
       self.points = self.points + 1
       self.game.totem.off()
       self.game._nextTotem()
@@ -217,6 +231,8 @@ class GameThread (ThreadEx):
     
     # Lose
     if self.missing < 0:
+      sound = SoundEffect(self.game.audio.LOSE)
+      sound.start()
       self.game.setMode(self.game.LOST)
       return
     
@@ -238,3 +254,23 @@ class PauseThread (ThreadEx):
   
   def cleanup(self):
     self.game.audio.stop()
+
+class RandomThread (ThreadEx):
+  def __init__(self, game):
+    self.game = game
+    super(self.__class__, self).__init__(name="random")
+  
+  def setup(self):
+    self.prob = 1
+  
+  def loop(self):
+    if self.game.mode == self.game.PAUSE:
+      if random() > 1.0/self.prob:
+        sound = SoundEffect(self.game.audio.RAND)
+        sound.start()
+        sound.wait()
+        self.prob = 1
+      else:
+        self.prob = 1.5*self.prob
+    sleep(5)
+    

@@ -28,7 +28,7 @@ class LED (ThreadEx):
     if self._blink:
       self._on = not self._on
       sleep(1.0/self._bfreq)
-    gpio.output(self.select, self._on)
+    gpio.output(self.pin, self._on)
   
   def cleanup(self):
     self.off()

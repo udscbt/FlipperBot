@@ -6,8 +6,8 @@ class FakeDisplay (tk.Canvas):
   COLOR_BG  = 'white'
   COLOR_BG1 = 'gray60'
   
-  H_F = 9.0/10
-  W_F = 9.0/10
+  H_F  = 0.9
+  W_F  = 0.95
   LW_F = 5.0
   DW_F = 0.8
   
@@ -17,7 +17,7 @@ class FakeDisplay (tk.Canvas):
       self.root = tk.Tk()
     else:
       self.root = master
-    tk.Canvas.__init__(self, master=self.root)
+    tk.Canvas.__init__(self, master=self.root, bd=0, highlightthickness=0)
     if master is None:
       self.pack(fill=tk.BOTH, expand=tk.YES)
     self.segments = {i : None for i in range(4)}
@@ -94,9 +94,10 @@ class FakeDisplay (tk.Canvas):
       )
   
   def drawDot(self, seg, x=0, y=0):
-    self.coords(x-self.DP_SIZE/2, y-self.DP_SIZE/2, x+self.DP_SIZE/2, y+self.DP_SIZE/2)
+    self.coords(seg, x-self.DP_SIZE/2, y-self.DP_SIZE/2, x+self.DP_SIZE/2, y+self.DP_SIZE/2)
   
   def drawDigit(self, digit, x=0, y=0):
+    x = x - self.DP_SIZE/2
     self.drawSegHor(digit['a'], x, y-(self.SEG_LEN+self.SEG_WID))
     self.drawSegVer(digit['b'], x+(self.SEG_LEN+self.SEG_WID)/2, y-(self.SEG_LEN+self.SEG_WID)/2)
     self.drawSegVer(digit['c'], x+(self.SEG_LEN+self.SEG_WID)/2, y+(self.SEG_LEN+self.SEG_WID)/2)
@@ -131,14 +132,20 @@ class FakeDisplay (tk.Canvas):
     self.w = self.winfo_width()
     self.h = self.winfo_height()
     
-    self.SEG_WID = min(self.H_F*self.h/(3+2*self.LW_F), self.W_F*self.w/(8+4*self.LW_F))
+    self.W = self.W_F*self.w
+    self.H = self.H_F*self.h
+    self.HW_F = 3+2*self.LW_F
+    self.WW_F = 8+4*self.LW_F+4*self.DW_F
+    self.SEG_WID = min(self.H/self.HW_F, self.W/self.WW_F)
     self.SEG_LEN = self.SEG_WID*self.LW_F
     self.DP_SIZE = self.SEG_WID*self.DW_F
+    self.W       = self.SEG_WID*self.WW_F
+    self.H       = self.SEG_WID*self.HW_F
     
     self.coords(self.box, 0, 0, self.w, self.h)
     
     for i in range(4):
-      self.drawDigit(self.poly[i], self.w*(2*i+1)/8, self.h/2)
+      self.drawDigit(self.poly[i], (self.w-self.W)/2+self.W*(2*i+1)/8, self.h/2)
   
   def updateColours(self):
     self['bg'] = self.COLOR_BG
