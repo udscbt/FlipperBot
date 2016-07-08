@@ -12,7 +12,7 @@ class EverythingButton:
   
   def start(self):
     if not self._started:
-      gpio.add_event_detect(self.everythingButton, gpio.BOTH, callback=self._managePress, bouncetime=10)
+      gpio.add_event_detect(self.everythingButton, gpio.BOTH, callback=self._managePress, bouncetime=50)
       self._started = True
   
   def stop(self):
