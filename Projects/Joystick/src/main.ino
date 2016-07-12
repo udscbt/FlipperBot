@@ -542,7 +542,7 @@ enum
         lOut != lOut_old ||
         rOut != rOut_old ||
         uOut != uOut_old ||
-        dOut != uOut_old
+        dOut != dOut_old
       )
       {
         sendStatus = SEND_NEW;
