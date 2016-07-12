@@ -111,22 +111,20 @@ fbcp::string hitCmd;
       ++@VAR(i);
     }
   }
-
+  
+  Serial.print("Received: '");
+  Serial.print(@VAR(msg).c_str());
+  Serial.println("'");
+  
   @IF (millis() - @VAR(t) >= @PARAM(timeout))
   {
     Serial.println("Timeout");
-    Serial.print("Received: '");
-    Serial.print(@VAR(msg).c_str());
-    Serial.println("'");
     @RETURN(false);
   }
   
   @IF (@VAR(c) == '\0')
   {
     Serial.println("Remote host said something REALLY strange :S");
-    Serial.print("Received: '");
-    Serial.print(@VAR(msg).c_str());
-    Serial.println("'");
     @RETURN(false);
   }
   
@@ -159,15 +157,8 @@ fbcp::string hitCmd;
 
     //tryConnect
     @VAR(t1:unsigned long)
-    @VAR(t2:unsigned long)
     
     @VAR(cmd:fbcp::COMMAND_LINE)
-    
-    @VAR(j:int)
-    @VAR(nc:int)
-    @VAR(c:char)
-    @VAR(end:bool)
-    @VAR(msg:fbcp::string)
   }
 
   @WHILE
@@ -350,7 +341,6 @@ fbcp::string hitCmd;
                 Serial.println("Getting into Stand Alone mode");
               }
               //~ schemo::schedule_job(job_client);
-              //~ schemo::schedule_job(job_server_G);
             }
             else
             {
@@ -375,7 +365,6 @@ fbcp::string hitCmd;
         Serial.print("IP address: ");
         Serial.println(WiFi.softAPIP());
         mode = MODE_STANDALONE;
-        //~ schemo::schedule_job(job_server_SA);
       }
     }
   }
@@ -386,16 +375,12 @@ fbcp::string hitCmd;
   //~ @MEMORY
   //~ {
     //~ @VAR(cmd:fbcp::COMMAND_LINE)
-    //~ @VAR(t:unsigned long)
-    //~ @VAR(end:bool)
-    //~ @VAR(read:bool)
   //~ }
 
   //~ @WHILE
   //~ {
     //~ @WHILE (sockOut.connected())
     //~ {
-      //~ @VAR(t) = millis();
       //~ @VAR(cmd).command = &fbcp::Q_ROBOT_COMMAND;
 
       //~ if (digitalRead(HIT))
@@ -491,126 +476,134 @@ void rightMotor(int dir)
   }
   else
   {
-    analogWrite(L_MOTOR, 0);
+    analogWrite(R_MOTOR, 0);
   }
 }
 
-//~ @JOB(job_server_G)
-//~ {
-  //~ @MEMORY
-  //~ {
-    //~ @VAR(client:WiFiClient)
-    //~ @VAR(cmd:fbcp::COMMAND_LINE)
-  //~ }
-  //~ server.begin();
-  
-  //~ @WHILE (mode == MODE_STANDALONE)
-  //~ {
-    //~ @VAR(client) = server.available();
-    //~ @IF (@VAR(client))
-    //~ {
-      //~ @WHILE (@VAR(client).connected())
-      //~ {
-        //~ @CALL(readCommand;&sockOut;&@VAR(cmd);100):understood;@VAR(cmd).command = &fbcp::Q_SINGLE_PRESENTATION;
-        //~ fbcp::COMMAND_LINE cmd;
-        //~ cmd.command = &fbcp::A_ACCEPT;
-        //~ if (!understood)
-        //~ {
-          //~ cmd.command = &fbcp::A_ERROR;
-          //~ Serial.println("Couldn't understand message");
-        //~ }
-        //~ else if (@VAR(cmd).command->code == fbcp::Q_ROBOT_COMMAND.code)
-        //~ {
-          //~ if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_FORWARD_LEFT.str)
-          //~ {
-            //~ leftMotor(0);
-            //~ rightMotor(1);
-          //~ }
-          //~ else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_FORWARD.str)
-          //~ {
-            //~ leftMotor(1);
-            //~ rightMotor(1);
-          //~ }
-          //~ else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_FORWARD_RIGHT.str)
-          //~ {
-            //~ leftMotor(1);
-            //~ rightMotor(0);
-          //~ }
-          //~ else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_LEFT.str)
-          //~ {
-            //~ leftMotor(-1);
-            //~ rightMotor(1);
-          //~ }
-          //~ else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_STOP.str)
-          //~ {
-            //~ leftMotor(0);
-            //~ rightMotor(0);
-          //~ }
-          //~ else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_RIGHT.str)
-          //~ {
-            //~ leftMotor(1);
-            //~ rightMotor(-1);
-          //~ }
-          //~ else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_BACKWARD_LEFT.str)
-          //~ {
-            //~ leftMotor(0);
-            //~ rightMotor(-1);
-          //~ }
-          //~ else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_BACKWARD.str)
-          //~ {
-            //~ leftMotor(-1);
-            //~ rightMotor(-1);
-          //~ }
-          //~ else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_BACKWARD_RIGHT.str)
-          //~ {
-            //~ leftMotor(-1);
-            //~ rightMotor(0);
-          //~ }
-        //~ }
-        //~ else if (@VAR(cmd).command->code == fbcp::Q_MOTOR_COMMAND.code)
-        //~ {
-          //~ bool left = false;
-          //~ bool right = false;
-          //~ if (@VAR(cmd).params["motor"] == fbcp::MOTOR_LEFT.str) left = true;
-          //~ if (@VAR(cmd).params["motor"] == fbcp::MOTOR_RIGHT.str) right = true;
-          //~ if (@VAR(cmd).params["motor"] == fbcp::MOTOR_BOTH.str) {left = true; right=true;}
-          //~ if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_FORWARD.str)
-          //~ {
-            //~ if (left) leftMotor(1);
-            //~ if (right) rightMotor(1);
-          //~ }
-          //~ else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_STOP.str)
-          //~ {
-            //~ if (left) leftMotor(0);
-            //~ if (right) rightMotor(0);
-          //~ }
-          //~ else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_BACKWARD.str)
-          //~ {
-            //~ if (left) leftMotor(-1);
-            //~ if (right) rightMotor(-1);
-          //~ }
-        //~ }
-        //~ else
-        //~ {
-          //~ cmd.command = &fbcp::A_ERROR;
-          //~ Serial.println("Board said something strange :S");
-        //~ }
-        //~ fbcp::string s = fbcp::writeCommand(cmd);
-        //~ Serial.print("Sent: ");
-        //~ Serial.println(s.c_str());
-        //~ @VAR(client).print(s.c_str());
-      //~ }
-    //~ }
-  //~ }
-  
-  //~ if (@VAR(client))
-  //~ {
-    //~ @VAR(client).stop();
-  //~ }
-//~ }
-
-@JOB(job_server_SA)
+@JOB(job_server)
 {
+  @MEMORY
+  {
+    @VAR(client:WiFiClient)
+    @VAR(cmd:fbcp::COMMAND_LINE)
+  }
+  server.begin();
+
+  @WHILE
+  {
+    @IF (mode == MODE_GAME)
+    {
+      @WHILE (mode == MODE_GAME)
+      {
+        @VAR(client) = server.available();
+        @IF (@VAR(client))
+        {
+          @WHILE (@VAR(client).connected())
+          {
+            @CALL(readCommand;&@VAR(client);&@VAR(cmd);1000):understood;
+            fbcp::COMMAND_LINE cmd;
+            cmd.command = &fbcp::A_ACCEPT;
+            if (!understood)
+            {
+              cmd.command = &fbcp::A_ERROR;
+              Serial.println("Couldn't understand message");
+            }
+            else if (@VAR(cmd).command->code == fbcp::Q_ROBOT_COMMAND.code)
+            {
+              Serial.println("Change direction");
+              if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_FORWARD_LEFT.str)
+              {
+                leftMotor(0);
+                rightMotor(1);
+              }
+              else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_FORWARD.str)
+              {
+                leftMotor(1);
+                rightMotor(1);
+              }
+              else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_FORWARD_RIGHT.str)
+              {
+                leftMotor(1);
+                rightMotor(0);
+              }
+              else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_LEFT.str)
+              {
+                leftMotor(-1);
+                rightMotor(1);
+              }
+              else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_STOP.str)
+              {
+                leftMotor(0);
+                rightMotor(0);
+              }
+              else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_RIGHT.str)
+              {
+                leftMotor(1);
+                rightMotor(-1);
+              }
+              else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_BACKWARD_LEFT.str)
+              {
+                leftMotor(0);
+                rightMotor(-1);
+              }
+              else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_BACKWARD.str)
+              {
+                leftMotor(-1);
+                rightMotor(-1);
+              }
+              else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_BACKWARD_RIGHT.str)
+              {
+                leftMotor(-1);
+                rightMotor(0);
+              }
+            }
+            else if (@VAR(cmd).command->code == fbcp::Q_MOTOR_COMMAND.code)
+            {
+              Serial.println("Change motor speed");
+              bool left = false;
+              bool right = false;
+              if (@VAR(cmd).params["motor"] == fbcp::MOTOR_LEFT.str) left = true;
+              if (@VAR(cmd).params["motor"] == fbcp::MOTOR_RIGHT.str) right = true;
+              if (@VAR(cmd).params["motor"] == fbcp::MOTOR_BOTH.str) {left = true; right=true;}
+              if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_FORWARD.str)
+              {
+                if (left) leftMotor(1);
+                if (right) rightMotor(1);
+              }
+              else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_STOP.str)
+              {
+                if (left) leftMotor(0);
+                if (right) rightMotor(0);
+              }
+              else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_BACKWARD.str)
+              {
+                if (left) leftMotor(-1);
+                if (right) rightMotor(-1);
+              }
+            }
+            else
+            {
+              cmd.command = &fbcp::A_ERROR;
+              Serial.println("Board said something strange :S");
+            }
+            fbcp::string s = fbcp::writeCommand(cmd);
+            Serial.print("Sent: ");
+            Serial.println(s.c_str());
+            @VAR(client).print(s.c_str());
+          }
+          Serial.println("Disconnected");
+        }
+      }
+      
+      if (@VAR(client))
+      {
+        @VAR(client).stop();
+      }
+    }
+    @IF (mode == MODE_STANDALONE)
+    {
+    }
+  }
 }
 
 @JOB (job_link)
@@ -619,7 +612,6 @@ void rightMotor(int dir)
   {
     @VAR(led:bool)
     @VAR(buz:bool)
-    @VAR(t:unsigned long)
   }
 
   @VAR(led) = false;
@@ -722,7 +714,8 @@ void setup()
   WiFi.persistent(false);
 
   schemo::schedule_job(job_link);
-  //~ schemo::schedule_job(job_network);
+  schemo::schedule_job(job_network);
+  schemo::schedule_job(job_server);
   schemo::schedule_job(avoid_breaking);
   Serial.println("Job scheduled");
 
