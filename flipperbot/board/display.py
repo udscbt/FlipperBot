@@ -1,4 +1,5 @@
 from .shared import gpio, ThreadEx, sleep, time, Lock, SharedVariable
+from serial import Serial
 
 class Display (ThreadEx):
   text = SharedVariable(None)
@@ -6,8 +7,6 @@ class Display (ThreadEx):
   tIndex = SharedVariable(0)
   animT = SharedVariable(time())
   values = SharedVariable(None)
-  updateF = SharedVariable()
-  scrollF = SharedVariable()
   
   segment = {
     'a' : 31,
@@ -189,3 +188,89 @@ class Display (ThreadEx):
       else:
         self._raw([0,1,2,3], "")
         sleep(1.0/self.updateF)
+
+class DisplayEx(Display):  
+  BAUDRATE = 9600
+  PORT = '/dev/ttyACM0'
+  
+  def __init__(self, updateF, scrollF):
+    self.updateF = updateF
+    self.scrollF = scrollF
+    self._raw_values = {}
+    self._raw_digits = {}
+    super(Display, self).__init__(name="display")
+  
+  def _raw(self, digits, on):    
+    raise NotImplementedError()
+  
+  def _show(self, digit, value, dot=False):
+    NotImplementedError
+  
+  def _set_text(self, text, dots=None):
+    if dots is None:
+      dots = [False]*len(text)
+    self.text = text
+    self.dots = dots
+    self.tIndex = 0
+    self.animT = time()
+    n = len(text)
+    for i in range(n):
+      self.serial.write(text[i].encode('utf-8'))
+      try:
+        if dots[i]:
+          self.serial.write(b'.')
+      except:
+        pass
+      if i < n-1:
+        self.serial.write(b':')
+    self.serial.write(b';')
+  
+  def loop(self):
+    if self.oldUpdateF != self.updateF or self.oldScrollF != self.scrollF:
+      self.oldUpdateF = self.updateF;
+      self.oldScrollF = self.scrollF;
+    
+    pair = self._get_text()
+    tIndex = self.tIndex
+    animT  = self.animT
+    if pair is not None:
+      text, dots = pair
+      if len(text) > 4:
+        if time() - animT > 1.0/self.scrollF:
+          self.tIndex = self.tIndex+1
+          self.animT = time()
+      for d in range(4):
+        index = (d+tIndex)%len(text)
+        sleep(0.25/self.updateF)
+    else:
+      values = self._get_values()
+      if values is not None:
+        for d in range(4):
+          sleep(0.25/self.updateF)
+      else:
+        sleep(1.0/self.updateF)
+  
+  def setup(self):
+    self.serial = Serial(self.PORT, self.BAUDRATE)
+    self.setOptions(self.updateF, self.scrollF)
+  
+  def cleanup(self):
+    self.show("")
+    self.serial.close()
+  
+  def sendOptions(self):
+    self.serial.write("({};{})".format(self.updateF, self.scrollF).encode('utf-8'))
+  
+  def setOptions(self, updateF, scrollF):
+    self.oldUpdateF = updateF;
+    self.oldScrollF = scrollF;
+    self.updateF = updateF
+    self.scrollF = scrollF
+    self.sendOptions()
+  
+  def setRefreshRate(self, updateF):
+    self.setOptions(updateF, self.scrollF)
+  
+  def setScrollSpeed(self, scrollF):
+    self.setOptions(self.updateF, scrollF)
+

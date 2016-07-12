@@ -25,6 +25,7 @@ class ClientThread (ThreadEx):
   def __init__(self, server, sock, address, port):
     self.server = server
     self.sockIn = sock
+    self.sockIn.settimeout(0.5)
     self.address = address
     self.port = port
     self.index = ClientThread.INDEX
@@ -34,14 +35,14 @@ class ClientThread (ThreadEx):
     super(ClientThread, self).__init__(name="client[{}]".format(self.index))
 
   def debug(self, *args, **kwargs):
-    #print(
-    #  "[{}] {}{}:{} ".format(
-    #    strftime("%H:%M:%S"),
-    #    termColors['BOLD'],
-    #    self.logname,
-    #    termColors['END']
-    #  ), *args, **kwargs
-    #)
+    #~ print(
+      #~ "[{}] {}{}:{} ".format(
+        #~ strftime("%H:%M:%S"),
+       #~ termColors['BOLD'],
+        #~ self.logname,
+        #~ termColors['END']
+      #~ ), *args, **kwargs
+    #~ )
     pass
   
   def remove(self):
@@ -71,112 +72,10 @@ class ClientThread (ThreadEx):
     self.debug("Waiting for data...")
   
   def loop(self):
-    if not self.connected:
-      buf = self.sockIn.recv(256).decode("UTF-8")
-      self.debug("Received:", buf)
-      if not self.cmdIn.parse(buf):
-        self.debug("Can't understand message")
-        self.cmdOut.command = fbcp.Command.A_ERROR
-        s = self.cmdOut.write()
-        self.sockIn.send(s.encode("UTF-8"))
-        self.debug("Sent:", s)
-        return
-      if self.cmdIn.command == fbcp.Command.Q_SINGLE_PRESENTATION:
-        self.debug("Client asked for access")
-        self.serial = self.cmdIn.params['serial']
-        accepted = False
-        if self.serial.startswith("FlipperBot-Robot-"):
-          self.server.robLock.acquire()
-          
-          old = False
-          if self.serial in self.server.robots:
-            self.debug("Warning: replacing robot")
-            accepted = True
-            self.server.robots[self.serial]['thread'].stop()
-            old = True
-          
-          if old or len(self.server.robots) < 2:          
-            self.debug("Robot connected:", self.serial)
-            accepted = True
-            self.sockOut = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.debug("Creating connection to {}:{}".format(self.address, self.server.port))
-            self.sockOut.connect((self.address, self.server.port))
-            self.server.robots[self.serial] = {'thread': self, 'in': self.sockIn, 'out': self.sockOut}
-            self.index = list(self.server.robots).index(self.serial)
-            self.server.game.robots[self.index].active = True
-            rt = RobotThread(self.server, self.sockOut, self.index)
-            self.addChild(rt)
-            self.robot = True
-          else:
-            self.debug("Too many robots")
-          self.server.robLock.release()
-        
-        elif self.serial.startswith("FlipperBot-Controller-"):
-          self.server.conLock.acquire()
-          
-          old = False
-          if self.serial in self.server.controllers:
-            self.debug("Warning: replacing controller")
-            accepted = True
-            self.server.controllers[self.serial]['in'].close()
-            self.server.controllers[self.serial]['out'].close()
-            old = True
-          
-          if old or len(self.server.controllers) < 2:          
-            self.debug("Controller connected:", self.serial)
-            accepted = True
-            self.sockOut = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            #self.debug("Creating connection to {}:{}".format(self.address, self.server.port))
-            #self.sockOut.connect((self.address, self.server.port))
-            self.server.controllers[self.serial] = {'thread': self, 'in': self.sockIn, 'out': self.sockOut}
-            self.index = list(self.server.controllers).index(self.serial)
-            self.server.game.controllers[self.index].active = True
-            self.robot = False
-          else:
-            self.debug("Too many controllers")
-          self.server.conLock.release()
-        else:
-          self.debug("Serial not recognised:", self.serial)
-
-        self.logname = self.serial
-        self.cmdOut.command = fbcp.Command.A_GRANT_ACCESS if accepted else fbcp.Command.A_DENY_ACCESS
-        s = self.cmdOut.write()
-        self.sockIn.send(s.encode("UTF-8"))
-        self.debug("Sent:", s)
-        if accepted:
-          self.connected = True
-          return
-    else:
-      buf = ""
-      while not self._stopped:
-        #self.sockIn.settimeout(10)
-        self.sockIn.settimeout(1000)
-        try:
-          c = self.sockIn.recv(1).decode("UTF-8")
-        except socket.timeout:
-          self.debug("Disconnected")
-          self.remove()
-          self.stop()
-          return
-        buf = buf + c
-        if c == '\n':
-          break
-      if self._stopped:
-        return
-      self.debug("Received:", buf)
-      if not self.cmdIn.parse(buf):
-        self.debug("Can't understand message")
-        self.cmdOut.command = fbcp.Command.A_ERROR
-        s = self.cmdOut.write()
-        self.sockIn.send(s.encode("UTF-8"))
-        self.debug("Sent:", s)
-        return
-      
-      if self.robot:
-        pass
-      else:
-        self.cmdOut = fbcp.CommandLine()
-        self.cmdIn = fbcp.CommandLine()
+    try:
+      if not self.connected:
+        buf = self.sockIn.recv(256).decode("UTF-8")
+        self.debug("Received:", buf)
         if not self.cmdIn.parse(buf):
           self.debug("Can't understand message")
           self.cmdOut.command = fbcp.Command.A_ERROR
@@ -184,50 +83,156 @@ class ClientThread (ThreadEx):
           self.sockIn.send(s.encode("UTF-8"))
           self.debug("Sent:", s)
           return
-        elif len(self.server.robots) > self.index:
-          self.cmdOut.command = fbcp.Command.A_ACCEPT
-        else:
-          self.debug("No related robot connected yet")
-          #self.cmdOut.command = fbcp.Command.A_REFUSE
-          self.cmdOut.command = fbcp.Command.A_ACCEPT
-        s = self.cmdOut.write()
-        self.sockIn.send(s.encode("UTF-8"))
-        self.debug("Sent:", s)
-        if self.cmdIn.command == fbcp.Command.Q_ROBOT_COMMAND:
-          if self.cmdIn.params['direction'] == fbcp.Param.DIRECTION_BACKWARD:
-            self.server.game.controllers[self.index].direction = Controller.Direction.BACKWARD
-          elif self.cmdIn.params['direction'] == fbcp.Param.DIRECTION_BACKWARD_LEFT:
-            self.server.game.controllers[self.index].direction = Controller.Direction.BACKWARD_LEFT
-          elif self.cmdIn.params['direction'] == fbcp.Param.DIRECTION_BACKWARD_RIGHT:
-            self.server.game.controllers[self.index].direction = Controller.Direction.BACKWARD_RIGHT
-          elif self.cmdIn.params['direction'] == fbcp.Param.DIRECTION_FORWARD:
-            self.server.game.controllers[self.index].direction = Controller.Direction.FORWARD
-          elif self.cmdIn.params['direction'] == fbcp.Param.DIRECTION_FORWARD_LEFT:
-            self.server.game.controllers[self.index].direction = Controller.Direction.FORWARD_LEFT
-          elif self.cmdIn.params['direction'] == fbcp.Param.DIRECTION_FORWARD_RIGHT:
-            self.server.game.controllers[self.index].direction = Controller.Direction.FORWARD_RIGHT
-          elif self.cmdIn.params['direction'] == fbcp.Param.DIRECTION_LEFT:
-            self.server.game.controllers[self.index].direction = Controller.Direction.LEFT
-          elif self.cmdIn.params['direction'] == fbcp.Param.DIRECTION_RIGHT:
-            self.server.game.controllers[self.index].direction = Controller.Direction.RIGHT
-          elif self.cmdIn.params['direction'] == fbcp.Param.DIRECTION_STOP:
-            self.server.game.controllers[self.index].direction = Controller.Direction.STOP
-        elif self.cmdIn.command == fbcp.Command.Q_EVERYTHING_ON:
-          if self.server.game.mode == self.server.game.GAME:
-            self.pressStart = None
-            self.server.game.setMode(self.server.game.PAUSE)
-          elif self.server.game.mode == self.server.game.PAUSE:
-            self.pressStart = time()
-        elif self.cmdIn.command == fbcp.Command.Q_EVERYTHING_OFF:
-          if self.server.game.mode == self.server.game.MENU or self.server.game.mode == self.server.game.LOST:
-            self.server.game.setMode(self.server.game.GAME)
-          elif self.server.game.mode == self.server.game.PAUSE and self.pressStart is not None:
-            if time() - self.pressStart < 3:
-              self.server.game.setMode(self.server.game.GAME)
+        if self.cmdIn.command == fbcp.Command.Q_SINGLE_PRESENTATION:
+          self.debug("Client asked for access")
+          self.serial = self.cmdIn.params['serial']
+          accepted = False
+          if self.serial.startswith("FlipperBot-Robot-"):
+            self.server.robLock.acquire()
+            
+            old = False
+            if self.serial in self.server.robots:
+              self.debug("Warning: replacing robot")
+              accepted = True
+              self.server.robots[self.serial]['thread'].stop()
+              old = True
+            
+            if old or len(self.server.robots) < 2:          
+              self.debug("Robot connected:", self.serial)
+              accepted = True
+              self.sockOut = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+              self.debug("Creating connection to {}:{}".format(self.address, self.server.port))
+              self.sockOut.connect((self.address, self.server.port))
+              self.server.robots[self.serial] = {'thread': self, 'in': self.sockIn, 'out': self.sockOut}
+              self.index = list(self.server.robots).index(self.serial)
+              self.server.game.robots[self.index].active = True
+              rt = RobotThread(self.server, self.sockOut, self.index)
+              rt.start()
+              self.addChild(rt)
+              self.robot = True
             else:
-              self.server.game.setMode(self.server.game.MENU)
-            self.pressStart = None
+              self.debug("Too many robots")
+            self.server.robLock.release()
+          
+          elif self.serial.startswith("FlipperBot-Controller-"):
+            self.server.conLock.acquire()
+            
+            old = False
+            if self.serial in self.server.controllers:
+              self.debug("Warning: replacing controller")
+              accepted = True
+              self.server.controllers[self.serial]['in'].close()
+              self.server.controllers[self.serial]['out'].close()
+              old = True
+            
+            if old or len(self.server.controllers) < 2:          
+              self.debug("Controller connected:", self.serial)
+              accepted = True
+              self.sockOut = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+              #self.debug("Creating connection to {}:{}".format(self.address, self.server.port))
+              #self.sockOut.connect((self.address, self.server.port))
+              self.server.controllers[self.serial] = {'thread': self, 'in': self.sockIn, 'out': self.sockOut}
+              self.index = list(self.server.controllers).index(self.serial)
+              self.server.game.controllers[self.index].active = True
+              self.robot = False
+            else:
+              self.debug("Too many controllers")
+            self.server.conLock.release()
+          else:
+            self.debug("Serial not recognised:", self.serial)
 
+          self.logname = self.serial
+          self.cmdOut.command = fbcp.Command.A_GRANT_ACCESS if accepted else fbcp.Command.A_DENY_ACCESS
+          s = self.cmdOut.write()
+          self.sockIn.send(s.encode("UTF-8"))
+          self.debug("Sent:", s)
+          if accepted:
+            self.connected = True
+            return
+      else:
+        buf = ""
+        while not self._stopped:
+          #self.sockIn.settimeout(10)
+          #self.sockIn.settimeout(1000)
+          try:
+            c = self.sockIn.recv(1).decode("UTF-8")
+          except socket.timeout:
+            #~ self.debug("Disconnected")
+            #~ self.remove()
+            #~ self.stop()
+            return
+          buf = buf + c
+          if c == '\n':
+            break
+        if self._stopped:
+          return
+        self.debug("Received:", buf)
+        if not self.cmdIn.parse(buf):
+          self.debug("Can't understand message")
+          self.cmdOut.command = fbcp.Command.A_ERROR
+          s = self.cmdOut.write()
+          self.sockIn.send(s.encode("UTF-8"))
+          self.debug("Sent:", s)
+          return
+        
+        if self.robot:
+          pass
+        else:
+          self.cmdOut = fbcp.CommandLine()
+          self.cmdIn = fbcp.CommandLine()
+          if not self.cmdIn.parse(buf):
+            self.debug("Can't understand message")
+            self.cmdOut.command = fbcp.Command.A_ERROR
+            s = self.cmdOut.write()
+            self.sockIn.send(s.encode("UTF-8"))
+            self.debug("Sent:", s)
+            return
+          elif len(self.server.robots) > self.index:
+            self.cmdOut.command = fbcp.Command.A_ACCEPT
+          else:
+            self.debug("No related robot connected yet")
+            #self.cmdOut.command = fbcp.Command.A_REFUSE
+            self.cmdOut.command = fbcp.Command.A_ACCEPT
+          s = self.cmdOut.write()
+          self.sockIn.send(s.encode("UTF-8"))
+          self.debug("Sent:", s)
+          if self.cmdIn.command == fbcp.Command.Q_ROBOT_COMMAND:
+            if self.cmdIn.params['direction'] == fbcp.Param.DIRECTION_BACKWARD:
+              self.server.game.controllers[self.index].direction = Controller.Direction.BACKWARD
+            elif self.cmdIn.params['direction'] == fbcp.Param.DIRECTION_BACKWARD_LEFT:
+              self.server.game.controllers[self.index].direction = Controller.Direction.BACKWARD_LEFT
+            elif self.cmdIn.params['direction'] == fbcp.Param.DIRECTION_BACKWARD_RIGHT:
+              self.server.game.controllers[self.index].direction = Controller.Direction.BACKWARD_RIGHT
+            elif self.cmdIn.params['direction'] == fbcp.Param.DIRECTION_FORWARD:
+              self.server.game.controllers[self.index].direction = Controller.Direction.FORWARD
+            elif self.cmdIn.params['direction'] == fbcp.Param.DIRECTION_FORWARD_LEFT:
+              self.server.game.controllers[self.index].direction = Controller.Direction.FORWARD_LEFT
+            elif self.cmdIn.params['direction'] == fbcp.Param.DIRECTION_FORWARD_RIGHT:
+              self.server.game.controllers[self.index].direction = Controller.Direction.FORWARD_RIGHT
+            elif self.cmdIn.params['direction'] == fbcp.Param.DIRECTION_LEFT:
+              self.server.game.controllers[self.index].direction = Controller.Direction.LEFT
+            elif self.cmdIn.params['direction'] == fbcp.Param.DIRECTION_RIGHT:
+              self.server.game.controllers[self.index].direction = Controller.Direction.RIGHT
+            elif self.cmdIn.params['direction'] == fbcp.Param.DIRECTION_STOP:
+              self.server.game.controllers[self.index].direction = Controller.Direction.STOP
+          elif self.cmdIn.command == fbcp.Command.Q_EVERYTHING_ON:
+            if self.server.game.mode == self.server.game.GAME:
+              self.pressStart = None
+              self.server.game.setMode(self.server.game.PAUSE)
+            elif self.server.game.mode == self.server.game.PAUSE:
+              self.pressStart = time()
+          elif self.cmdIn.command == fbcp.Command.Q_EVERYTHING_OFF:
+            if self.server.game.mode == self.server.game.MENU or self.server.game.mode == self.server.game.LOST:
+              self.server.game.setMode(self.server.game.GAME)
+            elif self.server.game.mode == self.server.game.PAUSE and self.pressStart is not None:
+              if time() - self.pressStart < 3:
+                self.server.game.setMode(self.server.game.GAME)
+              else:
+                self.server.game.setMode(self.server.game.MENU)
+              self.pressStart = None
+    except socket.timeout:
+      return
+  
 class RobotThread (ThreadEx):
   def __init__(self, server, sock, index):
     self.server = server
@@ -237,32 +242,32 @@ class RobotThread (ThreadEx):
     super(RobotThread, self).__init__(name="client[robot{}]".format(self.index))
   
   def loop(self):
-    if self.server.game.mode == self.server.game.GAME:
-      d = self.server.game.robots[index].direction
-      if d != self.direction:
-        cmd = fbcp.CommandLine()
-        cmd.command = fbcp.Command.Q_ROBOT_COMMAND
-        if d == Robot.Direction.BACKWARD:
-          cmd.params['direction'] = fbcp.Param.DIRECTION_BACKWARD
-        elif d == Robot.Direction.BACKWARD_LEFT:
-          cmd.params['direction'] = fbcp.Param.DIRECTION_BACKWARD_LEFT
-        elif d == Robot.Direction.BACKWARD_RIGHT:
-          cmd.params['direction'] = fbcp.Param.DIRECTION_BACKWARD_RIGHT
-        elif d == Robot.Direction.FORWARD:
-          cmd.params['direction'] = fbcp.Param.DIRECTION_FORWARD
-        elif d == Robot.Direction.FORWARD_LEFT:
-          cmd.params['direction'] = fbcp.Param.DIRECTION_FORWARD_LEFT
-        elif d == Robot.Direction.FORWARD_RIGHT:
-          cmd.params['direction'] = fbcp.Param.DIRECTION_FORWARD_RIGHT
-        elif d == Robot.Direction.LEFT:
-          cmd.params['direction'] = fbcp.Param.DIRECTION_LEFT
-        elif d == Robot.Direction.RIGHT:
-          cmd.params['direction'] = fbcp.Param.DIRECTION_RIGHT
-        elif d == Robot.Direction.STOP:
-          cmd.params['direction'] = fbcp.Param.DIRECTION_STOP
-        self.server.game.robots[index].direction = d
-        sock.send(cmd.write().encode("UTF-8"))
-  
+    d = self.server.game.robots[self.index].direction
+    if d != self.direction:
+      cmd = fbcp.CommandLine()
+      cmd.command = fbcp.Command.Q_ROBOT_COMMAND
+      if d == Robot.Direction.BACKWARD:
+        cmd.params['direction'] = fbcp.Param.DIRECTION_BACKWARD.id
+      elif d == Robot.Direction.BACKWARD_LEFT:
+        cmd.params['direction'] = fbcp.Param.DIRECTION_BACKWARD_LEFT.id
+      elif d == Robot.Direction.BACKWARD_RIGHT:
+        cmd.params['direction'] = fbcp.Param.DIRECTION_BACKWARD_RIGHT.id
+      elif d == Robot.Direction.FORWARD:
+        cmd.params['direction'] = fbcp.Param.DIRECTION_FORWARD.id
+      elif d == Robot.Direction.FORWARD_LEFT:
+        cmd.params['direction'] = fbcp.Param.DIRECTION_FORWARD_LEFT.id
+      elif d == Robot.Direction.FORWARD_RIGHT:
+        cmd.params['direction'] = fbcp.Param.DIRECTION_FORWARD_RIGHT.id
+      elif d == Robot.Direction.LEFT:
+        cmd.params['direction'] = fbcp.Param.DIRECTION_LEFT.id
+      elif d == Robot.Direction.RIGHT:
+        cmd.params['direction'] = fbcp.Param.DIRECTION_RIGHT.id
+      elif d == Robot.Direction.STOP:
+        cmd.params['direction'] = fbcp.Param.DIRECTION_STOP.id
+      self.direction = d
+      msg = cmd.write()
+      print("Send dir:", msg)
+      self.sockOut.send(msg.encode("UTF-8"))
   
 class Server (ThreadEx):
   def __init__(self, game):

@@ -1,6 +1,6 @@
 from .shared import gpio, Thread, sleep, time
 from os.path import dirname, abspath, join
-from subprocess import Popen, call
+from subprocess import Popen, call, DEVNULL
 from random import random
 
 audio_root = dirname(abspath(__file__))
@@ -54,7 +54,7 @@ class Audio:
   
   def start(self, song):
     self.stop()
-    self.log = open(join(audio_root, "{:d}.log".format(int(time()))), "w")
+    self.log = open(join(audio_root, "logs", "{:d}.log".format(int(time()))), "w")
 #    self.proc = Popen([self.PLAYER, *self.PL_OPTIONS, song], stdout=self.log, stderr=self.log)
     self.proc = Popen([self.PLAYER] + self.PL_OPTIONS + [song], stdout=self.log, stderr=self.log)
     self._started = True
@@ -93,7 +93,7 @@ class SoundEffect:
   def start(self):
     self.stop()
 #    self.proc = Popen([self.PLAYER, *self.PL_OPTIONS, self.sound])
-    self.proc = Popen([self.PLAYER] + self.PL_OPTIONS + [self.sound])
+    self.proc = Popen([self.PLAYER] + self.PL_OPTIONS + [self.sound], stdout=DEVNULL, stderr=DEVNULL)
     self._started = True
     self._stopped = False
   

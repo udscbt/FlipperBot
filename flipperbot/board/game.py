@@ -1,6 +1,6 @@
 from .shared import gpio, ThreadEx, sleep, time, SharedVariable
 from .totems import totems
-from .display import Display
+from .display import DisplayEx as Display
 from .everythingButton import EverythingButton
 from .audio import Audio, SoundEffect
 from .robot import Robot
@@ -22,9 +22,6 @@ class Game (ThreadEx):
 
   blinkR  = SharedVariable(5)   # Blinking frequency on robot connected
   blinkC  = SharedVariable(10)  # Blinking frequency on controller connected
-  
-  LED1 = LED(26)
-  LED2 = LED(29)
   
   # MODES
   WAIT  = -2
@@ -51,6 +48,8 @@ class Game (ThreadEx):
     self.gameThread  = GameThread(self)
     self.pauseThread = PauseThread(self)
     self.randomThread = RandomThread(self)
+    self.LED1 = LED(26)
+    self.LED2 = LED(29)
     super(Game, self).__init__(name="main")
     for t in totemList:
       self.addChild(t)
@@ -58,6 +57,8 @@ class Game (ThreadEx):
     self.addChild(self.everythingButton)
     self.addChild(self.audio)
     self.addChild(self.randomThread)
+    self.addChild(self.LED1)
+    self.addChild(self.LED2)
   
   def setMode(self, mode):
     if mode == self.IDLE:
@@ -81,7 +82,7 @@ class Game (ThreadEx):
         self.gameThread.start()
       elif self.gameThread.paused():
         self.gameThread.resume()
-        sound = SoundEffect(self.game.audio.RSME)
+        sound = SoundEffect(self.audio.RSME)
         sound.start()
     elif mode == self.PAUSE:
       print("PAUSE")
@@ -111,6 +112,10 @@ class Game (ThreadEx):
     if self.robots[0].active:
       if self.controllers[0].active:
         self.LED1.on()
+        if self.mode == self.GAME:
+          self.robots[0].direction = self.controllers[0].direction
+        else:
+          self.robots[0].direction = Robot.Direction.STOP
       else:
         self.LED1.blink(self.blinkR)
     else:
@@ -122,6 +127,10 @@ class Game (ThreadEx):
     if self.robots[1].active:
       if self.controllers[1].active:
         self.LED2.on()
+        if self.mode == self.GAME:
+          self.robots[1].direction = self.controllers[1].direction
+        else:
+          self.robots[1].direction = Robot.Direction.STOP
       else:
         self.LED2.blink(self.blinkR)
     else:
@@ -170,9 +179,18 @@ class MenuThread (ThreadEx):
       self.game.audio.start(self.game.audio.LOST)
     else:
       self.game.display.show(["F", "li"]+list("pperbot    "))
-      self.game.audio.start(self.game.audio.MENU)        
+      self.game.audio.start(self.game.audio.MENU)
+    self.game.totIndex = 0;
+    self.game.totem = self.game.totemList[self.game.totIndex]
+  
+  def loop(self):
+    self.game.totem.off()
+    self.game._nextTotem()
+    self.game.totem.on()
+    sleep(1)
   
   def cleanup(self):
+    self.game.totem.off()
     self.game.audio.stop()
 
 class GameThread (ThreadEx):
@@ -183,6 +201,7 @@ class GameThread (ThreadEx):
   def setup(self):
     print("Game started")
     self.game.display.show("_-^-"*2)
+    self.game.display.setScrollSpeed(10);
     sound = SoundEffect(self.game.audio.READY)
     self.game.audio.stop()
     sound.start()
@@ -198,6 +217,7 @@ class GameThread (ThreadEx):
     self.lastHit = time()
     self.lastLoop = self.lastHit
     self.missing = self.game.deltaT
+    self.game.display.setScrollSpeed(self.game.scrollF)
   
   def loop(self):
     # Correcting for pause

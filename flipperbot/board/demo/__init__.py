@@ -7,6 +7,7 @@ from .fakejoystick import FakeJoystick, VirtualJoystick
 from .fakeeb import FakeEB
 from .fakedisplay import FakeDisplay
 from .fakeled import FakeLED
+from .fakebot import FakeBot
 
 from time import sleep
 
@@ -41,12 +42,13 @@ class Demo:
       self.g = Game(totems.values())
       self.g.start()
       sleep(1)
-      self.fb = FakeBoard(self.g)
-      self.fj = FakeJoystick(self.g)
-      self.fe = FakeEB(self.g, master=self.front)
-      self.fd = FakeDisplay(self.g, master=self.front)
+      self.fb  = FakeBoard(self.g)
+      self.fj  = FakeJoystick(self.g)
+      self.fe  = FakeEB(self.g, master=self.front)
+      self.fd  = FakeDisplay(self.g, master=self.front)
       self.fl1 = FakeLED(self.g.LED1, master=self.front)
       self.fl2 = FakeLED(self.g.LED2, master=self.front)
+      self.fr  = FakeBot(self.g)
       if self.remote:
         self.s = Server(self.g)
         self.s.start()
