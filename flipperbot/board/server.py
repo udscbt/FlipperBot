@@ -4,8 +4,8 @@ from time import time, sleep, strftime
 from .. import fbcp
 from collections import OrderedDict as OD
 from .shared import SharedVariable, ThreadEx
-from .robot import Robot
-from .controller import Controller
+from ..robot import Robot
+from ..controller import Controller
 
 termColors = {
     'PURPLE' : '\033[95m',
@@ -22,7 +22,8 @@ fbcp.loadCommands()
 
 class ClientThread (ThreadEx):
   INDEX = 0
-  def __init__(self, server, sock, address, port):
+  def __init__(self, server, sock, address, port, dbgFlag=False):
+    self.dbgFlag = dbgFlag
     self.server = server
     self.sockIn = sock
     self.sockIn.settimeout(0.5)
@@ -35,15 +36,17 @@ class ClientThread (ThreadEx):
     super(ClientThread, self).__init__(name="client[{}]".format(self.index))
 
   def debug(self, *args, **kwargs):
-    #~ print(
-      #~ "[{}] {}{}:{} ".format(
-        #~ strftime("%H:%M:%S"),
-       #~ termColors['BOLD'],
-        #~ self.logname,
-        #~ termColors['END']
-      #~ ), *args, **kwargs
-    #~ )
-    pass
+    if self.dbgFlag:
+      print(
+        "[{}] {}{}:{} ".format(
+          strftime("%H:%M:%S"),
+         termColors['BOLD'],
+          self.logname,
+          termColors['END']
+        ), *args, **kwargs
+      )
+    else:
+      pass
   
   def remove(self):
     if self.robot:
@@ -87,7 +90,7 @@ class ClientThread (ThreadEx):
           self.debug("Client asked for access")
           self.serial = self.cmdIn.params['serial']
           accepted = False
-          if self.serial.startswith("FlipperBot-Robot-"):
+          if self.serial.startswith(fbcp.ROBOT_PREFIX):
             self.server.robLock.acquire()
             
             old = False
@@ -114,7 +117,7 @@ class ClientThread (ThreadEx):
               self.debug("Too many robots")
             self.server.robLock.release()
           
-          elif self.serial.startswith("FlipperBot-Controller-"):
+          elif self.serial.startswith(fbcp.CONTR_PREFIX):
             self.server.conLock.acquire()
             
             old = False
@@ -270,8 +273,11 @@ class RobotThread (ThreadEx):
       self.sockOut.send(msg.encode("UTF-8"))
   
 class Server (ThreadEx):
-  def __init__(self, game):
-    self.port = 10000
+  address = '192.168.1.1'
+  port = 10000
+  
+  def __init__(self, game,dbgFlag=False):
+    self.dbgFlag = dbgFlag
     self.game = game
     self.robots = OD()
     self.controllers = OD()
@@ -281,10 +287,10 @@ class Server (ThreadEx):
   
   def setup(self):
     self.serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    self.serversocket.bind(("192.168.1.1", self.port))
+    self.serversocket.bind((self.address, self.port))
     self.serversocket.listen(10)
     self.serversocket.settimeout(0.5)
-    print("Server started on 192.168.1.1:{}".format(self.port))
+    print("Server started on {}:{}".format(self.address, self.port))
   
   def loop(self):
     try:
@@ -292,7 +298,7 @@ class Server (ThreadEx):
     except socket.timeout:
         return
     print("New connection: {}".format(address))
-    ct = ClientThread(self, sock, address[0], address[1])
+    ct = ClientThread(self, sock, address[0], address[1], dbgFlag=self.dbgFlag)
     self.addChild(ct)
     ct.start()
   
