@@ -6,6 +6,7 @@ from collections import OrderedDict as OD
 from .shared import SharedVariable, ThreadEx
 from ..robot import Robot
 from ..controller import Controller
+from .everythingButton import RemoteEverythingButton
 
 termColors = {
     'PURPLE' : '\033[95m',
@@ -137,6 +138,7 @@ class ClientThread (ThreadEx):
               self.server.controllers[self.serial] = {'thread': self, 'in': self.sockIn, 'out': self.sockOut}
               self.index = list(self.server.controllers).index(self.serial)
               self.server.game.controllers[self.index].active = True
+              self.EButton = RemoteEverythingButton(self.server.game)
               self.robot = False
             else:
               self.debug("Too many controllers")
@@ -219,20 +221,9 @@ class ClientThread (ThreadEx):
             elif self.cmdIn.params['direction'] == fbcp.Param.DIRECTION_STOP:
               self.server.game.controllers[self.index].direction = Controller.Direction.STOP
           elif self.cmdIn.command == fbcp.Command.Q_EVERYTHING_ON:
-            if self.server.game.mode == self.server.game.GAME:
-              self.pressStart = None
-              self.server.game.setMode(self.server.game.PAUSE)
-            elif self.server.game.mode == self.server.game.PAUSE:
-              self.pressStart = time()
+            self.EButton.press()
           elif self.cmdIn.command == fbcp.Command.Q_EVERYTHING_OFF:
-            if self.server.game.mode == self.server.game.MENU or self.server.game.mode == self.server.game.LOST:
-              self.server.game.setMode(self.server.game.GAME)
-            elif self.server.game.mode == self.server.game.PAUSE and self.pressStart is not None:
-              if time() - self.pressStart < 3:
-                self.server.game.setMode(self.server.game.GAME)
-              else:
-                self.server.game.setMode(self.server.game.MENU)
-              self.pressStart = None
+            self.EButton.release()
     except socket.timeout:
       return
   

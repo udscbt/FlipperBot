@@ -50,3 +50,37 @@ class EverythingButton:
           self.game.setMode(self.game.MENU)
         self._lastPress = None
 
+class RemoteEverythingButton:
+  def __init__(self, game):
+    self.game = game
+    self._lastPress = None
+  
+  def press(self):
+    self.rising = True
+    self.falling = False
+    self._managePress()
+  
+  def release(self):
+    self.rising = False
+    self.falling = True
+    self._managePress()
+  
+  def _managePress(self):
+    if self.game.mode == self.game.IDLE:
+      return
+    elif self.game.mode == self.game.MENU or self.game.mode == self.game.LOST:
+      if self.falling:
+        self.game.setMode(self.game.GAME)
+    elif self.game.mode == self.game.GAME:
+      if self.rising:
+        self.game.setMode(self.game.PAUSE)
+    elif self.game.mode == self.game.PAUSE:
+      if self.rising:
+        self._lastPress = time()
+      if self.falling and self._lastPress is not None:
+        if time()-self._lastPress < 3:
+          self.game.setMode(self.game.GAME)
+        else:
+          self.game.setMode(self.game.MENU)
+        self._lastPress = None
+
