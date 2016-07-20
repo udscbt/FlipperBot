@@ -1,5 +1,5 @@
 import tkinter as tk
-from ..controller import Controller
+from ...controller import Controller
 from collections import OrderedDict as OD
 
 class FakeJoystick (tk.Canvas):
@@ -43,6 +43,31 @@ class FakeJoystick (tk.Canvas):
     self.updateColours()
     self.loop()
   
+  directionKeys = {
+    'Left'     : Controller.Direction.LEFT,
+    'KP_4'     : Controller.Direction.LEFT,
+    'KP_Left'  : Controller.Direction.LEFT,
+    'Up'       : Controller.Direction.FORWARD,
+    'KP_8'     : Controller.Direction.FORWARD,
+    'KP_Up'    : Controller.Direction.FORWARD,
+    'Right'    : Controller.Direction.RIGHT,
+    'KP_6'     : Controller.Direction.RIGHT,
+    'KP_Right' : Controller.Direction.RIGHT,
+    'Down'     : Controller.Direction.BACKWARD,
+    'KP_2'     : Controller.Direction.BACKWARD,
+    'KP_Down'  : Controller.Direction.BACKWARD,
+    'KP_5'     : Controller.Direction.STOP,
+    'KP_Begin' : Controller.Direction.STOP,
+    'KP_7'     : Controller.Direction.FORWARD_LEFT,
+    'KP_Home'  : Controller.Direction.FORWARD_LEFT,
+    'KP_9'     : Controller.Direction.FORWARD_RIGHT,
+    'KP_Prior' : Controller.Direction.FORWARD_RIGHT,
+    'KP_1'     : Controller.Direction.BACKWARD_LEFT,
+    'KP_End'   : Controller.Direction.BACKWARD_LEFT,
+    'KP_3'     : Controller.Direction.BACKWARD_RIGHT,
+    'KP_Next'  : Controller.Direction.BACKWARD_RIGHT
+  }
+  
   def input(self, value=None):
     if value is None:
       return self._input
@@ -50,34 +75,18 @@ class FakeJoystick (tk.Canvas):
       self._input = value
     if self._input:
       self.focus_set()
-      self.bind('<Left>', lambda e: self.setDirection(Controller.Direction.LEFT))
-      self.bind('<KP_4>', lambda e: self.setDirection(Controller.Direction.LEFT))
-      self.bind('<Up>', lambda e: self.setDirection(Controller.Direction.FORWARD))
-      self.bind('<KP_8>', lambda e: self.setDirection(Controller.Direction.FORWARD))
-      self.bind('<Right>', lambda e: self.setDirection(Controller.Direction.RIGHT))
-      self.bind('<KP_6>', lambda e: self.setDirection(Controller.Direction.RIGHT))
-      self.bind('<Down>', lambda e: self.setDirection(Controller.Direction.BACKWARD))
-      self.bind('<KP_2>', lambda e: self.setDirection(Controller.Direction.BACKWARD))
-      self.bind('<KP_5>', lambda e: self.setDirection(Controller.Direction.STOP))
-      self.bind('<KP_7>', lambda e: self.setDirection(Controller.Direction.FORWARD_LEFT))
-      self.bind('<KP_9>', lambda e: self.setDirection(Controller.Direction.FORWARD_RIGHT))
-      self.bind('<KP_1>', lambda e: self.setDirection(Controller.Direction.BACKWARD_LEFT))
-      self.bind('<KP_3>', lambda e: self.setDirection(Controller.Direction.BACKWARD_RIGHT))
+      for k, v in self.directionKeys.items():
+        def handler(d):
+          return lambda e: self.setDirection(d)
+        self.bind("<{}>".format(k), handler(v))
+      #~ self.bind('<Return>', lambda e: self.EBPressed())
+      #~ self.bind('<KeyRelease-Return>', lambda e: self.EBReleased())
       self.autostop(self._autostop)
     else:
-      self.unbind('<Left>')
-      self.unbind('<KP_4>')
-      self.unbind('<Up>')
-      self.unbind('<KP_8>')
-      self.unbind('<Right>')
-      self.unbind('<KP_6>')
-      self.unbind('<Down>')
-      self.unbind('<KP_2>')
-      self.unbind('<KP_5>')
-      self.unbind('<KP_7>')
-      self.unbind('<KP_9>')
-      self.unbind('<KP_1>')
-      self.unbind('<KP_3>')
+      for k in self.directionKeys.keys():
+        self.unbind('<{}>'.format(k))
+        self.unbind('<Return>')
+        self.unbind('<KeyRelease-Return>')
       self.autostop(False)
   
   def autostop(self, value=None):
@@ -86,9 +95,11 @@ class FakeJoystick (tk.Canvas):
     else:
       self._autostop = value
       if self._autostop:
-        self.bind('<KeyRelease>', lambda e: self.setDirection(Controller.Direction.STOP))
+        for k in self.directionKeys.keys():
+          self.bind('<KeyRelease-{}>'.format(k), lambda e: self.setDirection(Controller.Direction.STOP))
       else:
-        self.unbind('<KeyRelease>')
+        for k in self.directionKeys.keys():
+          self.unbind('<KeyRelease-{}>'.format(k))
   
   def setDirection(self, direction):
     self.game.controllers[0].direction = direction

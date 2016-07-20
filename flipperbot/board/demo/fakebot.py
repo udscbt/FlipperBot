@@ -1,5 +1,5 @@
 import tkinter as tk
-from ..robot import Robot
+from ...robot import Robot
 from collections import OrderedDict as OD
 
 class FakeBot (tk.Canvas):
