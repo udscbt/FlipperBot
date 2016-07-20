@@ -118,13 +118,15 @@ class FakeDisplay (tk.Canvas):
     self.root.after(100, self.loop)
   
   def redraw(self):
+    if len(self.text) < 4:
+      self.text = self.text + " "*(len(self.text)-4)
     self.segments = list(map(lambda x: {s : s in self.game.display.valuemap[x] for s in "abcdefg"}, self.text))
     for i in range(len(self.segments)):
       self.segments[i]['dp'] = self.dots[i]
-    
     for digit in range(4):
+      index = (digit+self.tIndex)%len(self.text)
       for segment in list("abcdefg")+["dp"]:
-        index = (digit+self.tIndex)%len(self.text)
+        if len(self.text) > 0:
         color = self.COLOR_A if self.segments[index][segment] else self.COLOR_P
         self.itemconfigure(self.poly[digit][segment], fill=color, outline=color)
   

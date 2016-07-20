@@ -171,11 +171,13 @@ class Display (ThreadEx):
     animT  = self.animT
     if pair is not None:
       text, dots = pair
-      if len(text) > 4:
+      tl = len(text)
+      if tl > 4:
+        tl = 4
         if time() - animT > 1.0/self.scrollF:
           self.tIndex = self.tIndex+1
           self.animT = time()
-      for d in range(4):
+      for d in range(tl):
         index = (d+tIndex)%len(text)
         self._show(d, text[index], dots[index])
         sleep(0.25/self.updateF)
@@ -199,7 +201,7 @@ class Display (ThreadEx):
   def setScrollSpeed(self, scrollF):
     self.setOptions(self.updateF, scrollF)
 
-class DisplayEx(Display):  
+class DisplayEx (Display):  
   BAUDRATE = 9600
   PORT = '/dev/ttyACM0'
   
@@ -245,11 +247,13 @@ class DisplayEx(Display):
     animT  = self.animT
     if pair is not None:
       text, dots = pair
-      if len(text) > 4:
+      tl = len(text)
+      if tl > 4:
+        tl = 4
         if time() - animT > 1.0/self.scrollF:
           self.tIndex = self.tIndex+1
           self.animT = time()
-      for d in range(4):
+      for d in range(tl):
         index = (d+tIndex)%len(text)
         sleep(0.25/self.updateF)
     else:
@@ -261,6 +265,7 @@ class DisplayEx(Display):
         sleep(1.0/self.updateF)
   
   def setup(self):
+    # ssty -F <device> <baud> -hup
     self.serial = Serial(self.PORT, self.BAUDRATE)
     self.setOptions(self.updateF, self.scrollF)
   
