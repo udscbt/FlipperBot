@@ -1,10 +1,10 @@
 from .shared import gpio, ThreadEx, sleep, time, SharedVariable
 from .totems import totems
-from .display import DisplayEx as Display
+from .display import Display, DisplayEx
 from .everythingButton import EverythingButton
 from .audio import Audio, SoundEffect
-from .robot import Robot
-from .controller import Controller
+from ..robot import Robot
+from ..controller import Controller
 from .led import LED
 
 from random import random
@@ -36,12 +36,15 @@ class Game (ThreadEx):
   robots = SharedVariable()
   controllers = SharedVariable()
   
-  def __init__(self, totemList):
+  def __init__(self, totemList, displayex=True):
     self.mode = self.IDLE
     self.totemList = list(totemList)
     self.robots = [Robot(), Robot()]
     self.controllers = [Controller(), Controller()]
-    self.display = Display(self.updateF, self.scrollF)
+    if displayex:
+      self.display = DisplayEx(self.updateF, self.scrollF)
+    else:
+      self.display = Display(self.updateF, self.scrollF)
     self.everythingButton = EverythingButton(self)
     self.audio = Audio()
     self.menuThread  = MenuThread(self)

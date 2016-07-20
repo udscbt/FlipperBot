@@ -188,6 +188,16 @@ class Display (ThreadEx):
       else:
         self._raw([0,1,2,3], "")
         sleep(1.0/self.updateF)
+    
+  def setOptions(self, updateF, scrollF):
+    self.updateF = updateF
+    self.scrollF = scrollF
+  
+  def setRefreshRate(self, updateF):
+    self.setOptions(updateF, self.scrollF)
+  
+  def setScrollSpeed(self, scrollF):
+    self.setOptions(self.updateF, scrollF)
 
 class DisplayEx(Display):  
   BAUDRATE = 9600

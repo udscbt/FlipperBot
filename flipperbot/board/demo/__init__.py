@@ -35,11 +35,11 @@ class Demo:
     #~ self.g.stop()
     #~ if self.remote:
       #~ self.s.stop()
-  def __init__(self, remote=False):
+  def __init__(self, remote=False, displayex=True):
     try:
       self.remote = remote
       self.front = Tk()
-      self.g = Game(totems.values())
+      self.g = Game(totems.values(), displayex=displayex)
       self.g.start()
       sleep(1)
       self.fb  = FakeBoard(self.g)
