@@ -1,5 +1,9 @@
 from os.path import dirname, abspath
 
+BOARD_PREFIX = "FlipperBot-Board-"
+ROBOT_PREFIX = "FlipperBot-Robot-"
+CONTR_PREFIX = "FlipperBot-Controller-"
+
 class Command:
   code = 0
   
