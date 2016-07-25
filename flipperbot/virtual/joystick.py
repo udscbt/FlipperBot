@@ -1,7 +1,6 @@
 import tkinter as tk
 from time import time
 from ..controller import Controller
-from collections import OrderedDict as OD
 
 import socket
 from .. import fbcp
@@ -10,7 +9,6 @@ fbcp.loadCommands()
 
 class Joystick (tk.Canvas):
   RADIUS_BG1_F = 1.0/5
-#  RADIUS_BG2_F = 4.0/5
   RADIUS_BG2_F = 1.0
   BORDER_F     = 1.0/50
   RADIUS_IN_F  = 1.0/10
