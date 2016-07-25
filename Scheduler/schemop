@@ -167,7 +167,7 @@ SETNUM_O  = CMD_O('SET_NUM_JOBS')
 COMMENT_1_PATTERN = re.compile("/\*.*?\*/", flags=re.DOTALL)
 COMMENT_2_PATTERN = re.compile("//.*?(\n|$)", flags=re.DOTALL)
 def clean(buf):
-  return COMMENT_2_PATTERN.sub("", COMMENT_1_PATTERN.sub("", buf))
+  return COMMENT_2_PATTERN.sub("\n", COMMENT_1_PATTERN.sub("", buf))
 
 JOB_PREFIX = 'job_'
 JOB_INDEX  = 0
