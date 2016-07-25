@@ -22,6 +22,8 @@ class Game (ThreadEx):
 
   blinkR  = SharedVariable(5)   # Blinking frequency on robot connected
   blinkC  = SharedVariable(10)  # Blinking frequency on controller connected
+
+  hitDelay = SharedVariable(0.1) # Maximum time between totem hit and robot hit to be considered simultaneous
   
   # MODES
   WAIT  = -2
@@ -30,6 +32,7 @@ class Game (ThreadEx):
   GAME  = 1
   PAUSE = 2
   LOST  = 3
+  NOSTOP = 4
   
   totemList = SharedVariable()
   mode = SharedVariable(MENU)
@@ -242,15 +245,28 @@ class GameThread (ThreadEx):
     
     # Check for hit
     if self.game.totem.isHit() or self.game.isHit2():
-      sound = SoundEffect(self.game.audio.HIT)
-      sound.start()
-      self.points = self.points + 1
-      self.game.totem.off()
-      self.game._nextTotem()
-      self.game.totem.on()
-      self.lastHit = time()
-      self.lastLoop = self.lastHit
-      return
+      hit = True
+      t1 = time()
+      t2 = self.game.robots[0].hit
+      if not t2 or abs(t2-t1) > self.game.hitDelay:
+        print(t1, t2)
+        sleep(self.game.hitDelay)
+        t2 = self.game.robots[0].hit
+        if not t2 or abs(t2-t1) > self.game.hitDelay:
+          print("***")
+          print(t1, t2)
+          hit = False
+          print("Fake hit")
+      if hit:
+        sound = SoundEffect(self.game.audio.HIT)
+        sound.start()
+        self.points = self.points + 1
+        self.game.totem.off()
+        self.game._nextTotem()
+        self.game.totem.on()
+        self.lastHit = time()
+        self.lastLoop = self.lastHit
+        return
     
     # Lose
     if self.missing < 0:
@@ -297,3 +313,4 @@ class RandomThread (ThreadEx):
         self.prob = 1.5*self.prob
     sleep(5)
     
+#~ from .simonsays import GameThread
