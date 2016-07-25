@@ -126,7 +126,6 @@ class FakeDisplay (tk.Canvas):
     for digit in range(4):
       index = (digit+self.tIndex)%len(self.text)
       for segment in list("abcdefg")+["dp"]:
-        if len(self.text) > 0:
         color = self.COLOR_A if self.segments[index][segment] else self.COLOR_P
         self.itemconfigure(self.poly[digit][segment], fill=color, outline=color)
   
