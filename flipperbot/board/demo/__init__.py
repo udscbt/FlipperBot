@@ -13,6 +13,8 @@ from time import sleep
 
 from tkinter import Tk
 
+from ..debug.debug import Debug
+
 class Demo:
   #~ def __init__(self, remote=False):
     #~ self.remote = remote
@@ -35,11 +37,24 @@ class Demo:
     #~ self.g.stop()
     #~ if self.remote:
       #~ self.s.stop()
-  def __init__(self, remote=False, displayex=True):
+  def __init__(self, remote=False, displayex=True, logging=True, debug=False):
     try:
       self.remote = remote
       self.front = Tk()
-      self.g = Game(totems.values(), displayex=displayex)
+      self.g = Game(
+        totems.values(),
+        displayex=displayex,
+        logging=logging,
+        debug=debug
+      )
+      self.debug = Debug(
+        log=self.g.log,
+        logging=self.g.debug.logging,
+        stdout=self.g.debug.stdout,
+        name="Demo",
+        parent=self
+      )
+      self.debug("Demo used")
       self.g.start()
       sleep(1)
       self.fb  = FakeBoard(self.g)
@@ -50,9 +65,11 @@ class Demo:
       self.fl2 = FakeLED(self.g.LED2, master=self.front)
       self.fr  = FakeBot(self.g)
       if self.remote:
+        self.debug("Server used")
         self.s = Server(self.g)
         self.s.start()
       else:
+        self.debug("Local fake controller used")
         self.g.controllers[0].active = True
       self.front.columnconfigure(1, weight=8)
       self.front.columnconfigure(2, weight=8)
@@ -63,6 +80,7 @@ class Demo:
       self.fl2.grid(row=1, column=2, sticky="wens")
       self.fe.grid(row=1, column=3, sticky="wens")
       self.fd.grid(row=1, column=4, sticky="wens")
+      self.debug("Started")
     except NameError as e:
       print(e)
       self.error = e
@@ -72,3 +90,4 @@ class Demo:
     self.g.stop()
     if self.remote:
       self.s.stop()
+    self.debug("Stopped")

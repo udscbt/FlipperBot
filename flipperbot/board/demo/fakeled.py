@@ -1,5 +1,7 @@
 import tkinter as tk
 
+from ..debug.debug import Debug
+
 class FakeLED (tk.Canvas):
   RADIUS_F  = 0.9
   
@@ -9,6 +11,14 @@ class FakeLED (tk.Canvas):
   
   def __init__(self, led, master=None):
     self.led = led
+    self.debug = Debug(
+      log=led.debug.log,
+      logging=led.debug.logging,
+      stdout=led.debug.stdout,
+      parent=self,
+      name="FakeLED<{}>".format(led.pin)
+    )
+    self.debug("FakeLED used")
     if master is None:
       self.root = tk.Tk()
     else:

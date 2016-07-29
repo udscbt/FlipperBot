@@ -2,6 +2,8 @@ import tkinter as tk
 from ...controller import Controller
 from collections import OrderedDict as OD
 
+from ..debug.debug import Debug
+
 class FakeJoystick (tk.Canvas):
   RADIUS_BG1_F = 1.0/5
 #  RADIUS_BG2_F = 4.0/5
@@ -20,8 +22,17 @@ class FakeJoystick (tk.Canvas):
   
   direction = None
   
-  def __init__(self, game, input=True, autostop=True, master=None):
+  def __init__(self, game, index=0, input=True, autostop=True, master=None):
     self.game = game
+    self.index = index
+    self.debug = Debug(
+      log=game.debug.log,
+      logging=game.debug.logging,
+      stdout=game.debug.stdout,
+      parent=self,
+      name="FakeController<{}>".format(self.index)
+    )
+    self.debug("FakeController used")
     if master is None:
       self.root = tk.Tk()
     else:
@@ -74,6 +85,7 @@ class FakeJoystick (tk.Canvas):
     else:
       self._input = value
     if self._input:
+      self.debug("Input enabled")
       self.focus_set()
       for k, v in self.directionKeys.items():
         def handler(d):
@@ -83,6 +95,7 @@ class FakeJoystick (tk.Canvas):
       #~ self.bind('<KeyRelease-Return>', lambda e: self.EBReleased())
       self.autostop(self._autostop)
     else:
+      self.debug("Input disabled")
       for k in self.directionKeys.keys():
         self.unbind('<{}>'.format(k))
         self.unbind('<Return>')
@@ -95,14 +108,21 @@ class FakeJoystick (tk.Canvas):
     else:
       self._autostop = value
       if self._autostop:
+        self.debug("Autostop enabled")
         for k in self.directionKeys.keys():
           self.bind('<KeyRelease-{}>'.format(k), lambda e: self.setDirection(Controller.Direction.STOP))
       else:
+        self.debug("Autostop disabled")
         for k in self.directionKeys.keys():
           self.unbind('<KeyRelease-{}>'.format(k))
   
   def setDirection(self, direction):
-    self.game.controllers[0].direction = direction
+    self.debug(
+      "Changing direction to {}".format(
+        Controller.Direction.getName(direction)
+      )
+    )
+    self.game.controllers[self.index].direction = direction
   
   def draw(self, pos):
     Cx = self.cx+self.RADIUS_MOV*pos[0]
@@ -139,8 +159,12 @@ class FakeJoystick (tk.Canvas):
   
   def loop(self):
     old_dir = self.direction
-    self.direction = self.game.controllers[0].direction
+    self.direction = self.game.controllers[self.index].direction
     if self.direction != old_dir:
+      self.debug("Direction changed from {} to {}".format(
+        Controller.Direction.getName(old_dir),
+        Controller.Direction.getName(self.direction)
+      ))
       self.redraw()
     self.root.after(50, self.loop)
   
@@ -198,6 +222,15 @@ class VirtualJoystick (tk.Canvas):
   
   def __init__(self, game, input=True, autostop=True, master=None):
     self.game = game
+    self.index = index
+    self.debug = Debug(
+      log=game.debug.log,
+      logging=game.debug.logging,
+      stdout=game.debug.stdout,
+      parent=self,
+      name="FakeController<{}>".format(self.index)
+    )
+    self.debug("FakeController used")
     if master is None:
       self.root = tk.Tk()
     else:
@@ -287,7 +320,7 @@ class VirtualJoystick (tk.Canvas):
         self.unbind('<KeyRelease>')
   
   def setDirection(self, direction):
-    self.game.controllers[0].direction = direction
+    self.game.controllers[self.index].direction = direction
   
   def draw(self, pos):
     Cx = self.cx+self.RADIUS_MOV*pos[0]
@@ -324,7 +357,7 @@ class VirtualJoystick (tk.Canvas):
   
   def loop(self):
     old_dir = self.direction
-    self.direction = self.game.controllers[0].direction
+    self.direction = self.game.controllers[self.index].direction
     if self.direction != old_dir:
       self.redraw()
     self.root.after(50, self.loop)

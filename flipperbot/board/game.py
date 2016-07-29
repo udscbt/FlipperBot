@@ -6,6 +6,8 @@ from .audio import Audio, SoundEffect
 from ..robot import Robot
 from ..controller import Controller
 from .led import LED
+from .debug.log import Log
+from .debug.debug import Debug
 
 from random import random
 
@@ -34,22 +36,48 @@ class Game (ThreadEx):
   LOST  = 3
   NOSTOP = 4
   
+  def getModeName(self, mode):
+    if mode == -2:
+      return "Wait"
+    elif mode == -1:
+      return "Idle"
+    elif mode == 0:
+      return "Main menu"
+    elif mode == 1:
+      return "Game started"
+    elif mode == 2:
+      return "Game paused"
+    elif mode == 3:
+      return "Game lost -> Main Menu"
+    elif mode == 4:
+      return "No control"
+  
   totemList = SharedVariable()
   mode = SharedVariable(MENU)
   robots = SharedVariable()
   controllers = SharedVariable()
   
-  def __init__(self, totemList, displayex=True):
+  def __init__(self, totemList, displayex=True, logging=True, debug=False):
+    self.log = Log(filename="main.log", enabled=logging)
+    self.debug = Debug(
+      log=self.log,
+      logging=logging,
+      stdout=debug,
+      parent=self,
+      name="Game"
+    )
     self.mode = self.IDLE
     self.totemList = list(totemList)
     self.robots = [Robot(), Robot()]
     self.controllers = [Controller(), Controller()]
     if displayex:
-      self.display = DisplayEx(self.updateF, self.scrollF)
+      self.debug("Using external display")
+      self.display = DisplayEx(self.updateF, self.scrollF, debug=self.debug)
     else:
-      self.display = Display(self.updateF, self.scrollF)
+      self.debug("Using internal display")
+      self.display = Display(self.updateF, self.scrollF, debug=self.debug)
     self.everythingButton = EverythingButton(self)
-    self.audio = Audio()
+    self.audio = Audio(debug=self.debug)
     self.menuThread  = MenuThread(self)
     self.gameThread  = GameThread(self)
     self.pauseThread = PauseThread(self)
@@ -65,20 +93,22 @@ class Game (ThreadEx):
     self.addChild(self.randomThread)
     self.addChild(self.LED1)
     self.addChild(self.LED2)
+    self.debug("Initialized")
   
   def setMode(self, mode):
+    self.debug("Changing mode")
     if mode == self.IDLE:
-      print("IDLE")
+      self.debug("Mode selected: IDLE")
       self.display.show("OoOoOo")
       self.audio.stop()
     elif mode == self.MENU:
-      print("MENU")
+      self.debug("Mode selected: MENU")
       self.gameThread.stop()
       self.pauseThread.stop()
       self.menuThread = MenuThread(self)
       self.menuThread.start()
     elif mode == self.GAME:
-      print("GAME")
+      self.debug("Mode selected: GAME")
       self.menuThread.stop()
       self.pauseThread.stop()
       if self.gameThread is None or self.gameThread.stopped():
@@ -88,16 +118,16 @@ class Game (ThreadEx):
         self.gameThread.start()
       elif self.gameThread.paused():
         self.gameThread.resume()
-        sound = SoundEffect(self.audio.RSME)
+        sound = SoundEffect(self.audio.RSME, debug=self.debug)
         sound.start()
     elif mode == self.PAUSE:
-      print("PAUSE")
+      self.debug("Mode selected: PAUSE")
       self.gameThread.pause()
       self.menuThread.stop()
       self.pauseThread = PauseThread(self)
       self.pauseThread.start()
     elif mode == self.LOST:
-      print("LOST")
+      self.debug("Mode selected: LOST")
       self.gameThread.stop()
       self.pauseThread.stop()
       self.menuThread = MenuThread(self, lost=True)
@@ -113,6 +143,7 @@ class Game (ThreadEx):
     self.LED2.start()
     self.randomThread.start()
     self.setMode(self.MENU)
+    self.debug("Thread started")
   
   def loop(self):
     if self.robots[0].active:
@@ -146,16 +177,24 @@ class Game (ThreadEx):
         self.LED2.off()
   
   def _nextTotem(self):
+    self.debug("Selecting new totem")
     old = self.totIndex
     while old == self.totIndex:
       self.totIndex = int(random()*len(self.totemList))
     self.totem = self.totemList[self.totIndex]
+    self.debug("Totem {} selected".format(self.totem.pos))
   
   def cleanup(self):
     self.menuThread.stop()
+    self.menuThread.wait()
     self.gameThread.stop()
+    self.gameThread.wait()
     self.pauseThread.stop()
+    self.pauseThread.wait()
     gpio.cleanup()
+    self.debug("Thread stopped")
+    self.debug("Closing log")
+    self.log.closeall()
   
   def isHit2(self):
     if self.controllers[0].active:
@@ -175,11 +214,19 @@ class Game (ThreadEx):
 class MenuThread (ThreadEx):
   def __init__(self, game, lost=False):
     self.game = game
+    self.debug = Debug(
+      log=self.game.log,
+      logging=self.game.debug.logging,
+      stdout=self.game.debug.stdout,
+      parent=self,
+      name="MenuThread"
+    )
     self.lost = lost
     super(self.__class__, self).__init__(name="menu")
+    self.debug("Initialized")
   
   def setup(self):
-    print("Entering menu")
+    self.debug("Entering menu")
     if self.lost:
       self.game.display.show("LOSE")
       self.game.audio.start(self.game.audio.LOST)
@@ -198,23 +245,34 @@ class MenuThread (ThreadEx):
   def cleanup(self):
     self.game.totem.off()
     self.game.audio.stop()
+    self.debug("Stopped")
 
 class GameThread (ThreadEx):
   def __init__(self, game):
     self.game = game
+    self.debug = Debug(
+      log=self.game.log,
+      logging=self.game.debug.logging,
+      stdout=self.game.debug.stdout,
+      parent=self,
+      name="GameThread"
+    )
     super(self.__class__, self).__init__(name="game")
+    self.debug("Initialized")
   
   def setup(self):
-    print("Game started")
+    self.debug("Game started")
+    self.debug("Showing animation")
     self.game.display.show("_-^-"*2)
     self.game.display.setScrollSpeed(10);
-    sound = SoundEffect(self.game.audio.READY)
+    sound = SoundEffect(self.game.audio.READY, debug=self.debug)
     self.game.audio.stop()
     sound.start()
     sound.wait()
-    sound = SoundEffect(self.game.audio.START)
+    sound = SoundEffect(self.game.audio.START, debug=self.debug)
     sound.start()
     
+    self.debug("Initializing variables")
     self.game.audio.start(self.game.audio.GAME)
     self.game.totIndex = 0
     self.game._nextTotem()
@@ -224,6 +282,7 @@ class GameThread (ThreadEx):
     self.lastLoop = self.lastHit
     self.missing = self.game.deltaT
     self.game.display.setScrollSpeed(self.game.scrollF)
+    self.debug("Game actually started")
   
   def loop(self):
     # Correcting for pause
@@ -239,27 +298,28 @@ class GameThread (ThreadEx):
     
     # Almost out of time!
     if not self.game.totem._blink and self.missing < self.game.blinkT:
-      sound = SoundEffect(self.game.audio.OOT)
+      self.debug("Warning that time is almost up")
+      sound = SoundEffect(self.game.audio.OOT, debug=self.debug)
       sound.start()
       self.game.totem.blink(self.game.blinkF)
     
     # Check for hit
     if self.game.totem.isHit() or self.game.isHit2():
+      self.debug("Selected totem was hit")
       hit = True
-      t1 = time()
-      t2 = self.game.robots[0].hit
-      if not t2 or abs(t2-t1) > self.game.hitDelay:
-        print(t1, t2)
-        sleep(self.game.hitDelay)
-        t2 = self.game.robots[0].hit
-        if not t2 or abs(t2-t1) > self.game.hitDelay:
-          print("***")
-          print(t1, t2)
-          hit = False
-          print("Fake hit")
+      #~ t1 = time()
+      #~ t2 = self.game.robots[0].hit
+      #~ if not t2 or abs(t2-t1) > self.game.hitDelay:
+        #~ sleep(self.game.hitDelay)
+        #~ t2 = self.game.robots[0].hit
+        #~ if not t2 or abs(t2-t1) > self.game.hitDelay:
+          #~ hit = False
+          #~ self.debug("Fake hit")
       if hit:
-        sound = SoundEffect(self.game.audio.HIT)
+        self.debug("Confirmed hit")
+        sound = SoundEffect(self.game.audio.HIT, debug=self.debug)
         sound.start()
+        self.debug("Increasing points count")
         self.points = self.points + 1
         self.game.totem.off()
         self.game._nextTotem()
@@ -270,7 +330,8 @@ class GameThread (ThreadEx):
     
     # Lose
     if self.missing < 0:
-      sound = SoundEffect(self.game.audio.LOSE)
+      self.debug("Time is up")
+      sound = SoundEffect(self.game.audio.LOSE, debug=self.debug)
       sound.start()
       self.game.setMode(self.game.LOST)
       return
@@ -279,25 +340,44 @@ class GameThread (ThreadEx):
   
   def cleanup(self):
     if not self.game.totem.stopped():
+      self.debug("Turning off totems")
       self.game.totem.off()
     self.game.audio.stop()
+    self.debug("Stopped")
 
 class PauseThread (ThreadEx):
   def __init__(self, game):
     self.game = game
+    self.debug = Debug(
+      log=self.game.log,
+      logging=self.game.debug.logging,
+      stdout=self.game.debug.stdout,
+      parent=self,
+      name="PauseThread"
+    )
     super(self.__class__, self).__init__(name="pause")
+    self.debug("Initialized")
   
   def setup(self):
-    print("Entering pause")
+    self.debug("Entering pause")
     self.game.audio.start(self.game.audio.PAUSE)
   
   def cleanup(self):
     self.game.audio.stop()
+    self.debug("Stopped")
 
 class RandomThread (ThreadEx):
   def __init__(self, game):
     self.game = game
+    self.debug = Debug(
+      log=self.game.log,
+      logging=self.game.debug.logging,
+      stdout=self.game.debug.stdout,
+      parent=self,
+      name="RandomThread"
+    )
     super(self.__class__, self).__init__(name="random")
+    self.debug("Initialized")
   
   def setup(self):
     self.prob = 1
@@ -305,11 +385,14 @@ class RandomThread (ThreadEx):
   def loop(self):
     if self.game.mode == self.game.PAUSE:
       if random() > 1.0/self.prob:
-        sound = SoundEffect(self.game.audio.RAND)
+        self.debug("Playing random sound effect")
+        sound = SoundEffect(self.game.audio.RAND, debug=self.debug)
         sound.start()
         sound.wait()
+        self.debug("Reducing probability of random sound effect")
         self.prob = 1
       else:
+        self.debug("Increasing probability of random sound effect")
         self.prob = 1.5*self.prob
     sleep(5)
     

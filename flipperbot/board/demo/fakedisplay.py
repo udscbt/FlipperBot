@@ -1,5 +1,7 @@
 import tkinter as tk
 
+from ..debug.debug import Debug
+
 class FakeDisplay (tk.Canvas):
   COLOR_P   = 'gray70'
   COLOR_A   = 'green1'
@@ -13,6 +15,14 @@ class FakeDisplay (tk.Canvas):
   
   def __init__(self, game, joined=False, master=None):
     self.game = game
+    self.debug = Debug(
+      log=game.display.debug.log,
+      logging=game.display.debug.logging,
+      stdout=game.display.debug.stdout,
+      parent=self,
+      name="FakeDisplay>"
+    )
+    self.debug("FakeDisplay used")
     if master is None:
       self.root = tk.Tk()
     else:

@@ -1,5 +1,8 @@
 import tkinter as tk
+from ..game import Game
 from ..totems import totems
+
+from ..debug.debug import Debug
 
 class FakeBoard (tk.Canvas):
   RADIUS_IN_F  = 1.0/10
@@ -9,12 +12,23 @@ class FakeBoard (tk.Canvas):
   COLOR_ACTIVE  = 'red'
   COLOR_PASSIVE = 'gray70'
   COLOR_OUT     = 'gray30'
+  COLOR_HIT     = 'green'
   COLOR_BG1     = 'black'
   COLOR_BORDER  = 'gray5'
   COLOR_BG      = 'white'
   
-  def __init__(self, game, master=None):
+  def __init__(self, game=None, master=None, input=False):
+    if game is None:
+      game = Game(totems.values())
     self.game = game
+    self.debug = Debug(
+      log=game.debug.log,
+      logging=game.debug.logging,
+      stdout=game.debug.stdout,
+      parent=self,
+      name="FakeBoard>".format(self.index)
+    )
+    self.debug("FakeBoard used")
     if master is None:
       self.root = tk.Tk()
     else:
@@ -32,11 +46,46 @@ class FakeBoard (tk.Canvas):
       } for tot in self.game.totemList
     }
     
+    self.input(input)
+    
     self.bind("<Configure>", self.config)
     self.config()
     self.updateColours()
     self.loop()
-
+    
+  def input(self, value=None):
+    if value is None:
+      return self._input
+    else:
+      self._input = value
+      if self._input:
+        self.debug("Input enabled")
+        for t in self.totems.values():
+          def handler(t):
+            return lambda e: t['totem'].on()
+          self.tag_bind(t['in'], '<Button-1>', handler(t))
+          def handler(t):
+            return lambda e: t['totem'].off()
+          self.tag_bind(t['in'], '<ButtonRelease-1>', handler(t))
+          
+          def handler(t):
+            def hitTotem(e):
+              t['totem']._hit = True
+            return hitTotem
+          self.tag_bind(t['in'], '<Button-3>', handler(t))
+          def handler(t):
+            def hitTotem(e):
+              t['totem']._hit = False
+            return hitTotem
+          self.tag_bind(t['in'], '<ButtonRelease-3>', handler(t))
+      else:
+        self.debug("Input disabled")
+        for t in self.totems.values():
+          self.tag_unbind(t['in'], '<Button-1>')
+          self.tag_unbind(t['in'], '<ButtonRelease-1>')
+          self.tag_unbind(t['in'], '<Button-3>')
+          self.tag_unbind(t['in'], '<ButtonRelease-3>')
+  
   def config(self, event=None):    
     self.w = self.winfo_width()
     self.h = self.winfo_height()
@@ -71,6 +120,7 @@ class FakeBoard (tk.Canvas):
   
   def updateTotem(self, t):
     self.itemconfigure(t['in'], fill=(self.COLOR_ACTIVE if t['totem']._on else self.COLOR_PASSIVE))
+    self.itemconfigure(t['out'], fill=(self.COLOR_HIT if t['totem']._hit else self.COLOR_OUT))
   
   def loop(self):
     for t in self.totems.values():
