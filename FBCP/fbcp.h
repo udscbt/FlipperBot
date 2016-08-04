@@ -11,6 +11,10 @@ namespace fbcp
   const char ROBOT_PREFIX[] = "FlipperBot-Robot-";
   const char CONTR_PREFIX[] = "FlipperBot-Controller-";
   
+  const int HARD_TIMEOUT = 10000;
+  const int SOFT_TIMEOUT = 1000;
+  const int FAKE_TIMEOUT = 100;
+  
   bool parseCommand(const fbcp::string& line, COMMAND_LINE& result);
   fbcp::string  writeCommand(COMMAND_LINE& cmd);
   COMMAND* findQCommand(const fbcp::string& line);
