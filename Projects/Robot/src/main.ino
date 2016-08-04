@@ -480,22 +480,56 @@ void rightMotor(int dir)
   }
 }
 
-@JOB(job_server)
+@JOB (job_server)
 {
   @MEMORY
   {
     @VAR(client:WiFiClient)
     @VAR(cmd:fbcp::COMMAND_LINE)
+    @VAR(controller:bool)
   }
   server.begin();
+  @VAR(controller) = false;
 
   @WHILE
   {
-    @IF (mode == MODE_GAME)
+    @WHILE (mode == MODE_STANDALONE && !@VAR(controller))
     {
-      @WHILE (mode == MODE_GAME)
+      @VAR(client) = server.available();
+      @IF (@VAR(client))
       {
-        @VAR(client) = server.available();
+        @WHILE(@VAR(client).connected() && !@VAR(controller))
+        {
+          @CALL(readCommand;&@VAR(client);&@VAR(cmd);1000):understood;
+          fbcp::COMMAND_LINE cmd;
+          cmd.command = &fbcp::A_GRANT_ACCESS;
+          if (!understood)
+          {
+            cmd.command = &fbcp::A_ERROR;
+            Serial.println("Couldn't understand message");
+          }
+          else if (@VAR(cmd).command->code == fbcp::Q_SINGLE_PRESENTATION.code)
+          {
+            Serial.print("Controller connected: ");
+            Serial.println(@VAR(cmd).params["serial"]);
+            @VAR(controller) = true;
+          }
+          fbcp::string s = fbcp::writeCommand(cmd);
+          Serial.print("Sent: ");
+          Serial.println(s.c_str());
+          @VAR(client).print(s.c_str());
+        }
+      }
+    }
+    
+    @IF (mode == MODE_GAME || (mode == MODE_STANDALONE && @VAR(controller)))
+    {
+      @WHILE (mode == MODE_GAME || (mode == MODE_STANDALONE && @VAR(controller)))
+      {
+        @IF (mode == MODE_GAME)
+        {
+          @VAR(client) = server.available();
+        }
         @IF (@VAR(client))
         {
           @WHILE (@VAR(client).connected())
