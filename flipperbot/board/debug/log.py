@@ -18,7 +18,10 @@ class LogTag:
     )
 
 class LogEntry:
-  def __init__(self, timestamp=None, tags=None):
+  def __init__(self, text=None, timestamp=None, tags=None):
+    if text is None:
+      text = ""
+    self.text = text
     if timestamp is None:
       timestamp = localtime()
     self.timestamp = timestamp
@@ -272,7 +275,7 @@ class LogViewer:
   def __new__(typ, *args, gui=False, **kwargs):
     if gui:
       cls = LogViewer_GUI
-    else
+    else:
       cls = LogViewer_Text
     return cls.__new__(typ, *args, **kwargs)
 
@@ -305,7 +308,7 @@ class LogViewer_Superclass:
       return False    
   
   def split(self, text):
-    
+    pass
     
   def noOrder(self):
     pass
