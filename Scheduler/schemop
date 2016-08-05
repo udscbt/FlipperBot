@@ -51,6 +51,8 @@ parser.add_argument('-d', '--directory', dest='dir', metavar='DIRECTORY',
                     help='Directory for output files')
 parser.add_argument('--evil', dest='evil', action='store_true',
                     help='Activate evil substitution mode')
+parser.add_argument('-p', dest='profiler', action='store_true',
+                    help='Enable profiler')
 parser.add_argument('files', metavar='FILE', type=str, nargs='+',
                     help='files to be processed')
 

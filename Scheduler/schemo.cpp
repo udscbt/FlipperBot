@@ -37,6 +37,7 @@ bool schemo::cycle_setup()
 
 bool schemo::start_cycle()
 {
+  SCHEMO_P_INIT
   while (first_job != &NULL_NODE)
   {
     current_job = first_job;
@@ -66,6 +67,7 @@ bool schemo::start_cycle()
       current_job = current_job->next;
     }
   }
+  SCHEMO_P_CLOSE
   
   return true;
 }

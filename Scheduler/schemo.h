@@ -8,6 +8,8 @@
 #include <stack>
 #include <queue>
 
+#include "schemo_profiler.h"
+
 /* Defines */
 
 #define SCHEMO_TASK_HANDLE_SUFFIX _handle
@@ -186,6 +188,8 @@ namespace schemo {
     void (*revert)();
     
     bool dynamic;
+    
+    SCHEMO_P_TASK_DATA
   } TASK;
   
   const unsigned int JOB_MAX_NAME_LENGTH = 100;
@@ -198,6 +202,8 @@ namespace schemo {
     int delay;
     int elapsed;
     int priority;
+    
+    SCHEMO_P_JOB_DATA
   } JOB;
   
   typedef struct CYCLE_NODE
