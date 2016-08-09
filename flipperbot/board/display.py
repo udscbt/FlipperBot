@@ -232,8 +232,8 @@ class Display (ThreadEx):
 
 class DisplayEx (Display):  
   BAUDRATE = 9600
-  PORT = '/dev/ttyACM0'
-#  PORT = '/dev/ttyUSB0'
+#  PORT = '/dev/ttyACM0'
+  PORT = '/dev/ttyUSB0'
   
   def __init__(self, updateF, scrollF, debug=None):
     if debug is None:
