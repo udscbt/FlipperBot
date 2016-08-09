@@ -161,7 +161,7 @@ class Log:
           self.parent.queue.pop(0)
           self.parent.qlock.release()
           
-          self.parent._write(msg)
+          self.parent._write(self.msg)
           written = True
           self.parent.wlock.release()
         else:
@@ -180,8 +180,8 @@ class Log:
       t.start()
   
   def _write(self, msg):
-    self.buffer = self.buffer + self.msg
-    self.count = self.count + len(self.msg)
+    self.buffer = self.buffer + msg
+    self.count = self.count + len(msg)
     if self.count-self.written > self.threshold:
       self.flush()
   
