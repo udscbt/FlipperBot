@@ -22,6 +22,7 @@ def stderr(*args, **kwargs):
 
 CMD_PREFIX_D  = '@SCHEMO_'
 CMD_PREFIX_O  = 'SCHEMO_'
+CMD_PREFIX_P  = 'SCHEMO_P_'
 CMD_PREFIX_SH = '@'
 FILE_PREFIX_D = '__schemo_'
 VAR_PREFIX_D  = '__schemo_'
@@ -51,8 +52,8 @@ parser.add_argument('-d', '--directory', dest='dir', metavar='DIRECTORY',
                     help='Directory for output files')
 parser.add_argument('--evil', dest='evil', action='store_true',
                     help='Activate evil substitution mode')
-parser.add_argument('-p', dest='profiler', action='store_true',
-                    help='Enable profiler')
+parser.add_argument('-p', '--enable-profiler', dest='profiler',
+                    action='store_true', help='Enable profiler')
 parser.add_argument('files', metavar='FILE', type=str, nargs='+',
                     help='files to be processed')
 
@@ -69,7 +70,10 @@ def CMD(name):
   
 def CMD_O(name):
   return CMD_PREFIX_O+name
-  
+
+def CMD_P(name):
+  return CMD_PREFIX_P+name
+
 FILE_HEADER = """/*************************************
  * Auto-generated ScheMo source file *
  *************************************
@@ -166,6 +170,10 @@ DECMUT_O  = CMD_O('DECLARE_MUTEX')
 SETNUM    = CMD('SET_NUM_JOBS')
 SETNUM_O  = CMD_O('SET_NUM_JOBS')
 
+#PROFILER
+T_SETID   = CMD_P('TASK_SETID')
+J_SETID   = CMD_P('JOB_SETID')
+
 COMMENT_1_PATTERN = re.compile("/\*.*?\*/", flags=re.DOTALL)
 COMMENT_2_PATTERN = re.compile("//.*?(\n|$)", flags=re.DOTALL)
 def clean(buf):
@@ -183,7 +191,7 @@ def JOB_NAME():
 def JOB_FULL(job, task):
   return JOB_O+"("+job+","+task+")"
 
-JOBS = {}
+JOBS = OrderedDict()
 UNNAMED_JOBS = 0
 
 TASK_PREFIX = 'task_'
@@ -751,10 +759,16 @@ for name in args.files:
   match = DEC_PATTERN.search(buf)
   if match is not None:
     dec = SETNUM_O + "({})\n".format(len(JOBS))
-    for task in TASKS:
+    for i in range(len(TASKS)):
+      task = TASKS[i]
       dec = dec + DECTSK_O + "(" + task + ")\n"
-    for job, info in JOBS.items():
+      if args.profiler:
+        dec = dec + T_SETID + "({}, {})\n".format(task, i)
+    for i in range(len(JOBS)):
+      job, info = list(JOBS.items())[i]
       dec = dec + DECJOB_O + "(" + job + ")\n"
+      if args.profiler:
+        dec = dec + J_SETID + "({}, {})\n".format(job, i)
       for var, t in info['mem'].items():
         dec = dec + DECJVAR_O + "(%s, %s, %s)\n" % (var, job, t)
     for fun, info in FUNCTIONS.items():

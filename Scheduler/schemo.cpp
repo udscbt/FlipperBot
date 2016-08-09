@@ -60,7 +60,9 @@ bool schemo::start_cycle()
         else
         {
           current_job->job->current = NULL;
+          SCHEMO_P_START_TASK(current_job->job, task)
           task->handle();
+          SCHEMO_P_STOP_TASK(current_job->job, task)
         }
       }
       
