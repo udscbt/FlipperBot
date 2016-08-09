@@ -161,7 +161,7 @@ class Log:
           self.parent.queue.pop(0)
           self.parent.qlock.release()
           
-          self.parent._write(msg)
+          self.parent._write(self.msg)
           written = True
           self.parent.wlock.release()
         else:
