@@ -4,6 +4,9 @@
 
 #include <ESP8266WiFi.h>
 
+typedef unsigned char byte;
+#include "ssidheap.h"
+
 const int INTER_AXIS_INTERVAL = 10;
 const int INTER_READ_INTERVAL = INTER_AXIS_INTERVAL;
 const int WAIT_AFTER_REFUSED  = 1000;
@@ -162,7 +165,7 @@ enum
 {
   @MEMORY
   {
-    @VAR(i:int)
+    @VAR(i:byte)
     @VAR(n:int)
     @VAR(connected:bool)
 
@@ -213,11 +216,16 @@ enum
         Serial.println(" networks found");
         @VAR(i) = 0;
         @VAR(connected) = false;
-        @WHILE (@VAR(i) < @VAR(n) && !@VAR(connected))
+        clearSsidHeap();
+        @WHILE (@VAR(i) < @VAR(n))
+        {
+          insertSsid(@VAR(i));
+          ++@VAR(i);
+        }
+        @WHILE ( (@VAR(i)=popSsid()) < @VAR(n) && !@VAR(connected) )
         {
           // Print SSID and RSSI for each network found
-          Serial.print(@VAR(i) + 1);
-          Serial.print(": ");
+          Serial.print("- ");
           ssid = WiFi.SSID(@VAR(i)).c_str();
           Serial.print(ssid.c_str());
           Serial.print(" (");
@@ -375,9 +383,6 @@ enum
               Serial.println("Connection failed");
             }
           }
-
-          
-          ++@VAR(i);
         }
       }
       Serial.println("");

@@ -1,6 +1,17 @@
 from time import sleep, time
 from threading import Thread, Lock
 
+termColors = {
+  'PURPLE' : '\033[95m',
+  'BLUE' : '\033[94m',
+  'GREEN' : '\033[92m',
+  'YELLOW' : '\033[93m',
+  'RED' : '\033[91m',
+  'END' : '\033[0m',
+  'BOLD' : '\033[1m',
+  'UNDERLINE' : '\033[4m'
+}
+
 class SharedVariable:
   _counter = 0
   _cLock = Lock()
@@ -129,11 +140,13 @@ class ThreadEx (Thread):
       for child in self._children:
         child.stop()
       for child in self._children:
-        while not child.stopped():
-          pass
+        child.wait()
       self.cleanup()
-      print("Thread<{}> stopped".format(self.getName()))
       self._actually_stopped = True
+    
+    def wait(self):
+      while not self.stopped():
+        pass
     
     @running
     def addChild(self, child):

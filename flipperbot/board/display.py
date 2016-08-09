@@ -1,6 +1,8 @@
 from .shared import gpio, ThreadEx, sleep, time, Lock, SharedVariable
 from serial import Serial
 
+from .debug.debug import Debug, fakedebug
+
 class Display (ThreadEx):
   text = SharedVariable(None)
   dots = SharedVariable(None)
@@ -34,7 +36,17 @@ class Display (ThreadEx):
     3 : 10
   }
   
-  def __init__(self, updateF, scrollF):
+  def __init__(self, updateF, scrollF, debug=None):
+    if debug is None:
+      self.debug = fakedebug
+    else:
+      self.debug = Debug(
+        log=debug.log,
+        logging=debug.logging,
+        stdout=debug.stdout,
+        parent=self,
+        name="Display"
+      )
     for seg in self.segment.values():
       gpio.setup(seg, gpio.OUT, initial=gpio.LOW)
     for cat in self.cathode.values():
@@ -44,6 +56,7 @@ class Display (ThreadEx):
     self._raw_values = {}
     self._raw_digits = {}
     super(self.__class__, self).__init__(name="display")
+    self.debug("Initialized")
   
   def _raw(self, digits, on):    
     for name, seg in self.segment.items():
@@ -138,6 +151,15 @@ class Display (ThreadEx):
     self._set_values(values)
   
   def show(self, text, dots=None):
+    if dots is None:
+      dots = [False]*len(text)
+    self.debug(
+      "Showing text '{}'".format(
+        "".join(
+          [x+("." if y else "") for x,y in zip(text,dots)]
+        )
+      )
+    )
     self._set_text(text, dots)
     self._set_values(None)
   
@@ -192,25 +214,44 @@ class Display (ThreadEx):
         sleep(1.0/self.updateF)
     
   def setOptions(self, updateF, scrollF):
+    self.debug(
+      "Changing options: {{ RefreshRate={}, ScrollSpeed={}}}".format(
+        updateF, scrollF
+      )
+    )
     self.updateF = updateF
     self.scrollF = scrollF
   
   def setRefreshRate(self, updateF):
+    self.debug("Changing refresh rate to {}".format(updateF))
     self.setOptions(updateF, self.scrollF)
   
   def setScrollSpeed(self, scrollF):
+    self.debug("Changing scroll speed to {}".format(scrollF))
     self.setOptions(self.updateF, scrollF)
 
 class DisplayEx (Display):  
   BAUDRATE = 9600
   PORT = '/dev/ttyACM0'
+#  PORT = '/dev/ttyUSB0'
   
-  def __init__(self, updateF, scrollF):
+  def __init__(self, updateF, scrollF, debug=None):
+    if debug is None:
+      self.debug = fakedebug
+    else:
+      self.debug = Debug(
+        log=debug.log,
+        logging=debug.logging,
+        stdout=debug.stdout,
+        parent=self,
+        name="Display"
+      )
     self.updateF = updateF
     self.scrollF = scrollF
     self._raw_values = {}
     self._raw_digits = {}
     super(Display, self).__init__(name="display")
+    self.debug("Initialized")
   
   def _raw(self, digits, on):    
     raise NotImplementedError()
@@ -277,6 +318,11 @@ class DisplayEx (Display):
     self.serial.write("({};{})".format(self.updateF, self.scrollF).encode('utf-8'))
   
   def setOptions(self, updateF, scrollF):
+    self.debug(
+      "Changing options: {{ RefreshRate={}, ScrollSpeed={}}}".format(
+        updateF, scrollF
+      )
+    )
     self.oldUpdateF = updateF;
     self.oldScrollF = scrollF;
     self.updateF = updateF
@@ -284,8 +330,10 @@ class DisplayEx (Display):
     self.sendOptions()
   
   def setRefreshRate(self, updateF):
+    self.debug("Changing refresh rate to {}".format(updateF))
     self.setOptions(updateF, self.scrollF)
   
   def setScrollSpeed(self, scrollF):
+    self.debug("Changing scroll speed to {}".format(scrollF))
     self.setOptions(self.updateF, scrollF)
 

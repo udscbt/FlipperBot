@@ -11,6 +11,12 @@ class Robot:
     FORWARD_RIGHT = 7
     BACKWARD_LEFT = 8
     BACKWARD_RIGHT = 9
+    
+    def getName(d, default=None):
+      for k,v in Robot.Direction.__dict__.items():
+        if v == d:
+          return k
+      return default
   
   hit       = SharedVariable(False)
   direction = SharedVariable(Direction.STOP)

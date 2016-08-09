@@ -1,17 +1,22 @@
 from .shared import gpio, ThreadEx, sleep, SharedVariable
 from .led import LED
 
+from .debug.debug import Debug, fakedebug
+
 class Totem (LED):
   
-  def __init__(self, dic):
+  def __init__(self, dic, debug=None):
     self.select = dic['select']
-    super(Totem, self).__init__(self.select, name="totem")
+    super(Totem, self).__init__(self.select, name="totem", debug=debug)
+    if debug is not None:
+      self.debug.name = "Totem<{}>".format(dic['pos'])
     self.hit    = dic['hit']
     self.pos   = dic['pos']
     self._hit   = False
     gpio.setup(self.hit, gpio.IN, pull_up_down=gpio.PUD_DOWN)
   
   def _manageHit(self, channel):
+    self.debug("Hit")
     self._hit = gpio.input(self.hit)
   
   def isHit(self):

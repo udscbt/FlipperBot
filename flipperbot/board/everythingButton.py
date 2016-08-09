@@ -1,23 +1,35 @@
 from .shared import gpio, Thread, sleep, time
 
+from .debug.debug import Debug
+
 class EverythingButton:
   def __init__(self, game):
     self.game = game
+    self.debug = Debug(
+      log=game.debug.log,
+      logging=game.debug.logging,
+      stdout=game.debug.stdout,
+      parent=self,
+      name="EverythingButton"
+    )
     self.everythingButton = 18
     gpio.setup(self.everythingButton, gpio.IN, pull_up_down=gpio.PUD_DOWN)
     self._lastPress = None
     self._started = False
     self._stopped = False
     super(EverythingButton, self).__init__()
+    self.debug("Initialized")
   
   def start(self):
     if not self._started:
       gpio.add_event_detect(self.everythingButton, gpio.BOTH, callback=self._managePress, bouncetime=50)
       self._started = True
+      self.debug("Started")
   
   def stop(self):
     gpio.remove_event_detect(self.everythingButton)
     self._stopped = True
+    self.debug("Stopped")
   
   def started(self):
     return self._started
@@ -25,11 +37,17 @@ class EverythingButton:
   def stopped(self):
     return self._stopped
   
+  def wait(self):
+    while not self.stopped():
+      pass
+  
   def _managePress(self, channel):
     if gpio.input(channel):
+      self.debug("Button pressed")
       rising = True
       falling = False
     else:
+      self.debug("Button released")
       rising = False
       falling = True
     if self.game.mode == self.game.IDLE:
@@ -53,14 +71,23 @@ class EverythingButton:
 class RemoteEverythingButton:
   def __init__(self, game):
     self.game = game
+    self.debug = Debug(
+      log=game.debug.log,
+      logging=game.debug.logging,
+      stdout=game.debug.stdout,
+      parent=self,
+      name="RemoteEverythingButton"
+    )
     self._lastPress = None
   
   def press(self):
+    self.debug("Button pressed")
     self.rising = True
     self.falling = False
     self._managePress()
   
   def release(self):
+    self.debug("Button released")
     self.rising = False
     self.falling = True
     self._managePress()

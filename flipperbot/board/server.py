@@ -3,28 +3,18 @@ from threading import Thread, Lock
 from time import time, sleep, strftime
 from .. import fbcp
 from collections import OrderedDict as OD
-from .shared import SharedVariable, ThreadEx
+from .shared import SharedVariable, ThreadEx, termColors
 from ..robot import Robot
 from ..controller import Controller
 from .everythingButton import RemoteEverythingButton
-
-termColors = {
-    'PURPLE' : '\033[95m',
-    'BLUE' : '\033[94m',
-    'GREEN' : '\033[92m',
-    'YELLOW' : '\033[93m',
-    'RED' : '\033[91m',
-    'END' : '\033[0m',
-    'BOLD' : '\033[1m',
-    'UNDERLINE' : '\033[4m'
- }
+from .debug.log import NET_TAG
+from .debug.debug import Debug
 
 fbcp.loadCommands()
 
 class ClientThread (ThreadEx):
   INDEX = 0
-  def __init__(self, server, sock, address, port, dbgFlag=False):
-    self.dbgFlag = dbgFlag
+  def __init__(self, server, sock, address, port):
     self.server = server
     self.sockIn = sock
     self.sockIn.settimeout(0.5)
@@ -32,22 +22,15 @@ class ClientThread (ThreadEx):
     self.port = port
     self.index = ClientThread.INDEX
     ClientThread.INDEX = ClientThread.INDEX + 1
-    self.logname = "Client #{}".format(self.index)
+    self.debug = Debug(
+      log=self.server.game.log,
+      stdout=self.server.debug.stdout,
+      name="Client #{}".format(self.index),
+      tags=[NET_TAG],
+      parent=self
+    )
     self.connected = False
     super(ClientThread, self).__init__(name="client[{}]".format(self.index))
-
-  def debug(self, *args, **kwargs):
-    if self.dbgFlag:
-      print(
-        "[{}] {}{}:{} ".format(
-          strftime("%H:%M:%S"),
-         termColors['BOLD'],
-          self.logname,
-          termColors['END']
-        ), *args, **kwargs
-      )
-    else:
-      pass
   
   def remove(self):
     if self.robot:
@@ -145,7 +128,7 @@ class ClientThread (ThreadEx):
           self.server.robots[self.serial] = {'thread': self, 'in': self.sockIn, 'out': self.sockOut}
           self.index = list(self.server.robots).index(self.serial)
           self.server.game.robots[self.index].active = True
-          rt = RobotThread(self.server, self.sockOut, self.index)
+          rt = RobotThread(self.server, self.sockOut, self.index, self.debug.name)
           rt.start()
           self.addChild(rt)
           self.robot = True
@@ -181,7 +164,7 @@ class ClientThread (ThreadEx):
       else:
         self.debug("Serial not recognised:", self.serial)
 
-      self.logname = self.serial
+      self.debug.name = self.serial
       self.cmdOut.command = fbcp.Command.A_GRANT_ACCESS if accepted else fbcp.Command.A_DENY_ACCESS
       s = self.cmdOut.write()
       self.sockIn.send(s.encode("UTF-8"))
@@ -255,10 +238,17 @@ class ClientThread (ThreadEx):
       self.EButton.release()
   
 class RobotThread (ThreadEx):
-  def __init__(self, server, sock, index):
+  def __init__(self, server, sock, index, name):
     self.server = server
     self.sockOut = sock
     self.index = index
+    self.debug = Debug(
+      log=self.server.game.log,
+      stdout=self.server.debug.stdout,
+      name=name+" R",
+      tags=[NET_TAG],
+      parent=self
+    )
     self.direction = self.server.game.robots[index].direction
     super(RobotThread, self).__init__(name="client[robot{}]".format(self.index))
   
@@ -295,8 +285,14 @@ class Server (ThreadEx):
   port = 10000
   
   def __init__(self, game,dbgFlag=False):
-    self.dbgFlag = dbgFlag
     self.game = game
+    self.debug = Debug(
+      log=self.game.log,
+      stdout=dbgFlag,
+      name="Server",
+      tags=[NET_TAG],
+      parent=self
+    )
     self.robots = OD()
     self.controllers = OD()
     self.robLock = Lock()
@@ -308,15 +304,15 @@ class Server (ThreadEx):
     self.serversocket.bind((self.address, self.port))
     self.serversocket.listen(10)
     self.serversocket.settimeout(0.5)
-    print("Server started on {}:{}".format(self.address, self.port))
+    self.debug("Server started on {}:{}".format(self.address, self.port))
   
   def loop(self):
     try:
       sock, address = self.serversocket.accept()
     except socket.timeout:
         return
-    print("New connection: {}".format(address))
-    ct = ClientThread(self, sock, address[0], address[1], dbgFlag=self.dbgFlag)
+    self.debug("New connection: {}".format(address))
+    ct = ClientThread(self, sock, address[0], address[1])
     self.addChild(ct)
     ct.start()
   

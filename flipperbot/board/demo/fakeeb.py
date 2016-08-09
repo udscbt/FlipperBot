@@ -1,6 +1,8 @@
 import tkinter as tk
 from time import time
 
+from ..debug.debug import Debug
+
 class FakeEB (tk.Canvas):
   RADIUS_OUT_F = 5/6
   RADIUS_IN1_F = 4/6
@@ -17,6 +19,14 @@ class FakeEB (tk.Canvas):
   
   def __init__(self, game, master=None):
     self.game = game
+    self.debug = Debug(
+      log=game.debug.log,
+      logging=game.debug.logging,
+      stdout=game.debug.stdout,
+      parent=self,
+      name="FakeEverythingButton>".format(self.index)
+    )
+    self.debug("FakeEverythingButton used")
     if master is None:
       self.root = tk.Tk()
     else:
@@ -55,6 +65,7 @@ class FakeEB (tk.Canvas):
     self.itemconfigure(self.in2, fill=self.COLOR_BTN2)
   
   def onPress(self, event):
+    self.debug("Button pressed")
     self.COLOR_BTN1 = self.COLOR_IN1_A
     self.COLOR_BTN2 = self.COLOR_IN2_A
     self.updateColours()
@@ -65,6 +76,7 @@ class FakeEB (tk.Canvas):
       self.pressStart = time()
   
   def onRelease(self, event):
+    self.debug("Button released")
     self.COLOR_BTN1 = self.COLOR_IN1_P
     self.COLOR_BTN2 = self.COLOR_IN2_P
     self.updateColours()

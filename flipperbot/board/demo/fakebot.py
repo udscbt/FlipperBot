@@ -2,6 +2,8 @@ import tkinter as tk
 from ...robot import Robot
 from collections import OrderedDict as OD
 
+from ..debug.debug import Debug
+
 class FakeBot (tk.Canvas):
   RADIUS_MOV1_F = 1.0/10
   RADIUS_MOV2_F = 1.0/3
@@ -12,8 +14,17 @@ class FakeBot (tk.Canvas):
   
   direction = None
   
-  def __init__(self, game, master=None):
+  def __init__(self, game, index=0, master=None):
     self.game = game
+    self.index = index
+    self.debug = Debug(
+      log=game.debug.log,
+      logging=game.debug.logging,
+      stdout=game.debug.stdout,
+      parent=self,
+      name="FakeRobot<{}>".format(self.index)
+    )
+    self.debug("FakeRobot used")
     if master is None:
       self.root = tk.Tk()
     else:
@@ -61,8 +72,12 @@ class FakeBot (tk.Canvas):
   
   def loop(self):
     old_dir = self.direction
-    self.direction = self.game.robots[0].direction
+    self.direction = self.game.robots[self.index].direction
     if self.direction != old_dir:
+      self.debug("Direction changed from {} to {}".format(
+        Robot.Direction.getName(old_dir),
+        Robot.Direction.getName(self.direction)
+      ))
       self.redraw()
     self.root.after(50, self.loop)
   

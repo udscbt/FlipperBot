@@ -1,0 +1,18 @@
+       Totems:       |  {bold}{underline}Player1{end}:
+                     |  |-{bold}Controller{end}:
+        {{totem_ul}}   {{totem_ur}}        |  | |-Connected?        {{j0_connected}}
+          {{totem_c}}          |  | |-Direction?        {{j0_direction}}
+        {{totem_dl}}   {{totem_dr}}        |  | \-EverythingButton? {{j0_eb}}
+                     |  \-{bold}Robot{end}:
+{totem_tp} : totem not turned |    |-Connected?        {{r0_connected}}
+    on and not hit   |    |-Direction?        {{r0_direction}}
+{totem_hp} : totem not turned |    \-Bumper?           {{r0_hit}}
+    on but hit       |  {bold}{underline}Player2{end}:
+{totem_ta} : totem turned on  |  |-{bold}Controller{end}:
+    but not hit      |  | |-Connected?        {{j1_connected}}
+{totem_ha} : totem turned on  |  | |-Direction?        {{j1_direction}}
+    and hit          |  | \-EverythingButton? {{j1_eb}}
+                     |  \-{bold}Robot{end}:
+---------------------/    |-Connected?        {{r1_connected}}
+{bold}{underline}Game mode:{end}                |-Direction?        {{r1_direction}}
+{{game_mode:<26}}\-Bumper?           {{r1_hit}}
