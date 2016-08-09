@@ -180,8 +180,8 @@ class Log:
       t.start()
   
   def _write(self, msg):
-    self.buffer = self.buffer + self.msg
-    self.count = self.count + len(self.msg)
+    self.buffer = self.buffer + msg
+    self.count = self.count + len(msg)
     if self.count-self.written > self.threshold:
       self.flush()
   
