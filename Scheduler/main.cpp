@@ -5,11 +5,23 @@
 
 @JOB (prova)
 {
-  printf("Ciao");
-  @TBREAK
-  printf(" come ");
-  @TBREAK
-  printf("va?");
+  @MEMORY
+  {
+    @VAR(i:int)
+    @VAR(j:int)
+  }
+  @VAR(i) = 0;
+  @WHILE(@VAR(i)<10)
+  {
+    @VAR(j) = 0;
+    @WHILE(@VAR(j)<10)
+    {
+      printf("*");
+      ++@VAR(j);
+    }
+    printf("\n");
+    ++@VAR(i);
+  }
 }
 
 @JOB (test)

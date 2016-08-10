@@ -356,7 +356,11 @@ def parseBlock(block):
     ss, ee = ret
     ss = ss+e
     ee = ee+e
+    if args.profiler:
+      wnode = profileWhileNext(task_fw)
     block = replace(block, ee+1, len(block), parseBlock(block[ee+1:]))
+    if args.profiler:
+      profileWhileInside(wnode, task_bk)
     block = replace(block, ee, ee+1, LOOP_O+"(%s, %s)" % (task_bk, task_fw))
     block = replace(block, ss, ee, parseBlock(block[ss:ee]))
     block = replace(block, match.start(), ss, WHILE_O+"(%s, %s, %s)" % (task_bk, task_fw, condition))
@@ -398,7 +402,11 @@ def parseBlock(block):
     ss, ee = ret
     ss = ss+e
     ee = ee+e
+    if args.profiler:
+      inode = profileIfNext(task_fw)
     block = replace(block, ee+1, len(block), parseBlock(block[ee+1:]))
+    if args.profiler:
+      profileIfInside(inode, task_bk)
     block = replace(block, ee, ee+1, ENDIF_O+"(%s)" % (task_after))
     block = replace(block, ss, ee, parseBlock(block[ss:ee]))
     block = replace(block, match.start(), ss, IF_O+"(%s, %s, %s)" % (task_if, task_after, condition))
@@ -708,6 +716,8 @@ for name in args.files:
     UNNAMED_TASKS = UNNAMED_TASKS + 1
     JOBS.update({job:{'task': task, 'mem': {}}})
     TASKS.append(task)
+    if args.profiler:
+      profileJob(job, task)
     buf = parseJob(buf, match.end(), job)
     buf = replace(buf, match.start(), match.end(), JOB_FULL(job, task))
   
@@ -722,6 +732,8 @@ for name in args.files:
     UNNAMED_TASKS = UNNAMED_TASKS + 1
     JOBS.update({job:{'task': task, 'mem': {}}})
     TASKS.append(task)
+    if args.profiler:
+      profileJob(job, task)
     buf = parseJob(buf, match.regs[1][1], job)
     buf = replace(buf, match.regs[1][0], match.regs[1][1], JOB_FULL(job, task))
   
@@ -781,18 +793,8 @@ for name in args.files:
     dec = SETNUM_O + "({})\n".format(len(JOBS))
     for task in TASKS:
       dec = dec + DECTSK_O + "(" + task + ")\n"
-      if args.profiler:
-        dec = dec + T_SETID + "({}, {})\n".format(
-          TaskNode.get(task).name,
-          TaskNode.get(task).id
-        )
     for job, info in JOBS.items():
       dec = dec + DECJOB_O + "(" + job + ")\n"
-      if args.profiler:
-        dec = dec + J_SETID + "({}, {})\n".format(
-          JobNode.get(job).name,
-          JobNode.get(job).id
-        )
       for var, t in info['mem'].items():
         dec = dec + DECJVAR_O + "(%s, %s, %s)\n" % (var, job, t)
     for fun, info in FUNCTIONS.items():
@@ -813,6 +815,17 @@ for name in args.files:
     init = INIT_O + "\n"
     for job, info in JOBS.items():
       init = init + INTJOB_O + "(" + job + "," + info['task'] + ")\n"
+      if args.profiler:
+        init = init + J_SETID + "({}, {})\n".format(
+          JobNode.get(job).name,
+          JobNode.get(job).id
+        )
+    for task in TASKS:
+      if args.profiler:
+        init = init + T_SETID + "({}, {})\n".format(
+          TaskNode.get(task).name,
+          TaskNode.get(task).id
+        )
     buf = replace(buf, match.start(), match.end(), init)
   buf = buf.replace(INIT, "")
   
@@ -849,4 +862,17 @@ for name in args.files:
   fout = open(newname, "w")
   fout.write(buf)
   fout.close()
-    
+  
+  if args.profiler:
+    fout = open(name+".profile", "w")
+    fout.write("#JOBS NUMBER\n{}\n#JOBS\n#NAME\tID\n".format(len(JobNode.JOB_NODES)))
+    for j in JobNode.JOB_NODES:
+      fout.write("{}\t{}\n".format(j.name, j.id))
+    fout.write("#TASKS NUMBER\n{}\n#TASKS\n#NAME\tID\n".format(len(TaskNode.TASK_NODES)))
+    for t in TaskNode.TASK_NODES:
+      fout.write("{}\t{}\n".format(t.name, t.id))
+    fout.write("#JOB\tCONTROL FLOW\n")
+    for j in JobNode.JOB_NODES:
+      fout.write(str(j)+"\n")
+    fout.close
+  
