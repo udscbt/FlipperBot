@@ -1,5 +1,5 @@
 #include "schemo.h"
-#include "fbcp.h"
+#include "fbcp.common.h"
 #include "FBNet.h"
 
 #include <ESP8266WiFi.h>
@@ -72,6 +72,7 @@ enum
 
 bool hit = false;
 fbcp::string hitCmd;
+fbcp::string kalCmd;
 
 typedef enum
 {
@@ -365,10 +366,12 @@ typedef enum
   @MEMORY
   {
     @VAR(cmd:fbcp::COMMAND_LINE)
+    @VAR(t:unsigned long)
   }
-
+  
   @WHILE
   {
+    @VAR(t) = millis();
     @WHILE (mode == MODE_GAME && sockOut.connected())
     {
       @VAR(cmd).command = &fbcp::Q_ROBOT_COMMAND;
@@ -385,7 +388,7 @@ typedef enum
       {
         hit = false;
       }
-
+      
       @IF (sendStatus == SEND_BUSY || sendStatus == SEND_NEW)
       {
         Serial.print("Sent: ");
@@ -395,6 +398,7 @@ typedef enum
         @CALL(readCommand;&sockOut;&@VAR(cmd);fbcp::SOFT_TIMEOUT):understood;
         if (understood == READ_SUCCESS)
         {
+          @VAR(t) = millis();
           if (@VAR(cmd).command->code == fbcp::A_ACCEPT.code)
           {
             Serial.println("Command was accepted");
@@ -420,6 +424,23 @@ typedef enum
         {
           Serial.println("Server answered something strange");
           sendStatus = SEND_FAIL;
+        }
+        else if (understood == READ_TIMEOUT)
+        {
+          sockOut.stop();
+          sendStatus = SEND_FAIL;
+        }
+      }
+      
+      @IF (millis() - @VAR(t) > fbcp::HARD_TIMEOUT/2)
+      {
+        Serial.print("Sent: ");
+        Serial.println(kalCmd.c_str());
+        sockOut.print(kalCmd.c_str());
+        @CALL(readCommand;&sockOut;&@VAR(cmd);fbcp::SOFT_TIMEOUT):understood;
+        if (understood == READ_SUCCESS)
+        {
+          @VAR(t) = millis();
         }
         else if (understood == READ_TIMEOUT)
         {
@@ -548,6 +569,10 @@ void rightMotor(int dir)
           {
             cmd.command = NULL;
             Serial.println(F("Client timed out"));
+          }
+          else if (fbcp::common::handleRequest(@VAR(cmd), cmd))
+          {
+            Serial.println("Library managed")
           }
           else if (@VAR(cmd).command->code == fbcp::Q_ROBOT_COMMAND.code)
           {
@@ -759,6 +784,8 @@ void setup()
   fbcp::COMMAND_LINE cmd;
   cmd.command = &fbcp::Q_HIT;
   hitCmd = fbcp::writeCommand(cmd);
+  cmd.command = &fbcp::Q_HEARTBEAT;
+  kalCmd = fbcp::writeCommand(cmd);
   
   //ScheMo
   Serial.println(F("ScheMo"));
