@@ -71,6 +71,9 @@ def CMD(name):
 def CMD_O(name):
   return CMD_PREFIX_O+name
 
+if args.profiler:
+  from schemop_profiler import *
+
 def CMD_P(name):
   return CMD_PREFIX_P+name
 
@@ -299,12 +302,27 @@ def parseJob(buf, start, job):
   
   blockstart = s
   blockend = e
+
+  block = parseBlock(block)
   
-  # WHILE
-  while True:
-    match = re.search(WHILE, block)
-    if match is None:
-      break
+  block = JVAR_PATTERN.sub(JVAR_O + "(\\1, %s)" % job, block)
+
+  return replace(buf, start+blockstart, start+blockend, block)
+
+def parseBlock(block):
+  global UNNAMED_TASKS
+  if not block.startswith(CMD_PREFIX):
+    i = 0
+    while not block[i:].startswith(CMD_PREFIX) and i < len(block):
+      i = i+1
+    if i >= len(block):
+      return block
+    else:
+      return block[:i]+parseBlock(block[i:])
+  
+  #WHILE
+  match = re.match(WHILE, block)
+  if match is not None:
     if checkBlockStart(block[match.end():], "\("):
       ret = getBlock(block[match.end():], "(", ")")
       if ret is None:
@@ -338,14 +356,15 @@ def parseJob(buf, start, job):
     ss, ee = ret
     ss = ss+e
     ee = ee+e
+    block = replace(block, ee+1, len(block), parseBlock(block[ee+1:]))
     block = replace(block, ee, ee+1, LOOP_O+"(%s, %s)" % (task_bk, task_fw))
+    block = replace(block, ss, ee, parseBlock(block[ss:ee]))
     block = replace(block, match.start(), ss, WHILE_O+"(%s, %s, %s)" % (task_bk, task_fw, condition))
+    return block
   
   # IF
-  while True:
-    match = re.search(IF, block)
-    if match is None:
-      break
+  match = re.match(IF, block)
+  if match is not None:
     if checkBlockStart(block[match.end():], "\("):
       ret = getBlock(block[match.end():], "(", ")")
       if ret is None:
@@ -379,12 +398,13 @@ def parseJob(buf, start, job):
     ss, ee = ret
     ss = ss+e
     ee = ee+e
+    block = replace(block, ee+1, len(block), parseBlock(block[ee+1:]))
     block = replace(block, ee, ee+1, ENDIF_O+"(%s)" % (task_after))
+    block = replace(block, ss, ee, parseBlock(block[ss:ee]))
     block = replace(block, match.start(), ss, IF_O+"(%s, %s, %s)" % (task_if, task_after, condition))
-    
-  block = JVAR_PATTERN.sub(JVAR_O + "(\\1, %s)" % job, block)
-
-  return replace(buf, start+blockstart, start+blockend, block)
+    return block
+  
+  return block[0]+parseBlock(block[1:])
 
 FUNCTION_PATTERN = re.compile(FUN+"\((.+?)\)")
 PARAM_PATTERN    = re.compile("[^{]*?("+PAR+"\((.+?):(.+?)\))")
@@ -759,16 +779,20 @@ for name in args.files:
   match = DEC_PATTERN.search(buf)
   if match is not None:
     dec = SETNUM_O + "({})\n".format(len(JOBS))
-    for i in range(len(TASKS)):
-      task = TASKS[i]
+    for task in TASKS:
       dec = dec + DECTSK_O + "(" + task + ")\n"
       if args.profiler:
-        dec = dec + T_SETID + "({}, {})\n".format(task, i)
-    for i in range(len(JOBS)):
-      job, info = list(JOBS.items())[i]
+        dec = dec + T_SETID + "({}, {})\n".format(
+          TaskNode.get(task).name,
+          TaskNode.get(task).id
+        )
+    for job, info in JOBS.items():
       dec = dec + DECJOB_O + "(" + job + ")\n"
       if args.profiler:
-        dec = dec + J_SETID + "({}, {})\n".format(job, i)
+        dec = dec + J_SETID + "({}, {})\n".format(
+          JobNode.get(job).name,
+          JobNode.get(job).id
+        )
       for var, t in info['mem'].items():
         dec = dec + DECJVAR_O + "(%s, %s, %s)\n" % (var, job, t)
     for fun, info in FUNCTIONS.items():

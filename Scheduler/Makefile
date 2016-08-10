@@ -1,7 +1,7 @@
 #OTHER_FLAGS=-DSCHEMO_PROFILER
 
 schemo: lib main.cpp schemop
-	./schemop -sq main.cpp
+	./schemop -spq main.cpp
 	g++ __schemo_main.cpp $(OTHER_FLAGS) -o schemo -I include -L lib -lschemo
 
 schemo_profiler.o: schemo_profiler.h schemo_profiler.cpp
