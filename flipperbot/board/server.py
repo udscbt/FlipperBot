@@ -284,7 +284,7 @@ class Server (ThreadEx):
   address = '192.168.1.1'
   port = 10000
   
-  def __init__(self, game,dbgFlag=False):
+  def __init__(self, game, dbgFlag=False):
     self.game = game
     self.debug = Debug(
       log=self.game.log,
