@@ -88,21 +88,27 @@ enum
   FREQ_FAST  = 10
 };
 
+fbcp::string kalCmd;
+
+typedef enum
+{
+  READ_TIMEOUT,
+  READ_SUCCESS,
+  READ_FAIL
+} READ_RESULT;
+
 @DECLARE
 
 @FUNCTION(readCommand)
 @PARAM(sock:WiFiClient*)
 @PARAM(cmd:fbcp::COMMAND_LINE*)
 @PARAM(timeout:unsigned long)
-@RETURN(bool)
+@RETURN(READ_RESULT)
 {
   @MEMORY
   {
     @VAR(msg:fbcp::string)
     @VAR(end:bool)
-    @VAR(nc:int)
-    @VAR(c:char)
-    @VAR(i:int)
     @VAR(t:unsigned long)
   }  
   
@@ -111,41 +117,36 @@ enum
   @VAR(t) = millis();
   @WHILE (!@VAR(end) && millis() - @VAR(t) < @PARAM(timeout))
   {
-    @VAR(nc) = @PARAM(sock)->available();
-    @VAR(i) = 0;
-    @WHILE (!@VAR(end) && @VAR(i) < @VAR(nc))
+    int nc = @PARAM(sock)->available();
+    for (int i = 0; i < nc && !@VAR(end); ++i)
     {
-      @VAR(c) = @PARAM(sock)->read();
-      @VAR(msg) += @VAR(c);
+      char c = @PARAM(sock)->read();
+      @VAR(msg) += c;
       
-      if (@VAR(c) == '\n' or @VAR(c) == '\0')
+      if (c == '\n' or c == '\0')
       {
         @VAR(end) = true;
       }
-      
-      ++@VAR(i);
     }
   }
-
+  
+  Serial.print(F("Received: '"));
+  Serial.print(@VAR(msg).c_str());
+  Serial.println(F("'"));
+  
   @IF (millis() - @VAR(t) >= @PARAM(timeout))
   {
-    Serial.println("Timeout");
-    Serial.print("Received: '");
-    Serial.print(@VAR(msg).c_str());
-    Serial.println("'");
-    @RETURN(false);
+    Serial.println(F("Timeout"));
+    @RETURN(READ_TIMEOUT);
   }
   
-  @IF (@VAR(c) == '\0')
+  @IF (@VAR(msg)[@VAR(msg).length()-1] == '\0')
   {
-    Serial.println("Remote host said something REALLY strange :S");
-    Serial.print("Received: '");
-    Serial.print(@VAR(msg).c_str());
-    Serial.println("'");
-    @RETURN(false);
+    Serial.println(F("Remote host said something REALLY strange :S"));
+    @RETURN(READ_FAIL);
   }
   
-  @RETURN(fbcp::parseCommand(@VAR(msg), *@PARAM(cmd)));
+  @RETURN(fbcp::parseCommand(@VAR(msg), *@PARAM(cmd))?READ_SUCCESS:READ_FAIL);
 }
 
 @FUNCTION(wait)
@@ -336,11 +337,15 @@ enum
                   Serial.println(s.c_str());
                   sockOut.print(s.c_str());
                   
-                  @CALL(readCommand;&sockOut;&@VAR(cmd);2000):understood;
+                  @CALL(readCommand;&sockOut;&@VAR(cmd);fbcp::HARD_TIMEOUT):understood;
                   @VAR(connected) = false;
-                  if (!understood)
+                  if (understood == READ_FAIL)
                   {
                     Serial.println("Couldn't understand server response");
+                  }
+                  else if (understood == READ_TIMEOUT)
+                  {
+                    Serial.println("Server timed out");
                   }
                   else if (@VAR(cmd).command->code == fbcp::A_GRANT_ACCESS.code)
                   {
@@ -405,10 +410,12 @@ enum
     @VAR(t:unsigned long)
     @VAR(end:bool)
     @VAR(read:bool)
+    @VAR(last:unsigned long)
   }
 
   @WHILE
   {
+    @VAR(last) = millis();
     @WHILE (sockOut.connected())
     {
       //Everything Button
@@ -418,20 +425,21 @@ enum
       {
         if (pressed)
         {
-          @VAR(cmd).command = &fbcp::Q_EVERYTHING_ON;
+          @VAR(cmd).command = &fbcp::Q_EVERYTHING_OFF;
         }
         else
         {
-          @VAR(cmd).command = &fbcp::Q_EVERYTHING_OFF;
+          @VAR(cmd).command = &fbcp::Q_EVERYTHING_ON;
         }
         Serial.print("Sent: ");
         fbcp::string s = fbcp::writeCommand(@VAR(cmd));
         Serial.println(s.c_str());
         sockOut.print(s.c_str());
 
-        @CALL(readCommand;&sockOut;&@VAR(cmd);1000):understood;
-        if (understood)
+        @CALL(readCommand;&sockOut;&@VAR(cmd);fbcp::SOFT_TIMEOUT):understood;
+        if (understood == READ_SUCCESS)
         {
+          @VAR(last) = millis();
           if (@VAR(cmd).command->code == fbcp::A_ACCEPT.code)
           {
             Serial.println("Command was accepted");
@@ -449,7 +457,6 @@ enum
             Serial.println("Server answered something strange");
           }
         }
-        
       }
 
       //Direction
@@ -560,9 +567,10 @@ enum
         Serial.println(s.c_str());
         sockOut.print(s.c_str());
 
-        @CALL(readCommand;&sockOut;&@VAR(cmd);1000):understood;
-        if (understood)
+        @CALL(readCommand;&sockOut;&@VAR(cmd);fbcp::SOFT_TIMEOUT):understood;
+        if (understood == READ_SUCCESS)
         {
+          @VAR(last) = millis();
           if (@VAR(cmd).command->code == fbcp::A_ACCEPT.code)
           {
             Serial.println("Command was accepted");
@@ -590,6 +598,24 @@ enum
           sendStatus = SEND_FAIL;
         }
       }
+      
+      @IF (millis() - @VAR(last) > fbcp::HARD_TIMEOUT/2)
+      {
+        Serial.print("Sent: ");
+        Serial.println(kalCmd.c_str());
+        sockOut.print(kalCmd.c_str());
+        @CALL(readCommand;&sockOut;&@VAR(cmd);fbcp::SOFT_TIMEOUT):understood;
+        if (understood == READ_SUCCESS)
+        {
+          @VAR(last) = millis();
+        }
+        else if (understood == READ_TIMEOUT)
+        {
+          sockOut.stop();
+          sendStatus = SEND_FAIL;
+        }
+      }
+      
       unsigned int t = millis();
       int dt;
       if (INTER_READ_INTERVAL > t-@VAR(t))
@@ -600,10 +626,7 @@ enum
       {
         dt = 0;
       }
-      Serial.println("Wait before");
-      Serial.println(dt);
       @CALL(wait;dt):null;
-      Serial.println("Wait after");
 
       @IF (sendStatus == SEND_BUSY)
       {
@@ -713,6 +736,9 @@ void setup()
   fbcp::serial = fbcp::CONTR_PREFIX;
   fbcp::serial += serial;
   mode = MODE_IDLE;
+  fbcp::COMMAND_LINE cmd;
+  cmd.command = &fbcp::Q_HEARTBEAT;
+  kalCmd = fbcp::writeCommand(cmd);
   
   //ScheMo
   Serial.println("ScheMo");

@@ -572,7 +572,7 @@ void rightMotor(int dir)
           }
           else if (fbcp::common::handleRequest(@VAR(cmd), cmd))
           {
-            Serial.println("Library managed")
+            Serial.println("Library managed");
           }
           else if (@VAR(cmd).command->code == fbcp::Q_ROBOT_COMMAND.code)
           {
