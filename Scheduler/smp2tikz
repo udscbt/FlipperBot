@@ -180,7 +180,7 @@ job_format = r"\node [scale={scale}, draw, thick] (j{id}) at ({x},{y}) {{\textbf
 task_format = r"\node [scale={scale}, draw, circle] (t{id}) at ({x},{y}) {{{name}}};"+"\n"
 while_format = r"\node [scale={scale}, draw, diamond] (t{id}) at ({x},{y}) {{\texttt{{while}}}};"+"\n"
 if_format = r"\node [scale={scale}, draw, diamond] (t{id}) at ({x},{y}) {{\texttt{{if}}}};"+"\n"
-edge_format = r"\draw [scale={scale}, -latex, thick] (t{src}) to [out={outangle}, in={inangle}]{additional} (t{dst});"+"\n"
+edge_format = r"\draw [scale={scale}, -latex, thick] (t{src}{anchor1}) to [out={outangle}, in={inangle}]{additional} (t{dst}{anchor2});"+"\n"
 order_format = r"\node [scale={scale}, above right] at (t{task}.north east) {{{order}}};"+"\n"
 
 graph = ""
@@ -222,31 +222,44 @@ for t in Task.all.values():
   for t2 in t._out:
     outangle = 0
     inangle = 180
+    anchor1 = ""
+    anchor2 = ""
     additional = ""
-    if t2.level < t.level and t2.type == 'while':
-      outangle = 90
-      inangle = 90
+    if t2.level < t.level:
+      if t2.type == 'while':
+        outangle = 90
+        inangle = 90
+        anchor2 = ".north"
+      else:
+        outangle = 0
+        inangle = 135
     if t.type == 'if':
       if t2.level > t.level:
         outangle = 90
-        #~ inangle = -90
+        inangle = 180
+        anchor1 = ".north"
         additional = r" node [scale=%f, at start, above left] {true}" % (scale*2/3)
       else:
         outangle = -90
-        #~ inangle = 180
+        inangle = -135
+        anchor1 = ".south"
         additional = r" node [scale=%f, at start, below left] {false}" % (scale*2/3)
     elif t.type == 'while':
       if t2.level > t.level:
         outangle = 0
         inangle = -90
+        anchor1 = ".east"
         additional = r" node [scale=%f, at start, below right] {true}" % (scale*2/3)
       else:
         outangle = -90
-        #~ inangle = 180
+        inangle = -135
+        anchor1 = ".south"
         additional = r" node [scale=%f, at start, below left] {false}" % (scale*2/3)
     graph = graph + edge_format.format(
       src=t.id,
+      anchor1=anchor1,
       dst=t2.id,
+      anchor2=anchor2,
       outangle=outangle,
       inangle=inangle,
       additional=additional,
