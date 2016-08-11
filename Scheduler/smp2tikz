@@ -28,6 +28,7 @@ class Task:
     self.position = 0
     self.job = None
     self.type = 'task'
+    self.order = []
   
   def enter(self, task):
     self._in.append(task)
@@ -137,6 +138,16 @@ for j in range(jobn):
   current.job = job
   parseFlow(flow, 1, 0, current)
 
+line = readLine(f)
+line = readLine(f)
+i = 0
+while line != '':
+  line = line.replace('\n', '')
+  job, task, start, end = line.split('\t')
+  Task.all[int(task)].order.append(i)
+  i = i+1
+  line = readLine(f)
+
 f.close()
 
 maxlev = 0
@@ -162,14 +173,15 @@ maxpos = maxpos + 1
     #~ print('I')
 #~ print("\033[{}f".format(maxpos+2))
 
-scale = 0.3
-#~ scale = 1
+#~ scale = 0.3
+scale = 1
 
-job_format = r"\node [scale={scale}, draw, thick] ({id}) at ({x},{y}) {{{name}}};"+"\n"
-task_format = r"\node [scale={scale}, draw, circle] ({id}) at ({x},{y}) {{{name}}};"+"\n"
-while_format = r"\node [scale={scale}, draw, diamond] ({id}) at ({x},{y}) {{while}};"+"\n"
-if_format = r"\node [scale={scale}, draw, diamond] ({id}) at ({x},{y}) {{if}};"+"\n"
-edge_format = r"\draw [-latex, thick] ({src}) to [out={outangle}, in={inangle}]{additional} ({dst});"+"\n"
+job_format = r"\node [scale={scale}, draw, thick] (j{id}) at ({x},{y}) {{\textbf{{{name}}}}};"+"\n"
+task_format = r"\node [scale={scale}, draw, circle] (t{id}) at ({x},{y}) {{{name}}};"+"\n"
+while_format = r"\node [scale={scale}, draw, diamond] (t{id}) at ({x},{y}) {{\texttt{{while}}}};"+"\n"
+if_format = r"\node [scale={scale}, draw, diamond] (t{id}) at ({x},{y}) {{\texttt{{if}}}};"+"\n"
+edge_format = r"\draw [scale={scale}, -latex, thick] (t{src}) to [out={outangle}, in={inangle}]{additional} (t{dst});"+"\n"
+order_format = r"\node [scale={scale}, above right] at (t{task}.north east) {{{order}}};"+"\n"
 
 graph = ""
 for j in Job.all.values():
@@ -192,8 +204,18 @@ for t in Task.all.values():
     id=t.id,
     x=2*t.position+2,
     y=2*t.job.position*maxlev+maxlev+t.level,
-    name=t.id,
+    #~ name=t.id,
+    name="",
     scale=scale
+  )
+  if len(t.order)>3:
+    order = "{}, {} ... {}".format(t.order[0], t.order[1], t.order[-1])
+  else:
+    order = ", ".join(map(str, t.order))
+  graph = graph + order_format.format(
+    task=t.id,
+    order=order,
+    scale=scale*2/3
   )
 
 for t in Task.all.values():
@@ -208,26 +230,27 @@ for t in Task.all.values():
       if t2.level > t.level:
         outangle = 90
         #~ inangle = -90
-        additional = " node [scale=%f, at start, above left] {true}" % (scale*2/3)
+        additional = r" node [scale=%f, at start, above left] {true}" % (scale*2/3)
       else:
         outangle = -90
         #~ inangle = 180
-        additional = " node [scale=%f, at start, below left] {false}" % (scale*2/3)
+        additional = r" node [scale=%f, at start, below left] {false}" % (scale*2/3)
     elif t.type == 'while':
       if t2.level > t.level:
         outangle = 0
         inangle = -90
-        additional = " node [scale=%f, at start, below right] {true}" % (scale*2/3)
+        additional = r" node [scale=%f, at start, below right] {true}" % (scale*2/3)
       else:
         outangle = -90
         #~ inangle = 180
-        additional = " node [scale=%f, at start, below left] {false}" % (scale*2/3)
+        additional = r" node [scale=%f, at start, below left] {false}" % (scale*2/3)
     graph = graph + edge_format.format(
       src=t.id,
       dst=t2.id,
       outangle=outangle,
       inangle=inangle,
-      additional=additional
+      additional=additional,
+      scale=scale
     )
 
 f = open("profile.template", "r")
