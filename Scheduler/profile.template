@@ -4,8 +4,8 @@
 \pgfplotsset{compat=1.12}
 \usetikzlibrary{shapes}
 \begin{document}
-\begin{tikzpicture}[x=%fcm, y=%fcm]
+\begin{tabular}{c}
 %s
-\end{tikzpicture}
+\end{tabular}
 \end{document}
 

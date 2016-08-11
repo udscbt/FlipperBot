@@ -29,6 +29,7 @@ class Task:
     self.job = None
     self.type = 'task'
     self.order = []
+    self.searched = False
   
   def enter(self, task):
     self._in.append(task)
@@ -120,7 +121,7 @@ for j in range(jobn):
   line = readLine(f)
   name, id = line.split("\t")
   job = Job(name, int(id))
-  job.position = jobn-int(j)-1
+  #~ job.position = jobn-int(j)-1
 line = readLine(f)
 taskn = int(line)
 for t in range(taskn):
@@ -136,6 +137,7 @@ for j in range(jobn):
   current.position = 0
   current.level = 0
   current.job = job
+  job.first = current
   parseFlow(flow, 1, 0, current)
 
 line = readLine(f)
@@ -185,6 +187,7 @@ order_format = r"\node [scale={scale}, above right] at (t{task}.north east) {{{o
 
 graph = ""
 for j in Job.all.values():
+  graph = graph + r"\begin{tikzpicture}[x=%fcm, y=%fcm]" % (scale, scale) + "\n"
   graph = graph + job_format.format(
     id=j.id,
     x=0,
@@ -192,84 +195,90 @@ for j in Job.all.values():
     name=j.name,
     scale=scale
   )
-
-for t in Task.all.values():
-  if t.type == 'task':
-    node_format = task_format
-  elif t.type == 'while':
-    node_format = while_format
-  elif t.type == 'if':
-    node_format = if_format
-  graph = graph + node_format.format(
-    id=t.id,
-    x=2*t.position+2,
-    y=2*t.job.position*maxlev+maxlev+t.level,
-    #~ name=t.id,
-    name="",
-    scale=scale
-  )
-  if len(t.order)>3:
-    order = "{}, {} ... {}".format(t.order[0], t.order[1], t.order[-1])
-  else:
-    order = ", ".join(map(str, t.order))
-  graph = graph + order_format.format(
-    task=t.id,
-    order=order,
-    scale=scale*2/3
-  )
-
-for t in Task.all.values():
-  for t2 in t._out:
-    outangle = 0
-    inangle = 180
-    anchor1 = ""
-    anchor2 = ""
-    additional = ""
-    if t2.level < t.level:
-      if t2.type == 'while':
-        outangle = 90
-        inangle = 90
-        anchor2 = ".north"
-      else:
-        outangle = 0
-        inangle = 135
-    if t.type == 'if':
-      if t2.level > t.level:
-        outangle = 90
-        inangle = 180
-        anchor1 = ".north"
-        additional = r" node [scale=%f, at start, above left] {true}" % (scale*2/3)
-      else:
-        outangle = -90
-        inangle = -135
-        anchor1 = ".south"
-        additional = r" node [scale=%f, at start, below left] {false}" % (scale*2/3)
+  
+  for t in Task.all.values():
+    if t.job != j:
+      continue
+    if t.type == 'task':
+      node_format = task_format
     elif t.type == 'while':
-      if t2.level > t.level:
-        outangle = 0
-        inangle = -90
-        anchor1 = ".east"
-        additional = r" node [scale=%f, at start, below right] {true}" % (scale*2/3)
-      else:
-        outangle = -90
-        inangle = -135
-        anchor1 = ".south"
-        additional = r" node [scale=%f, at start, below left] {false}" % (scale*2/3)
-    graph = graph + edge_format.format(
-      src=t.id,
-      anchor1=anchor1,
-      dst=t2.id,
-      anchor2=anchor2,
-      outangle=outangle,
-      inangle=inangle,
-      additional=additional,
+      node_format = while_format
+    elif t.type == 'if':
+      node_format = if_format
+    graph = graph + node_format.format(
+      id=t.id,
+      x=2*t.position+2,
+      y=2*t.job.position*maxlev+maxlev+t.level,
+      #~ name=t.id,
+      name="",
       scale=scale
     )
+    if len(t.order)>3:
+      order = "{}, {} ... {}".format(t.order[0], t.order[1], t.order[-1])
+    else:
+      order = ", ".join(map(str, t.order))
+    graph = graph + order_format.format(
+      task=t.id,
+      order=order,
+      scale=scale*2/3
+    )
+
+  for t in Task.all.values():
+    if t.job != j:
+      continue
+    for t2 in t._out:
+      outangle = 0
+      inangle = 180
+      anchor1 = ""
+      anchor2 = ""
+      additional = ""
+      if t2.level < t.level:
+        if t2.type == 'while':
+          outangle = 90
+          inangle = 90
+          anchor2 = ".north"
+        else:
+          outangle = 0
+          inangle = 135
+      if t.type == 'if':
+        if t2.level > t.level:
+          outangle = 90
+          inangle = 180
+          anchor1 = ".north"
+          additional = r" node [scale=%f, at start, above left] {true}" % (scale*2/3)
+        else:
+          outangle = -90
+          inangle = -135
+          anchor1 = ".south"
+          additional = r" node [scale=%f, at start, below left] {false}" % (scale*2/3)
+      elif t.type == 'while':
+        if t2.level > t.level:
+          outangle = 0
+          inangle = -90
+          anchor1 = ".east"
+          additional = r" node [scale=%f, at start, below right] {true}" % (scale*2/3)
+        else:
+          outangle = -90
+          inangle = -135
+          anchor1 = ".south"
+          additional = r" node [scale=%f, at start, below left] {false}" % (scale*2/3)
+      graph = graph + edge_format.format(
+        src=t.id,
+        anchor1=anchor1,
+        dst=t2.id,
+        anchor2=anchor2,
+        outangle=outangle,
+        inangle=inangle,
+        additional=additional,
+        scale=scale
+      )
+  
+  graph = graph + r"\end{tikzpicture}\\" + "\n"
 
 f = open("profile.template", "r")
 template = f.read()
 f.close()
 
 f = open(profile.replace(".profile", ".tex"), "w")
-f.write(template % (scale, scale, graph.replace("_", "\\_")))
+f.write(template % graph.replace("_", r"\_"))
 f.close()
