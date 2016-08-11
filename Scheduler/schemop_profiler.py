@@ -27,12 +27,12 @@ class JobNode:
   def __str__(self):
     s = self.id + "\t"
     if self.first is not None:
-      s = s + str(self.first) + " "
+      s = s + str(self.first)
       n = self.first
       while n.next is not None:
         n = n.next
-        s = s + str(n) + " "
-    s = s + "S"
+        s = s + " " + str(n)
+    s = s + " S"
     return s
 
 class TaskNode:
@@ -68,11 +68,11 @@ class WhileNode:
     s = "W ["
     n = self.inside
     if n is not None:
-      s = s + " " + str(n) + " "
+      s = s + " " + str(n)
       while n.next is not None:
         n = n.next
         s = s + " " + str(n)
-    s = s + "]"
+    s = s + " ]"
     return s
 
 class IfNode:
@@ -84,11 +84,11 @@ class IfNode:
     s = "I ["
     n = self.inside
     if n is not None:
-      s = s + " " + str(n) + " "
+      s = s + " " + str(n)
       while n.next is not None:
         n = n.next
         s = s + " " + str(n)
-    s = s + "] "
+    s = s + " ]"
     return s
 
 def profileJob(job, task):

@@ -33,6 +33,10 @@
   @VAR(i) = 0;
   @WHILE(@VAR(i) < 10)
   {
+    @IF(@VAR(i)%5)
+    {
+      printf("AAA\n");
+    }
     printf("%d", @VAR(i));
     ++@VAR(i);
   }

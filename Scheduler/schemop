@@ -3,6 +3,7 @@ import sys
 import re
 import argparse
 from collections import OrderedDict
+from os.path import join
 
 from random import random
 
@@ -194,7 +195,7 @@ def JOB_NAME():
 def JOB_FULL(job, task):
   return JOB_O+"("+job+","+task+")"
 
-JOBS = OrderedDict()
+JOBS = {}
 UNNAMED_JOBS = 0
 
 TASK_PREFIX = 'task_'
@@ -403,10 +404,10 @@ def parseBlock(block):
     ss = ss+e
     ee = ee+e
     if args.profiler:
-      inode = profileIfNext(task_fw)
+      inode = profileIfNext(task_after)
     block = replace(block, ee+1, len(block), parseBlock(block[ee+1:]))
     if args.profiler:
-      profileIfInside(inode, task_bk)
+      profileIfInside(inode, task_if)
     block = replace(block, ee, ee+1, ENDIF_O+"(%s)" % (task_after))
     block = replace(block, ss, ee, parseBlock(block[ss:ee]))
     block = replace(block, match.start(), ss, IF_O+"(%s, %s, %s)" % (task_if, task_after, condition))
@@ -645,12 +646,13 @@ for name in args.files:
   fin = open(name, "r")
   buf = fin.read()
   fin.close()
-  
-  # INITIALIZE GLOBALS
-  TASKS = []
-  UNNAMED_TASKS = 0
-  JOBS = {}
-  UNNAMED_JOBS = 0
+
+  # CONSISTENT NAMING FOR INCLUDED FILES
+  #~ # INITIALIZE GLOBALS
+  #~ TASKS = []
+  #~ UNNAMED_TASKS = 0
+  #~ JOBS = {}
+  #~ UNNAMED_JOBS = 0
   
   # REMOVE COMMENTS
   buf = clean(buf)
@@ -815,16 +817,17 @@ for name in args.files:
     init = INIT_O + "\n"
     for job, info in JOBS.items():
       init = init + INTJOB_O + "(" + job + "," + info['task'] + ")\n"
+    for job in JobNode.JOB_NODES:
       if args.profiler:
         init = init + J_SETID + "({}, {})\n".format(
-          JobNode.get(job).name,
-          JobNode.get(job).id
+          job.name,
+          job.id
         )
-    for task in TASKS:
+    for task in TaskNode.TASK_NODES:
       if args.profiler:
         init = init + T_SETID + "({}, {})\n".format(
-          TaskNode.get(task).name,
-          TaskNode.get(task).id
+          task.name,
+          task.id
         )
     buf = replace(buf, match.start(), match.end(), init)
   buf = buf.replace(INIT, "")
@@ -840,7 +843,7 @@ for name in args.files:
     buf = replace(buf, match.start(), match.end(), sch) 
   buf = buf.replace(SCHALL, SCHALL_O)
   
-  newname = OUT_DIR+"/"+FILE_PREFIX+name
+  newname = join(OUT_DIR, FILE_PREFIX+name)
   head_dict = {
     'name': name,
     'newname': newname,
@@ -864,7 +867,7 @@ for name in args.files:
   fout.close()
   
   if args.profiler:
-    fout = open(name+".profile", "w")
+    fout = open(join(OUT_DIR, name+".profile"), "w")
     fout.write("#JOBS NUMBER\n{}\n#JOBS\n#NAME\tID\n".format(len(JobNode.JOB_NODES)))
     for j in JobNode.JOB_NODES:
       fout.write("{}\t{}\n".format(j.name, j.id))

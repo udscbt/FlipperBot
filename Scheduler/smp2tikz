@@ -1,0 +1,239 @@
+#!/usr/bin/env python
+import sys
+
+class Job:
+  all = {}
+  
+  def __init__(self, name, id):
+    self.name = name
+    self.id = id
+    Job.all[self.id] = self
+    self.first = None
+    self.maxpos = 0
+    self.maxlev = 0
+    self.position = 0
+
+class Task:
+  all = {}
+  
+  def __init__(self, name=None, id=None):
+    self.name = name
+    if id is None:
+      id = max(Task.all.keys())+1
+    self.id = id
+    self._in = []
+    self._out = []
+    Task.all[self.id] = self
+    self.level = 0
+    self.position = 0
+    self.job = None
+    self.type = 'task'
+  
+  def enter(self, task):
+    self._in.append(task)
+  
+  def exit(self, task):
+    self._out.append(task)
+  
+  def setPosition(self, position):
+    self.position = position
+    if self.job is not None and self.job.maxpos < position:
+      self.job.maxpos = position
+  
+  def setLevel(self, level):
+    self.level = level
+    if self.job is not None and self.job.maxlev < level:
+      self.job.maxlev = level
+
+def readLine(f):
+  line = f.readline()
+  while line.startswith("#"):
+    line = f.readline()
+  return line.replace("\n", "")
+
+def parseFlow(flow, start, level, parent):
+  inner = (flow[start] == '[')
+  i = start+1 if inner else start
+  last = None
+  while True:
+    if flow[i] == 'S':
+      if inner:
+        raise FormatError()
+      else:
+        return None
+    elif flow[i] == ']':
+      if inner:
+        if last is not None:
+          if parent.type == 'while':
+            parent.enter(last)
+            last.exit(parent)
+        return i
+      else:
+        raise FormatError()
+    elif flow[i] == 'W':
+      t = Task()
+      t.type = 'while'
+      t.job = parent.job
+      t.setPosition(parent.job.maxpos+1)
+      t.setLevel(level)
+      if last is None:
+        last = parent
+      last.exit(t)
+      t.enter(last)
+      last = t
+      i = parseFlow(flow, i+1, level+1, last)
+    elif flow[i] == 'I':
+      t = Task()
+      t.type = 'if'
+      t.job = parent.job
+      t.setPosition(parent.job.maxpos+1)
+      t.setLevel(level)
+      if last is None:
+        last = parent
+      last.exit(t)
+      t.enter(last)
+      last = t
+      i = parseFlow(flow, i+1, level+1, last)
+      t1 = Task.all[int(flow[i-1])]
+      t2 = Task.all[int(flow[i+1])]
+      t1.exit(t2)
+      t2.enter(t1)
+    else:
+      t = Task.all[int(flow[i])]
+      t.job = parent.job
+      t.setPosition(parent.job.maxpos+1)
+      t.setLevel(level)
+      if last is None:
+        last = parent
+      last.exit(t)
+      t.enter(last)
+      last = t
+    i = i+1
+
+profile = sys.argv[1]
+f = open(profile, "r")
+
+line = readLine(f)
+jobn = int(line)
+for j in range(jobn):
+  line = readLine(f)
+  name, id = line.split("\t")
+  job = Job(name, int(id))
+  job.position = jobn-int(j)-1
+line = readLine(f)
+taskn = int(line)
+for t in range(taskn):
+  line = readLine(f)
+  name, id = line.split("\t")
+  task = Task(name, int(id))
+for j in range(jobn):
+  line = readLine(f)
+  job, flow = line.split("\t")
+  job = Job.all[int(job)]
+  flow = flow.split(" ")
+  current = Task.all[int(flow[0])]
+  current.position = 0
+  current.level = 0
+  current.job = job
+  parseFlow(flow, 1, 0, current)
+
+f.close()
+
+maxlev = 0
+maxpos = 0
+for j in Job.all.values():
+  maxlev = j.maxlev if j.maxlev > maxlev else maxlev
+  maxpos = j.maxpos if j.maxpos > maxpos else maxpos
+maxlev = maxlev + 1
+maxpos = maxpos + 1
+
+#~ print("\033c")
+#~ for j in Job.all.values():
+  #~ print("\033[;{}f{}".format(j.position*maxlev*4+1, j.name))
+  #~ pass
+
+#~ for t in Task.all.values():
+  #~ print("\033[{};{}f".format(t.position+3, (t.job.position*maxlev+t.level)*4+1), end="")
+  #~ if t.type == 'task':
+    #~ print(t.id)
+  #~ elif t.type == 'while':
+    #~ print("W")
+  #~ elif t.type == 'if':
+    #~ print('I')
+#~ print("\033[{}f".format(maxpos+2))
+
+scale = 0.3
+#~ scale = 1
+
+job_format = r"\node [scale={scale}, draw, thick] ({id}) at ({x},{y}) {{{name}}};"+"\n"
+task_format = r"\node [scale={scale}, draw, circle] ({id}) at ({x},{y}) {{{name}}};"+"\n"
+while_format = r"\node [scale={scale}, draw, diamond] ({id}) at ({x},{y}) {{while}};"+"\n"
+if_format = r"\node [scale={scale}, draw, diamond] ({id}) at ({x},{y}) {{if}};"+"\n"
+edge_format = r"\draw [-latex, thick] ({src}) to [out={outangle}, in={inangle}]{additional} ({dst});"+"\n"
+
+graph = ""
+for j in Job.all.values():
+  graph = graph + job_format.format(
+    id=j.id,
+    x=0,
+    y=2*j.position*maxlev+maxlev,
+    name=j.name,
+    scale=scale
+  )
+
+for t in Task.all.values():
+  if t.type == 'task':
+    node_format = task_format
+  elif t.type == 'while':
+    node_format = while_format
+  elif t.type == 'if':
+    node_format = if_format
+  graph = graph + node_format.format(
+    id=t.id,
+    x=2*t.position+2,
+    y=2*t.job.position*maxlev+maxlev+t.level,
+    name=t.id,
+    scale=scale
+  )
+
+for t in Task.all.values():
+  for t2 in t._out:
+    outangle = 0
+    inangle = 180
+    additional = ""
+    if t2.level < t.level and t2.type == 'while':
+      outangle = 90
+      inangle = 90
+    if t.type == 'if':
+      if t2.level > t.level:
+        outangle = 90
+        #~ inangle = -90
+        additional = " node [scale=%f, at start, above left] {true}" % (scale*2/3)
+      else:
+        outangle = -90
+        #~ inangle = 180
+        additional = " node [scale=%f, at start, below left] {false}" % (scale*2/3)
+    elif t.type == 'while':
+      if t2.level > t.level:
+        outangle = 0
+        inangle = -90
+        additional = " node [scale=%f, at start, below right] {true}" % (scale*2/3)
+      else:
+        outangle = -90
+        #~ inangle = 180
+        additional = " node [scale=%f, at start, below left] {false}" % (scale*2/3)
+    graph = graph + edge_format.format(
+      src=t.id,
+      dst=t2.id,
+      outangle=outangle,
+      inangle=inangle,
+      additional=additional
+    )
+
+f = open("profile.template", "r")
+template = f.read()
+f.close()
+
+f = open(profile.replace(".profile", ".tex"), "w")
+f.write(template % (scale, scale, graph.replace("_", "\\_")))
+f.close()

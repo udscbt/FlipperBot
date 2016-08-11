@@ -1,0 +1,11 @@
+\documentclass{standalone}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.12}
+\usetikzlibrary{shapes}
+\begin{document}
+\begin{tikzpicture}[x=%fcm, y=%fcm]
+%s
+\end{tikzpicture}
+\end{document}
+

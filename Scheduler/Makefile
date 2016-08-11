@@ -23,7 +23,7 @@ lib: lib/libschemo.a include/schemo.h include/schemo_profiler.h
 
 clean:
 	-rm *.o
-	-rm __schemo_main.cpp
+	-rm __schemo*
 	-rm schemo
 	-rm *.profile
 	-rm include/*
