@@ -182,7 +182,7 @@ job_format = r"\node [scale={scale}, draw, thick] (j{id}) at ({x},{y}) {{\textbf
 task_format = r"\node [scale={scale}, draw, circle] (t{id}) at ({x},{y}) {{{name}}};"+"\n"
 while_format = r"\node [scale={scale}, draw, diamond] (t{id}) at ({x},{y}) {{\texttt{{while}}}};"+"\n"
 if_format = r"\node [scale={scale}, draw, diamond] (t{id}) at ({x},{y}) {{\texttt{{if}}}};"+"\n"
-edge_format = r"\draw [scale={scale}, -latex, thick] (t{src}{anchor1}) to [out={outangle}, in={inangle}]{additional} (t{dst}{anchor2});"+"\n"
+edge_format = r"\draw [scale={scale}, -{{Latex[scale={scale}]}}, thick] (t{src}{anchor1}) to [out={outangle}, in={inangle}]{additional} (t{dst}{anchor2});"+"\n"
 order_format = r"\node [scale={scale}, above right] at (t{task}.north east) {{{order}}};"+"\n"
 
 graph = ""

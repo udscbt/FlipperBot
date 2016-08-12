@@ -3,8 +3,9 @@
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.12}
 \usetikzlibrary{shapes}
+\usetikzlibrary{arrows.meta}
 \begin{document}
-\begin{tabular}{c}
+\begin{tabular}{l}
 %s
 \end{tabular}
 \end{document}
