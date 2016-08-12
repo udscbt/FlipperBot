@@ -2,4 +2,5 @@
 **/*.a
 **/*.pyc
 **/__pycache__
+Scheduler/out/
 RPi
