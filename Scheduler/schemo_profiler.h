@@ -35,14 +35,15 @@
   }
 #else
   #define SCHEMO_P_TASK_DATA
-  #define SCHEMO_P_TASK_SETID
+  #define SCHEMO_P_TASK_SETID(task, id)
   #define SCHEMO_P_JOB_DATA
-  #define SCHEMO_P_JOB_SETID
+  #define SCHEMO_P_JOB_SETID(job, id)
+  #define SCHEMO_P_PROFILE_NAME
   #define SCHEMO_P_INIT
   #define SCHEMO_P_CLOSE
+  #define SCHEMO_P_GET_ID(x)
   #define SCHEMO_P_START_TASK(job, task)
   #define SCHEMO_P_STOP_TASK(job, task)
-  #define SCHEMO_P_GET_ID(x)
 #endif
 
 #endif //SCHEMO_PROFILER_H

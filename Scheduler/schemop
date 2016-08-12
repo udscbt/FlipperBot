@@ -413,9 +413,42 @@ def parseBlock(block):
     block = replace(block, match.start(), ss, IF_O+"(%s, %s, %s)" % (task_if, task_after, condition))
     return block
   
+  #TBREAK
+  match = TBREAK_PATTERN_NAMED.match(block)
+  if match is not None:
+    task  = match.group(1).replace(" ", "")
+    if args.profiler:
+      profileTbreak(task)
+    block = replace(block, match.start(), match.end(), TBREAK_FULL(task))
+
+  #FUNCTION CALL
+  match = CALL_PATTERN.match(block)
+  if match is not None:
+    ret = match.group(3)
+    params = match.group(1).split(";")
+    fun = params[0]
+    if fun not in FUNCTIONS.keys():
+      stderr("Called function '%s' is undefined" % fun)
+      sys.exit(1)
+    params = params[1:]
+    rightn = len(FUNCTIONS[fun]['params'])
+    gotn   = len(params)
+    if gotn != rightn:
+      stderr("Wrong number of parameters for function '%s'" % fun)
+      stderr("Expected %d, got %d" % (rightn, gotn))
+      sys.exit(1)
+    newtask = TASK_NAME()
+    UNNAMED_TASKS = UNNAMED_TASKS + 1
+    TASKS.append(newtask)
+    fcall = pushParams(fun, params)
+    fcall = fcall + CALL_O + "(%s, %s, %s, %s)\n" % (FUNCTIONS[fun]['return'], fun, newtask, ret)
+    if args.profiler:
+      profileCall(fun, newtask)
+    return replace(block, match.start(), match.end(), fcall)
+  
   return block[0]+parseBlock(block[1:])
 
-FUNCTION_PATTERN = re.compile(FUN+"\((.+?)\)")
+FUNCTION_PATTERN = re.compile(FUN+"\s*\((.+?)\)")
 PARAM_PATTERN    = re.compile("[^{]*?("+PAR+"\((.+?):(.+?)\))")
 PARAM_PATTERN2   = re.compile(PAR+"\((.+?)\)")
 RETURN_PATTERN   = re.compile("[^{]*?("+RET+"\((.+?)\))")
@@ -530,106 +563,8 @@ def parseFunction(buf, start, fun):
   blockend = e
   
   block = subbuf[s:e]
-  
-  # WHILE
-  while True:
-    match = re.search(WHILE, block)
-    if match is None:
-      break
-    if checkBlockStart(block[match.end():], "\("):
-      ret = getBlock(block[match.end():], "(", ")")
-      if ret is None:
-        stderr("Missing ) in %s statement" % WHILE)
-        sys.exit(1)
-      s, e = ret
-      s = match.end()+s
-      e = match.end()+e
-      condition = "("+block[s:e]+")"
-      e = e+1
-    else:
-      condition = "(true)"
-      stderr("Missing condition in %s statement" % WHILE)
-      stderr("Assuming '%s'" % condition)
-      stderr("Continuing...")
-      s = match.start()
-      e = match.end()
-    if not checkBlockStart(block[e:]):
-      stderr("%s statement without attached block of code exists" % WHILE)
-      sys.exit(1)
-    ret = getBlock(block[e:])
-    if ret is None:
-      stderr("Missing } in %s statement" % WHILE)
-      sys.exit(1)
-    task_bk = TASK_NAME()
-    UNNAMED_TASKS = UNNAMED_TASKS + 1
-    TASKS.append(task_bk)
-    task_fw = TASK_NAME()
-    UNNAMED_TASKS = UNNAMED_TASKS + 1
-    TASKS.append(task_fw)
-    ss, ee = ret
-    ss = ss+e
-    ee = ee+e
-    block = replace(block, ee, ee+1, LOOP_O+"(%s, %s)\n" % (task_bk, task_fw))
-    block = replace(block, match.start(), ss, WHILE_O+"(%s, %s, %s)\n" % (task_bk, task_fw, condition))
-    
-  
-  # IF
-  while True:
-    match = re.search(IF, block)
-    if match is None:
-      break
-    if checkBlockStart(block[match.end():], "\("):
-      ret = getBlock(block[match.end():], "(", ")")
-      if ret is None:
-        stderr("Missing ) in IF statement")
-        sys.exit(1)
-      s, e = ret
-      s = match.end()+s
-      e = match.end()+e
-      condition = "("+block[s:e]+")"
-      e = e+1
-    else:
-      condition = "(true)"
-      stderr("Missing condition in %s statement" % IF)
-      stderr("Assuming '%s'" % condition)
-      stderr("Continuing...")
-      s = match.start()
-      e = match.end()
-    if not checkBlockStart(block[e:]):
-      stderr("%s statement without attached block of code exists" % IF)
-      sys.exit(1)
-    ret = getBlock(block[e:])
-    if ret is None:
-      stderr("Missing } in %s statement" % IF)
-      sys.exit(1)
-    task_after = TASK_NAME()
-    UNNAMED_TASKS = UNNAMED_TASKS + 1
-    TASKS.append(task_after)
-    task_if = TASK_NAME()
-    UNNAMED_TASKS = UNNAMED_TASKS + 1
-    TASKS.append(task_if)
-    ss, ee = ret
-    ss = ss+e
-    ee = ee+e
-    block = replace(block, ee, ee+1, ENDIF_O+"(%s)\n" % (task_after))
-    block = replace(block, match.start(), ss, IF_O+"(%s, %s, %s)\n" % (task_if, task_after, condition))
-  
-  """# TBREAK
-  pos = 0
-  while True:
-    match = TBREAK_PATTERN_NAMED.search(block[pos:])
-    if match is None:
-      break
-    block = replace(block, match.end(), match.end(), getAll(fun))
-    pos = match.end()
-  pos = 0
-  while True:
-    match = TBREAK_PATTERN_UNNAMED.search(block[pos:])
-    if match is None:
-      break
-    block = replace(block, match.end(), match.end(), getAll(fun))
-    pos = match.end()
-  """
+
+  block = parseBlock(block)
   
   block = JVAR_PATTERN.sub(FVAR_O + "(\\1, %s)" % fun, block)
   block = PARAM_PATTERN2.sub(PAR_O + "(\\1, %s)" % fun, block)
@@ -661,9 +596,22 @@ for name in args.files:
   if args.evil:
     buf = buf.replace("if", IF).replace("while", WHILE)
   
-  # FUNCTION DEFINITIONS
+  # NAMED TBREAKS
   while True:
-    match = FUNCTION_PATTERN.search(buf)
+    match = TBREAK_PATTERN_NAMED.search(buf)
+    if match is None:
+      break
+    task  = match.group(1).replace(" ", "")
+    if task in TASKS:
+      stderr("Error: multiple uses of task name '%s'" % task)
+      sys.exit(1)
+    TASKS.append(task)
+    #~ buf = replace(buf, match.start(), match.end(), TBREAK_FULL(task))
+  
+  #FUNCTION NAMES
+  lastfun = 0
+  while True:
+    match = FUNCTION_PATTERN.search(buf[lastfun:])
     if match is None:
       break
     fun = match.group(1).replace(" ", "")
@@ -680,20 +628,7 @@ for name in args.files:
       
       sys.exit(1)
     TASKS.append(fun)
-    buf = parseFunction(buf, match.end(), fun)
-    buf = replace(buf, match.start(), match.end(), FUN_O+"(%s)\n" % fun)
-  
-  # NAMED TBREAKS
-  while True:
-    match = TBREAK_PATTERN_NAMED.search(buf)
-    if match is None:
-      break
-    task  = match.group(1).replace(" ", "")
-    if task in TASKS:
-      stderr("Error: multiple uses of task name '%s'" % task)
-      sys.exit(1)
-    TASKS.append(task)
-    buf = replace(buf, match.start(), match.end(), TBREAK_FULL(task))
+    lastfun = match.end()
   
   # UNNAMED TBREAKS
   while True:
@@ -703,7 +638,19 @@ for name in args.files:
     task = TASK_NAME()
     UNNAMED_TASKS = UNNAMED_TASKS + 1
     TASKS.append(task)
-    buf = replace(buf, match.regs[1][0], match.regs[1][1], TBREAK_FULL(task))
+    #~ buf = replace(buf, match.regs[1][0], match.regs[1][1], TBREAK_FULL(task))
+    buf = replace(buf, match.regs[1][0], match.regs[1][1], TBREAK+"("+task+")")
+  
+  # FUNCTION DEFINITIONS
+  while True:
+    match = FUNCTION_PATTERN.search(buf)
+    if match is None:
+      break
+    fun = match.group(1).replace(" ", "")
+    if args.profiler:
+      profileFunction(fun)
+    buf = parseFunction(buf, match.end(), fun)
+    buf = replace(buf, match.start(), match.end(), FUN_O+"(%s)\n" % fun)
   
   # NAMED JOBS
   while True:
@@ -738,31 +685,6 @@ for name in args.files:
       profileJob(job, task)
     buf = parseJob(buf, match.regs[1][1], job)
     buf = replace(buf, match.regs[1][0], match.regs[1][1], JOB_FULL(job, task))
-  
-  # FUNCTION CALLS
-  while True:
-    match = CALL_PATTERN.search(buf)
-    if match is None:
-      break
-    ret = match.group(3)
-    params = match.group(1).split(";")
-    fun = params[0]
-    if fun not in FUNCTIONS.keys():
-      stderr("Called function '%s' is undefined" % fun)
-      sys.exit(1)
-    params = params[1:]
-    rightn = len(FUNCTIONS[fun]['params'])
-    gotn   = len(params)
-    if gotn != rightn:
-      stderr("Wrong number of parameters for function '%s'" % fun)
-      stderr("Expected %d, got %d" % (rightn, gotn))
-      sys.exit(1)
-    newtask = TASK_NAME()
-    UNNAMED_TASKS = UNNAMED_TASKS + 1
-    TASKS.append(newtask)
-    fcall = pushParams(fun, params)
-    fcall = fcall + CALL_O + "(%s, %s, %s, %s)\n" % (FUNCTIONS[fun]['return'], fun, newtask, ret)
-    buf = replace(buf, match.start(), match.end(), fcall)
   
   # CRITICAL SECTIONS
   while True:
@@ -817,14 +739,13 @@ for name in args.files:
     init = INIT_O + "\n"
     for job, info in JOBS.items():
       init = init + INTJOB_O + "(" + job + "," + info['task'] + ")\n"
-    for job in JobNode.JOB_NODES:
-      if args.profiler:
+    if args.profiler:
+      for job in JobNode.JOB_NODES:
         init = init + J_SETID + "({}, {})\n".format(
           job.name,
           job.id
         )
-    for task in TaskNode.TASK_NODES:
-      if args.profiler:
+      for task in TaskNode.TASK_NODES:
         init = init + T_SETID + "({}, {})\n".format(
           task.name,
           task.id
@@ -871,11 +792,17 @@ for name in args.files:
     fout.write("#JOBS NUMBER\n{}\n#JOBS\n#NAME\tID\n".format(len(JobNode.JOB_NODES)))
     for j in JobNode.JOB_NODES:
       fout.write("{}\t{}\n".format(j.name, j.id))
+    fout.write("#FUNCTIONS NUMBER\n{}\n#FUNCTIONS\n#NAME\tID\n".format(len(FunctionNode.FUN_NODES)))
+    for f in FunctionNode.FUN_NODES:
+      fout.write("{}\t{}\n".format(f.name, f.id))
     fout.write("#TASKS NUMBER\n{}\n#TASKS\n#NAME\tID\n".format(len(TaskNode.TASK_NODES)))
     for t in TaskNode.TASK_NODES:
       fout.write("{}\t{}\n".format(t.name, t.id))
     fout.write("#JOB\tCONTROL FLOW\n")
     for j in JobNode.JOB_NODES:
       fout.write(str(j)+"\n")
+    fout.write("#FUNCTION\tCONTROL FLOW\n")
+    for f in FunctionNode.FUN_NODES:
+      fout.write(str(f)+"\n")
     fout.close
   

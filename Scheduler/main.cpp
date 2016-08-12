@@ -3,6 +3,15 @@
 
 @DECLARE
 
+@FUNCTION (ciao)
+@PARAM(hi:int)
+@RETURN(int)
+{
+  @PARAM(hi) = @PARAM(hi)+1;
+  @TBREAK
+  @RETURN(@PARAM(hi)*2);
+}
+
 @JOB (prova)
 {
   @MEMORY
@@ -33,11 +42,8 @@
   @VAR(i) = 0;
   @WHILE(@VAR(i) < 10)
   {
-    @IF(@VAR(i)%5)
-    {
-      printf("AAA\n");
-    }
-    printf("%d", @VAR(i));
+    @CALL(ciao;@VAR(i)):res;
+    printf("%d", res);
     ++@VAR(i);
   }
 }

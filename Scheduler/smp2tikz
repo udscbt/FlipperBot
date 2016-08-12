@@ -13,6 +13,18 @@ class Job:
     self.maxlev = 0
     self.position = 0
 
+class Function:
+  all = {}
+  
+  def __init__(self, name, id):
+    self.name = name
+    self.id = id
+    Function.all[self.id] = self
+    self.first = None
+    self.maxpos = 0
+    self.maxlev = 0
+    self.position = 0
+
 class Task:
   all = {}
   
@@ -100,6 +112,19 @@ def parseFlow(flow, start, level, parent):
       t2 = Task.all[int(flow[i+1])]
       t1.exit(t2)
       t2.enter(t1)
+    elif flow[i] == 'F':
+      fun = Function.all[int(flow[i+2])]
+      i = i+3
+      t = Task(name=fun.name)
+      t.type = 'call'
+      t.job = parent.job
+      t.setPosition(parent.job.maxpos+1)
+      t.setLevel(level)
+      if last is None:
+        last = parent
+      last.exit(t)
+      t.enter(last)
+      last = t
     else:
       t = Task.all[int(flow[i])]
       t.job = parent.job
@@ -123,6 +148,14 @@ for j in range(jobn):
   job = Job(name, int(id))
   #~ job.position = jobn-int(j)-1
 line = readLine(f)
+funn = int(line)
+for i in range(funn):
+  line = readLine(f)
+  name, id = line.split("\t")
+  fun = Function(name, int(id))
+  #~ fun.position = funn-int(i)-1
+
+line = readLine(f)
 taskn = int(line)
 for t in range(taskn):
   line = readLine(f)
@@ -138,6 +171,17 @@ for j in range(jobn):
   current.level = 0
   current.job = job
   job.first = current
+  parseFlow(flow, 1, 0, current)
+for i in range(funn):
+  line = readLine(f)
+  fun, flow = line.split("\t")
+  fun = Function.all[int(fun)]
+  flow = flow.split(" ")
+  current = Task.all[int(flow[0])]
+  current.position = 0
+  current.level = 0
+  current.job = fun
+  fun.first = current
   parseFlow(flow, 1, 0, current)
 
 line = readLine(f)
@@ -178,21 +222,22 @@ maxpos = maxpos + 1
 #~ scale = 0.3
 scale = 1
 
-job_format = r"\node [scale={scale}, draw, thick] (j{id}) at ({x},{y}) {{\textbf{{{name}}}}};"+"\n"
-task_format = r"\node [scale={scale}, draw, circle] (t{id}) at ({x},{y}) {{{name}}};"+"\n"
+job_format = r"\node [scale={scale}, draw, thick] (j{id}) at ({x},{y}) {{\textbf{{{job.name}}}}};"+"\n"
+task_format = r"\node [scale={scale}, draw, circle] (t{id}) at ({x},{y}) {{}};"+"\n"
 while_format = r"\node [scale={scale}, draw, diamond] (t{id}) at ({x},{y}) {{\texttt{{while}}}};"+"\n"
 if_format = r"\node [scale={scale}, draw, diamond] (t{id}) at ({x},{y}) {{\texttt{{if}}}};"+"\n"
+call_format = r"\node [scale={scale}, draw, rectangle] (t{id}) at ({x},{y}) {{{node.name}}};"+"\n"
 edge_format = r"\draw [scale={scale}, -{{Latex[scale={scale}]}}, thick] (t{src}{anchor1}) to [out={outangle}, in={inangle}]{additional} (t{dst}{anchor2});"+"\n"
 order_format = r"\node [scale={scale}, above right] at (t{task}.north east) {{{order}}};"+"\n"
 
 graph = ""
-for j in Job.all.values():
+for j in (list(Job.all.values())+list(Function.all.values())):
   graph = graph + r"\begin{tikzpicture}[x=%fcm, y=%fcm]" % (scale, scale) + "\n"
   graph = graph + job_format.format(
     id=j.id,
     x=0,
     y=2*j.position*maxlev+maxlev,
-    name=j.name,
+    job=j,
     scale=scale
   )
   
@@ -205,12 +250,14 @@ for j in Job.all.values():
       node_format = while_format
     elif t.type == 'if':
       node_format = if_format
+    elif t.type == 'call':
+      node_format = call_format
     graph = graph + node_format.format(
       id=t.id,
       x=2*t.position+2,
       y=2*t.job.position*maxlev+maxlev+t.level,
       #~ name=t.id,
-      name="",
+      node=t,
       scale=scale
     )
     if len(t.order)>3:
@@ -274,6 +321,7 @@ for j in Job.all.values():
       )
   
   graph = graph + r"\end{tikzpicture}\\" + "\n"
+
 
 f = open("profile.template", "r")
 template = f.read()

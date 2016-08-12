@@ -35,6 +35,38 @@ class JobNode:
     s = s + " S"
     return s
 
+class FunctionNode:
+  FUN_ID = 0
+  FUN_NODES = []
+  def __init__(self, name):
+    self.name = name
+    self.id = FunctionNode.newId()
+    self.first = None
+    FunctionNode.FUN_NODES.append(self)
+  
+  @staticmethod
+  def newId():
+    FunctionNode.FUN_ID = FunctionNode.FUN_ID+1
+    return str(FunctionNode.FUN_ID)
+  
+  @staticmethod
+  def get(fun):
+    for f in FunctionNode.FUN_NODES:
+      if f.name == fun:
+        return f
+    return None
+  
+  def __str__(self):
+    s = self.id + "\t"
+    if self.first is not None:
+      s = s + str(self.first)
+      n = self.first
+      while n.next is not None:
+        n = n.next
+        s = s + " " + str(n)
+    s = s + " S"
+    return s
+
 class TaskNode:
   TASK_ID = 0
   TASK_NODES = []
@@ -91,12 +123,32 @@ class IfNode:
     s = s + " ]"
     return s
 
+class CallNode:
+  def __init__(self, fun=None, task=None):
+    self.fun = fun
+    self.next = task
+
+  def __str__(self):
+    return "F ( {} )".format(self.fun.id)
+
 def profileJob(job, task):
   global current_job
   global current_task
   current_job = JobNode(job)
   current_task = TaskNode(task)
   current_job.first = current_task
+
+def profileFunction(fun):
+  global current_job
+  global current_task
+  current_job = FunctionNode(fun)
+  current_task = TaskNode(fun)
+  current_job.first = current_task
+
+def profileTbreak(task):
+  global current_task
+  current_task.next = TaskNode(task)
+  current_task = current_task.next
 
 def profileWhileInside(wnode, task):
   global current_task
@@ -123,3 +175,11 @@ def profileIfNext(task):
   inode.next = TaskNode(task)
   current_task = inode.next
   return inode
+
+def profileCall(fun, task):
+  global current_task
+  task = TaskNode(task)
+  cnode = CallNode(FunctionNode.get(fun), task)
+  current_task.next = cnode
+  current_task = task
+
