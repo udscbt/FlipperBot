@@ -4,8 +4,8 @@
 \pgfplotsset{compat=1.12}
 \usetikzlibrary{shapes}
 \usetikzlibrary{arrows.meta}
-\usepackage{adjustbox}
-\usepackage{arydshln}
+\usepackage{adjustbox}  %% vertical alignment
+\usepackage{arydshln}   %% dashed columns
 \begin{document}
 \begin{tabular}%s
 %s

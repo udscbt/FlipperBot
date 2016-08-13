@@ -16,6 +16,19 @@
   }
 }
 
+@JOB (schemo_test)
+{
+  @MEMORY
+  {
+    @VAR(i:int)
+  }
+  @VAR(i) = 0;
+  @WHILE (@VAR(i) < 10)
+  {
+    ++@VAR(i);
+  }
+}
+
 @JOB
 {
   @MEMORY

@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 import sys
+import re
 
-#~ scale = 0.3
+#PARAMETERS
 scale = 1
-
 rotation = 0
+unaccessible = False
+showid = False
 
 rotation = rotation%180
 if rotation < 45 or rotation > 135:
@@ -12,11 +14,23 @@ if rotation < 45 or rotation > 135:
 else:
   vertical = False
 
+def parseName(name):
+  if name.startswith("__schemo_"):
+    name = name.replace("__schemo_", "")
+    auto = True
+  else:
+    auto = False
+  name = name.replace("_", " ").strip().capitalize()
+  if auto:
+    name = name + " (auto)"
+  name = re.sub(r"\bschemo\b", r"ScheMo", name, flags=re.IGNORECASE)
+  return name
+
 class Job:
   all = {}
   
   def __init__(self, name, id):
-    self.name = name.replace("_", " ").strip().capitalize()
+    self.name = parseName(name)
     self.id = id
     Job.all[self.id] = self
     self.first = None
@@ -29,7 +43,7 @@ class Function:
   all = {}
   
   def __init__(self, name, id):
-    self.name = name.replace("_", " ").capitalize()
+    self.name = parseName(name)
     self.id = id
     Function.all[self.id] = self
     self.first = None
@@ -56,7 +70,7 @@ class Task:
     self.job = None
     self.type = 'task'
     self.order = []
-    self.searched = False
+    self.visited = False
   
   def enter(self, task, jump=False):
     if jump:
@@ -98,6 +112,7 @@ def parseFlow(flow, start, level, parent):
       if inner:
         raise FormatError()
       else:
+        #~ # Replace last task with stop
         #~ s = parent.job.stop
         #~ for t in s._in:
           #~ last.enter(t)
@@ -226,8 +241,9 @@ def parseFlow(flow, start, level, parent):
       t.setLevel(level)
       if last is None:
         last = parent
-      last.exit(t)
-      t.enter(last)
+      if not (last.level == t.level and last.type == 'loop'):
+        last.exit(t)
+        t.enter(last)
       last = t
     i = i+1
 
@@ -324,7 +340,7 @@ maxpos = maxpos + 1
 
 job_format = r"\node [scale={scale}, draw, thick] (j{id}) at ({x},{y}) {{\rotatebox{{{rotation}}}{{\textbf{{{job.name}}}}}}};"+"\n"
 fun_format = r"\node [scale={scale}, draw] (j{id}) at ({x},{y}) {{\rotatebox{{{rotation}}}{{\textit{{{job.name}}}}}}};"+"\n"
-task_format = r"\node [scale={scale}, draw, circle] (t{id}) at ({x},{y}) {{\rotatebox{{{rotation}}}{{}}}};"+"\n"
+task_format = r"\node [scale={scale}, draw, circle] (t{id}) at ({x},{y}) {{\rotatebox{{{rotation}}}{{%s}}}};" % ("{node.id}" if showid else "")+"\n"
 while_format = r"\node [scale={scale}, draw, diamond] (t{id}) at ({x},{y}) {{\rotatebox{{{rotation}}}{{\texttt{{while}}}}}};"+"\n"
 loop_format = r"\node [scale={scale}, draw, diamond] (t{id}) at ({x},{y}) {{\rotatebox{{{rotation}}}{{\texttt{{loop}}}}}};"+"\n"
 if_format = r"\node [scale={scale}, draw, diamond] (t{id}) at ({x},{y}) {{\rotatebox{{{rotation}}}{{\texttt{{if}}}}}};"+"\n"
@@ -346,6 +362,133 @@ jump_format = r"\draw [scale={scale}, dashed, -{{Latex[scale={scale}]}}] (t{src}
 
 order_format = r"\node [scale={scale}, above right] at (t{task}.north east) {{\rotatebox{{{rotation}}}{{{order}}}}};"+"\n"
 
+def addNode(t, graph):
+  if t.type == 'task':
+    node_format = task_format
+  elif t.type == 'while':
+    node_format = while_format
+  elif t.type == 'loop':
+    node_format = loop_format
+  elif t.type == 'if':
+    node_format = if_format
+  elif t.type == 'call':
+    node_format = call_format
+  elif t.type == 'stop':
+    if isinstance(j, Job):
+      node_format = stop_format
+    elif isinstance(j, Function):
+      node_format = return_format
+  elif t.type == 'shutdown':
+    node_format = shutdown_format
+  graph = graph + node_format.format(
+    id=t.id,
+    x=2*t.position+2,
+    y=2*t.job.position*maxlev+maxlev+t.level,
+    #~ name=t.id,
+    node=t,
+    scale=scale,
+    rotation=rotation
+  )
+  if len(t.order)>3:
+    order = "{}, {} ... {}".format(t.order[0], t.order[1], t.order[-1])
+  else:
+    order = ", ".join(map(str, t.order))
+  graph = graph + order_format.format(
+    task=t.id,
+    order=order,
+    scale=scale*2/3,
+    rotation=rotation
+  )
+  return graph
+
+def addEdges(t, graph):
+  for t2 in t.o_out:
+    anchor1 = ""
+    anchor2 = ""
+    additional = ""
+    if t2.position > t.position:
+      if t2.type == 'stop':
+        outangle = -90
+        inangle = -135
+        text = ''
+        if isinstance(j, Job):
+          text = 'exit'
+        elif isinstance(j, Function):
+          text = 'return'
+        additional = r" node [scale=%f, at start, below right] {\rotatebox{%s}{%s}}" % (scale*2/3, rotation, text)
+      else:
+        outangle = -90
+        inangle = 180
+        additional = r" node [scale=%f, at start, below right] {\rotatebox{%s}{break}}" % (scale*2/3, rotation)
+    else:
+      outangle = 90
+      inangle = 90
+      additional = r" node [scale=%f, at start, above left] {\rotatebox{%s}{continue}}" % (scale*2/3, rotation)
+    graph = graph + jump_format.format(
+      src=t.id,
+      anchor1=anchor1,
+      dst=t2.id,
+      anchor2=anchor2,
+      outangle=outangle,
+      inangle=inangle,
+      additional=additional,
+      scale=scale
+    )
+  for t2 in t._out:
+    outangle = 0
+    inangle = 180
+    anchor1 = ""
+    anchor2 = ""
+    additional = ""
+    if t2.level < t.level:
+      if t2.type == 'while' or t2.type == 'loop':
+        outangle = 90
+        inangle = 90
+        anchor2 = ".north"
+      else:
+        outangle = 0
+        inangle = 135
+    if t.type == 'if':
+      if t2.level > t.level:
+        outangle = 90
+        inangle = 180
+        anchor1 = ".north"
+        additional = r" node [scale=%f, at start, above left] {\rotatebox{%s}{true}}" % (scale*2/3, rotation)
+      else:
+        outangle = -90
+        inangle = -135
+        anchor1 = ".south"
+        additional = r" node [scale=%f, at start, below left] {\rotatebox{%s}{false}}" % (scale*2/3, rotation)
+    elif t.type == 'while':
+      if t2.level > t.level:
+        outangle = 0
+        inangle = -90
+        anchor1 = ".east"
+        additional = r" node [scale=%f, at start, below right] {\rotatebox{%s}{true}}" % (scale*2/3, rotation)
+      else:
+        outangle = -90
+        inangle = -135
+        anchor1 = ".south"
+        additional = r" node [scale=%f, at start, below left] {\rotatebox{%s}{false}}" % (scale*2/3, rotation)
+    elif t.type == 'loop':
+      if t2.level > t.level:
+        outangle = 0
+        inangle = -90
+        anchor1 = ".east"
+      else:
+        continue
+    graph = graph + edge_format.format(
+      src=t.id,
+      anchor1=anchor1,
+      dst=t2.id,
+      anchor2=anchor2,
+      outangle=outangle,
+      inangle=inangle,
+      additional=additional,
+      scale=scale
+    )
+  return graph
+
 graphs = []
 for j in (list(Function.all.values())+list(Job.all.values())):
   graph = r"\adjustbox{valign=t}{\begin{tikzpicture}[x=%fcm, y=%fcm, transform shape, rotate=-%s]" % (scale, scale, rotation) + "\n"
@@ -362,134 +505,29 @@ for j in (list(Function.all.values())+list(Job.all.values())):
     rotation=rotation
   )
   
-  for t in Task.all.values():
-    if t.job != j:
-      continue
-    if t.type == 'task':
-      node_format = task_format
-    elif t.type == 'while':
-      node_format = while_format
-    elif t.type == 'loop':
-      node_format = loop_format
-    elif t.type == 'if':
-      node_format = if_format
-    elif t.type == 'call':
-      node_format = call_format
-    elif t.type == 'stop':
-      if isinstance(j, Job):
-        node_format = stop_format
-      elif isinstance(j, Function):
-        node_format = return_format
-    elif t.type == 'shutdown':
-      node_format = shutdown_format
-    graph = graph + node_format.format(
-      id=t.id,
-      x=2*t.position+2,
-      y=2*t.job.position*maxlev+maxlev+t.level,
-      #~ name=t.id,
-      node=t,
-      scale=scale,
-      rotation=rotation
-    )
-    if len(t.order)>3:
-      order = "{}, {} ... {}".format(t.order[0], t.order[1], t.order[-1])
-    else:
-      order = ", ".join(map(str, t.order))
-    graph = graph + order_format.format(
-      task=t.id,
-      order=order,
-      scale=scale*2/3,
-      rotation=rotation
-    )
-
-  for t in Task.all.values():
-    if t.job != j:
-      continue
-    for t2 in t.o_out:
-      anchor1 = ""
-      anchor2 = ""
-      additional = ""
-      if t2.position > t.position:
-        if t2.type == 'stop':
-          outangle = -90
-          inangle = -135
-          text = ''
-          if isinstance(j, Job):
-            text = 'exit'
-          elif isinstance(j, Function):
-            text = 'return'
-          additional = r" node [scale=%f, at start, below right] {\rotatebox{%s}{%s}}" % (scale*2/3, rotation, text)
-        else:
-          outangle = -90
-          inangle = 180
-          additional = r" node [scale=%f, at start, below right] {\rotatebox{%s}{break}}" % (scale*2/3, rotation)
-      else:
-        outangle = 90
-        inangle = 90
-        additional = r" node [scale=%f, at start, above left] {\rotatebox{%s}{continue}}" % (scale*2/3, rotation)
-      graph = graph + jump_format.format(
-        src=t.id,
-        anchor1=anchor1,
-        dst=t2.id,
-        anchor2=anchor2,
-        outangle=outangle,
-        inangle=inangle,
-        additional=additional,
-        scale=scale
-      )
-    for t2 in t._out:
-      outangle = 0
-      inangle = 180
-      anchor1 = ""
-      anchor2 = ""
-      additional = ""
-      if t2.level < t.level:
-        if t2.type == 'while' or t2.type == 'loop':
-          outangle = 90
-          inangle = 90
-          anchor2 = ".north"
-        else:
-          outangle = 0
-          inangle = 135
-      if t.type == 'if':
-        if t2.level > t.level:
-          outangle = 90
-          inangle = 180
-          anchor1 = ".north"
-          additional = r" node [scale=%f, at start, above left] {\rotatebox{%s}{true}}" % (scale*2/3, rotation)
-        else:
-          outangle = -90
-          inangle = -135
-          anchor1 = ".south"
-          additional = r" node [scale=%f, at start, below left] {\rotatebox{%s}{false}}" % (scale*2/3, rotation)
-      elif t.type == 'while':
-        if t2.level > t.level:
-          outangle = 0
-          inangle = -90
-          anchor1 = ".east"
-          additional = r" node [scale=%f, at start, below right] {\rotatebox{%s}{true}}" % (scale*2/3, rotation)
-        else:
-          outangle = -90
-          inangle = -135
-          anchor1 = ".south"
-          additional = r" node [scale=%f, at start, below left] {\rotatebox{%s}{false}}" % (scale*2/3, rotation)
-      elif t.type == 'loop':
-        if t2.level > t.level:
-          outangle = 0
-          inangle = -90
-          anchor1 = ".east"
-        else:
-          continue
-      graph = graph + edge_format.format(
-        src=t.id,
-        anchor1=anchor1,
-        dst=t2.id,
-        anchor2=anchor2,
-        outangle=outangle,
-        inangle=inangle,
-        additional=additional,
-        scale=scale
-      )
+  tasks = []
+  if unaccessible:
+    for t in Task.all.values():
+      if t.job != j:
+        continue
+      tasks.append(t)
+  else:
+    ts = [j.first]
+    while len(ts) > 0:
+      t = ts.pop(0)
+      if t.visited:
+        continue
+      t.visited = True
+      tasks.append(t)
+      for t2 in t._out:
+        ts.append(t2)
+      for t2 in t.o_out:
+        ts.append(t2)
+  
+  for t in tasks:
+    graph = addNode(t, graph)
+  for t in tasks:
+    graph = addEdges(t, graph)
   
   graph = graph + r"\end{tikzpicture}}"
   graphs.append(graph)
