@@ -11,10 +11,12 @@ schemo: lib main.cpp schemop schemop_profiler.py
 	g++ __schemo_main.cpp $(FLAGS) -o schemo -I include -L lib -lschemo
 
 pdf:
-	$(MAKE) schemo PROFILER=true
 ifeq ($(EXEC),true)
+	$(MAKE) schemo PROFILER=true
 	./schemo
 	cat schemo.profile >> main.cpp.profile
+else
+	./schemop -sqp main.cpp
 endif
 	./smp2tikz main.cpp.profile
 	pdflatex main.cpp.tex
