@@ -3,48 +3,39 @@
 
 @DECLARE
 
-@FUNCTION (ciao)
-@PARAM(hi:int)
-@RETURN(int)
-{
-  @PARAM(hi) = @PARAM(hi)+1;
-  @TBREAK
-  @RETURN(@PARAM(hi)*2);
-}
-
-@JOB (prova)
+@JOB
 {
   @MEMORY
   {
     @VAR(i:int)
-    @VAR(j:int)
   }
   @VAR(i) = 0;
-  @WHILE(@VAR(i)<10)
+  @WHILE
   {
-    @VAR(j) = 0;
-    @WHILE(@VAR(j)<10)
+    printf("%d\n", @VAR(i)++);
+  }
+}
+
+@JOB
+{
+  @MEMORY
+  {
+    @VAR(i:int)
+  }
+  @VAR(i) = -1;
+  @WHILE
+  {
+    ++@VAR(i);
+    printf("%c\n", 'A'+@VAR(i));
+    @IF (@VAR(i) % 5)
     {
-      printf("*");
-      ++@VAR(j);
+      @CONTINUE
     }
-    printf("\n");
-    ++@VAR(i);
-  }
-}
-
-@JOB (test)
-{
-  @MEMORY
-  {
-    @VAR(i:int)
-  }
-  @VAR(i) = 0;
-  @WHILE(@VAR(i) < 10)
-  {
-    @CALL(ciao;@VAR(i)):res;
-    printf("%d", res);
-    ++@VAR(i);
+    @IF (@VAR(i) == 10)
+    {
+      @SHUTDOWN
+    }
+    printf("!!!\n");
   }
 }
 

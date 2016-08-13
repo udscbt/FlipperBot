@@ -74,6 +74,12 @@ bool schemo::start_cycle()
   return true;
 }
 
+bool schemo::stop_cycle()
+{
+  first_job = &NULL_NODE;
+  return true;
+}
+
 bool schemo::init_job(JOB& job, const char name[], TASK& start_point, int delay, int priority)
 {
   if (new_job_id > MAX_JOBS)

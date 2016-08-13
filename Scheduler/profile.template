@@ -4,8 +4,10 @@
 \pgfplotsset{compat=1.12}
 \usetikzlibrary{shapes}
 \usetikzlibrary{arrows.meta}
+\usepackage{adjustbox}
+\usepackage{arydshln}
 \begin{document}
-\begin{tabular}{l}
+\begin{tabular}%s
 %s
 \end{tabular}
 \end{document}

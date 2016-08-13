@@ -74,6 +74,10 @@ class TaskNode:
     self.name = name
     self.id = TaskNode.newId()
     self.next = None
+    self.cnt = None
+    self.brk = None
+    self.ext = False
+    self.shd = False
     TaskNode.TASK_NODES.append(self)
   
   @staticmethod
@@ -89,15 +93,34 @@ class TaskNode:
     return None
   
   def __str__(self):
-    return self.id
+    s = self.id
+    if self.cnt is not None:
+      s = s + " C ( {} )".format(self.cnt.id)
+    if self.brk:
+      s = s + " B ( {} )".format(self.brk.id)
+    if self.ext:
+      s = s + " R"
+    if self.shd:
+      s = s + " S!"
+    return s
 
 class WhileNode:
-  def __init__(self):
+  WHILE_NODES = []
+  def __init__(self, loop):
     self.inside = None
     self.next = None
+    self.loop = loop
+    WhileNode.WHILE_NODES.append(self)
+  
+  @staticmethod
+  def get(task):
+    for w in WhileNode.WHILE_NODES:
+      if w.inside == task:
+        return w
+    return None
   
   def __str__(self):
-    s = "W ["
+    s = "{} [".format('L' if self.loop else 'W')
     n = self.inside
     if n is not None:
       s = s + " " + str(n)
@@ -155,9 +178,9 @@ def profileWhileInside(wnode, task):
   wnode.inside = TaskNode(task)
   current_task = wnode.inside
 
-def profileWhileNext(task):
+def profileWhileNext(task, loop=False):
   global current_task
-  wnode = WhileNode()
+  wnode = WhileNode(loop)
   current_task.next = wnode
   wnode.next = TaskNode(task)
   current_task = wnode.next
@@ -183,3 +206,22 @@ def profileCall(fun, task):
   current_task.next = cnode
   current_task = task
 
+def profileContinue(bw):
+  global current_task
+  current_task.cnt = TaskNode.get(bw)
+
+def profileBreak(bw):
+  global current_task
+  wnode = WhileNode.get(TaskNode.get(bw))
+  current_task.brk = wnode.next
+
+def profileExit():
+  global current_task
+  current_task.ext = True
+
+def profileShutdown():
+  global current_task
+  current_task.shd = True
+
+def profileReturn():
+  profileExit()

@@ -53,18 +53,25 @@
 #define SCHEMO_DECLARE_JVAR(var, job, type) \
   type SCHEMO_JVAR(var, job);
 
-#define SCHEMO_IF(task_if, task_after, condition) \
+#define SCHEMO_IF(task_if, task_else, condition) \
     if condition \
     { \
       schemo::run_task(task_if); \
     } \
     else \
     { \
-      schemo::run_task(task_after); \
+      schemo::run_task(task_else); \
     } \
     return; \
   } \
   void SCHEMO_TASK_HANDLE(task_if)() \
+  {
+
+#define SCHEMO_ELSE(task_else, task_after) \
+    schemo::run_task(task_after); \
+    return; \
+  } \
+  void SCHEMO_TASK_HANDLE(task_else)() \
   {
 
 #define SCHEMO_ENDIF(task_after) SCHEMO_TBREAK(task_after)
@@ -86,6 +93,18 @@
   void SCHEMO_TASK_HANDLE(task_fw)() \
   {
 
+#define SCHEMO_CONTINUE(task_bk) \
+    { \
+      schemo::run_task(task_bk); \
+      return; \
+    }
+
+#define SCHEMO_BREAK(task_fw) \
+    { \
+      schemo::run_task(task_fw); \
+      return; \
+    }
+
 #define SUBTASK if (schemo::check_timeout()) return;
 
 #define SCHEMO_RETURN_STACK(function) \
@@ -99,7 +118,6 @@
 
 #define SCHEMO_PARAM(param, function) \
   SCHEMO_PARAM_STACK(param, function)[schemo::current_job->job->id].top()
-
 
 #define SCHEMO_DECLARE_PARAM_STACK(type, param, function) \
   std::stack<type> SCHEMO_PARAM_STACK(param, function)[schemo::NUM_JOBS];
@@ -172,6 +190,12 @@
 
 #define SCHEMO_SET_NUM_JOBS(nj) \
   const unsigned int schemo::NUM_JOBS = nj;
+
+#define SCHEMO_EXIT \
+  return;
+
+#define SCHEMO_SHUTDOWN \
+  schemo::stop_cycle();
 
 namespace schemo {
 
@@ -246,6 +270,7 @@ namespace schemo {
    */
   bool cycle_setup();
   bool start_cycle();
+  bool stop_cycle();
    
   bool init_job(JOB& job, const char name[], TASK& start_point, int delay = 0, int priority = 0);
   JOB init_job(const char name[], TASK& start_point, int delay = 0, int priority = 0);

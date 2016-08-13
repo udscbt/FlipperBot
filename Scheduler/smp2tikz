@@ -1,29 +1,42 @@
 #!/usr/bin/env python
 import sys
 
+#~ scale = 0.3
+scale = 1
+
+rotation = 0
+
+rotation = rotation%180
+if rotation < 45 or rotation > 135:
+  vertical = True
+else:
+  vertical = False
+
 class Job:
   all = {}
   
   def __init__(self, name, id):
-    self.name = name
+    self.name = name.replace("_", " ").strip().capitalize()
     self.id = id
     Job.all[self.id] = self
     self.first = None
     self.maxpos = 0
     self.maxlev = 0
     self.position = 0
+    self.stop = None
 
 class Function:
   all = {}
   
   def __init__(self, name, id):
-    self.name = name
+    self.name = name.replace("_", " ").capitalize()
     self.id = id
     Function.all[self.id] = self
     self.first = None
     self.maxpos = 0
     self.maxlev = 0
     self.position = 0
+    self.stop = None
 
 class Task:
   all = {}
@@ -35,6 +48,8 @@ class Task:
     self.id = id
     self._in = []
     self._out = []
+    self.o_in = []
+    self.o_out = []
     Task.all[self.id] = self
     self.level = 0
     self.position = 0
@@ -43,11 +58,17 @@ class Task:
     self.order = []
     self.searched = False
   
-  def enter(self, task):
-    self._in.append(task)
+  def enter(self, task, jump=False):
+    if jump:
+      self.o_in.append(task)
+    else:
+      self._in.append(task)
   
-  def exit(self, task):
-    self._out.append(task)
+  def exit(self, task, jump=False):
+    if jump:
+      self.o_out.append(task)
+    else:
+      self._out.append(task)
   
   def setPosition(self, position):
     self.position = position
@@ -66,19 +87,45 @@ def readLine(f):
   return line.replace("\n", "")
 
 def parseFlow(flow, start, level, parent):
+  global current
   inner = (flow[start] == '[')
   i = start+1 if inner else start
   last = None
   while True:
+    if last is not None:
+      current = last
     if flow[i] == 'S':
       if inner:
         raise FormatError()
       else:
+        #~ s = parent.job.stop
+        #~ for t in s._in:
+          #~ last.enter(t)
+          #~ t.exit(last)
+          #~ t._out.remove(s)
+        #~ for t in s._out:
+          #~ last.exit(t)
+          #~ t.enter(last)
+          #~ t._in.remove(s)
+        #~ for t in s.o_in:
+          #~ last.enter(t, jump=True)
+          #~ t.exit(last, jump=True)
+          #~ t.o_out.remove(s)
+        #~ for t in s.o_out:
+          #~ last.exit(t, jump=True)
+          #~ t.enter(last, jump=True)
+          #~ t.o_in.remove(s)
+        #~ last.type = 'stop'
+        #~ parent.job.stop = last
+        #~ Task.all.pop(s.id)
+        last.exit(parent.job.stop)
+        parent.job.stop.enter(last)
+        parent.job.stop.setPosition(parent.job.maxpos+1)
         return None
     elif flow[i] == ']':
       if inner:
         if last is not None:
-          if parent.type == 'while':
+          if parent.type == 'while' or parent.type == 'loop':
             parent.enter(last)
             last.exit(parent)
         return i
@@ -87,6 +134,18 @@ def parseFlow(flow, start, level, parent):
     elif flow[i] == 'W':
       t = Task()
       t.type = 'while'
+      t.job = parent.job
+      t.setPosition(parent.job.maxpos+1)
+      t.setLevel(level)
+      if last is None:
+        last = parent
+      last.exit(t)
+      t.enter(last)
+      last = t
+      i = parseFlow(flow, i+1, level+1, last)
+    elif flow[i] == 'L':
+      t = Task()
+      t.type = 'loop'
       t.job = parent.job
       t.setPosition(parent.job.maxpos+1)
       t.setLevel(level)
@@ -108,13 +167,13 @@ def parseFlow(flow, start, level, parent):
       t.enter(last)
       last = t
       i = parseFlow(flow, i+1, level+1, last)
-      t1 = Task.all[int(flow[i-1])]
+      t1 = current
       t2 = Task.all[int(flow[i+1])]
       t1.exit(t2)
       t2.enter(t1)
     elif flow[i] == 'F':
       fun = Function.all[int(flow[i+2])]
-      i = i+3
+      i = i + 3
       t = Task(name=fun.name)
       t.type = 'call'
       t.job = parent.job
@@ -125,8 +184,43 @@ def parseFlow(flow, start, level, parent):
       last.exit(t)
       t.enter(last)
       last = t
+    elif flow[i] == 'C':
+      if inner:
+        if last is None:
+          last = parent
+        t = Task.all[int(flow[i+2])]
+        w = None
+        for w in Task.all.values():
+          if w.type == 'while' or w.type == 'loop':
+            if t in w._out:
+              break
+        if w is not None:
+          last.exit(w, jump=True)
+          w.enter(last, jump=True)
+        i = i + 3
+      else:
+        raise FormatError()
+    elif flow[i] == 'B':
+      if inner:
+        if last is None:
+          last = parent
+        t = Task.all[int(flow[i+2])]
+        last.exit(t, jump=True)
+        t.enter(last, jump=True)
+        i = i + 3
+      else:
+        raise FormatError()
+    elif flow[i] == 'R':
+      t = parent.job.stop
+      last.exit(t, jump=True)
+      t.enter(last, jump=True)
+    elif flow[i] == 'S!':
+      last.type = 'shutdown'
     else:
-      t = Task.all[int(flow[i])]
+      try:
+        t = Task.all[int(flow[i])]
+      except:
+        continue
       t.job = parent.job
       t.setPosition(parent.job.maxpos+1)
       t.setLevel(level)
@@ -149,6 +243,7 @@ for j in range(jobn):
   #~ job.position = jobn-int(j)-1
 line = readLine(f)
 funn = int(line)
+
 for i in range(funn):
   line = readLine(f)
   name, id = line.split("\t")
@@ -161,10 +256,14 @@ for t in range(taskn):
   line = readLine(f)
   name, id = line.split("\t")
   task = Task(name, int(id))
+
 for j in range(jobn):
   line = readLine(f)
   job, flow = line.split("\t")
   job = Job.all[int(job)]
+  job.stop = Task()
+  job.stop.type = 'stop'
+  job.stop.job = job
   flow = flow.split(" ")
   current = Task.all[int(flow[0])]
   current.position = 0
@@ -172,10 +271,14 @@ for j in range(jobn):
   current.job = job
   job.first = current
   parseFlow(flow, 1, 0, current)
+
 for i in range(funn):
   line = readLine(f)
   fun, flow = line.split("\t")
   fun = Function.all[int(fun)]
+  fun.stop = Task()
+  fun.stop.type = 'stop'
+  fun.stop.job = fun
   flow = flow.split(" ")
   current = Task.all[int(flow[0])]
   current.position = 0
@@ -219,26 +322,44 @@ maxpos = maxpos + 1
     #~ print('I')
 #~ print("\033[{}f".format(maxpos+2))
 
-#~ scale = 0.3
-scale = 1
+job_format = r"\node [scale={scale}, draw, thick] (j{id}) at ({x},{y}) {{\rotatebox{{{rotation}}}{{\textbf{{{job.name}}}}}}};"+"\n"
+fun_format = r"\node [scale={scale}, draw] (j{id}) at ({x},{y}) {{\rotatebox{{{rotation}}}{{\textit{{{job.name}}}}}}};"+"\n"
+task_format = r"\node [scale={scale}, draw, circle] (t{id}) at ({x},{y}) {{\rotatebox{{{rotation}}}{{}}}};"+"\n"
+while_format = r"\node [scale={scale}, draw, diamond] (t{id}) at ({x},{y}) {{\rotatebox{{{rotation}}}{{\texttt{{while}}}}}};"+"\n"
+loop_format = r"\node [scale={scale}, draw, diamond] (t{id}) at ({x},{y}) {{\rotatebox{{{rotation}}}{{\texttt{{loop}}}}}};"+"\n"
+if_format = r"\node [scale={scale}, draw, diamond] (t{id}) at ({x},{y}) {{\rotatebox{{{rotation}}}{{\texttt{{if}}}}}};"+"\n"
+call_format = r"\node [scale={scale}, draw, rectangle] (t{id}) at ({x},{y}) {{\rotatebox{{{rotation}}}{{\texttt{{call}} \textit{{{node.name}}}}}}};"+"\n"
+stop_format = (
+  r"\node [scale={scale}, draw, circle] (t{id}) at ({x},{y}) {{\rotatebox{{{rotation}}}{{}}}};"+"\n"+
+  r"\node [scale={scale}, draw, cross out] at (t{id}) {{\rotatebox{{{rotation}}}{{}}}};"+"\n"+
+  r"\node [scale={scale}, above] at (t{id}.north) {{\rotatebox{{{rotation}}}{{STOP}}}};"+"\n"
+)
+return_format = (
+  r"\node [scale={scale}, draw, circle] (t{id}) at ({x},{y}) {{\rotatebox{{{rotation}}}{{}}}};"+"\n"+
+  r"\node [scale={scale}, draw, cross out] at (t{id}) {{\rotatebox{{{rotation}}}{{}}}};"+"\n"+
+  r"\node [scale={scale}, above] at (t{id}.north) {{\rotatebox{{{rotation}}}{{RETURN}}}};"+"\n"
+)
+shutdown_format = r"\node [scale={scale}, draw, star, star points=10] (t{id}) at ({x},{y}) {{\rotatebox{{{rotation}}}{{\textbf{{!}}}}}};"+"\n"
 
-job_format = r"\node [scale={scale}, draw, thick] (j{id}) at ({x},{y}) {{\textbf{{{job.name}}}}};"+"\n"
-task_format = r"\node [scale={scale}, draw, circle] (t{id}) at ({x},{y}) {{}};"+"\n"
-while_format = r"\node [scale={scale}, draw, diamond] (t{id}) at ({x},{y}) {{\texttt{{while}}}};"+"\n"
-if_format = r"\node [scale={scale}, draw, diamond] (t{id}) at ({x},{y}) {{\texttt{{if}}}};"+"\n"
-call_format = r"\node [scale={scale}, draw, rectangle] (t{id}) at ({x},{y}) {{{node.name}}};"+"\n"
 edge_format = r"\draw [scale={scale}, -{{Latex[scale={scale}]}}, thick] (t{src}{anchor1}) to [out={outangle}, in={inangle}]{additional} (t{dst}{anchor2});"+"\n"
-order_format = r"\node [scale={scale}, above right] at (t{task}.north east) {{{order}}};"+"\n"
+jump_format = r"\draw [scale={scale}, dashed, -{{Latex[scale={scale}]}}] (t{src}{anchor1}) to [out={outangle}, in={inangle}]{additional} (t{dst}{anchor2});"+"\n"
 
-graph = ""
-for j in (list(Job.all.values())+list(Function.all.values())):
-  graph = graph + r"\begin{tikzpicture}[x=%fcm, y=%fcm]" % (scale, scale) + "\n"
-  graph = graph + job_format.format(
+order_format = r"\node [scale={scale}, above right] at (t{task}.north east) {{\rotatebox{{{rotation}}}{{{order}}}}};"+"\n"
+
+graphs = []
+for j in (list(Function.all.values())+list(Job.all.values())):
+  graph = r"\adjustbox{valign=t}{\begin{tikzpicture}[x=%fcm, y=%fcm, transform shape, rotate=-%s]" % (scale, scale, rotation) + "\n"
+  if isinstance(j, Job):
+    node_format = job_format
+  elif isinstance(j, Function):
+    node_format = fun_format
+  graph = graph + node_format.format(
     id=j.id,
     x=0,
     y=2*j.position*maxlev+maxlev,
     job=j,
-    scale=scale
+    scale=scale,
+    rotation=rotation
   )
   
   for t in Task.all.values():
@@ -248,17 +369,27 @@ for j in (list(Job.all.values())+list(Function.all.values())):
       node_format = task_format
     elif t.type == 'while':
       node_format = while_format
+    elif t.type == 'loop':
+      node_format = loop_format
     elif t.type == 'if':
       node_format = if_format
     elif t.type == 'call':
       node_format = call_format
+    elif t.type == 'stop':
+      if isinstance(j, Job):
+        node_format = stop_format
+      elif isinstance(j, Function):
+        node_format = return_format
+    elif t.type == 'shutdown':
+      node_format = shutdown_format
     graph = graph + node_format.format(
       id=t.id,
       x=2*t.position+2,
       y=2*t.job.position*maxlev+maxlev+t.level,
       #~ name=t.id,
       node=t,
-      scale=scale
+      scale=scale,
+      rotation=rotation
     )
     if len(t.order)>3:
       order = "{}, {} ... {}".format(t.order[0], t.order[1], t.order[-1])
@@ -267,12 +398,45 @@ for j in (list(Job.all.values())+list(Function.all.values())):
     graph = graph + order_format.format(
       task=t.id,
       order=order,
-      scale=scale*2/3
+      scale=scale*2/3,
+      rotation=rotation
     )
 
   for t in Task.all.values():
     if t.job != j:
       continue
+    for t2 in t.o_out:
+      anchor1 = ""
+      anchor2 = ""
+      additional = ""
+      if t2.position > t.position:
+        if t2.type == 'stop':
+          outangle = -90
+          inangle = -135
+          text = ''
+          if isinstance(j, Job):
+            text = 'exit'
+          elif isinstance(j, Function):
+            text = 'return'
+          additional = r" node [scale=%f, at start, below right] {\rotatebox{%s}{%s}}" % (scale*2/3, rotation, text)
+        else:
+          outangle = -90
+          inangle = 180
+          additional = r" node [scale=%f, at start, below right] {\rotatebox{%s}{break}}" % (scale*2/3, rotation)
+      else:
+        outangle = 90
+        inangle = 90
+        additional = r" node [scale=%f, at start, above left] {\rotatebox{%s}{continue}}" % (scale*2/3, rotation)
+      graph = graph + jump_format.format(
+        src=t.id,
+        anchor1=anchor1,
+        dst=t2.id,
+        anchor2=anchor2,
+        outangle=outangle,
+        inangle=inangle,
+        additional=additional,
+        scale=scale
+      )
     for t2 in t._out:
       outangle = 0
       inangle = 180
@@ -280,7 +444,7 @@ for j in (list(Job.all.values())+list(Function.all.values())):
       anchor2 = ""
       additional = ""
       if t2.level < t.level:
-        if t2.type == 'while':
+        if t2.type == 'while' or t2.type == 'loop':
           outangle = 90
           inangle = 90
           anchor2 = ".north"
@@ -292,23 +456,30 @@ for j in (list(Job.all.values())+list(Function.all.values())):
           outangle = 90
           inangle = 180
           anchor1 = ".north"
-          additional = r" node [scale=%f, at start, above left] {true}" % (scale*2/3)
+          additional = r" node [scale=%f, at start, above left] {\rotatebox{%s}{true}}" % (scale*2/3, rotation)
         else:
           outangle = -90
           inangle = -135
           anchor1 = ".south"
-          additional = r" node [scale=%f, at start, below left] {false}" % (scale*2/3)
+          additional = r" node [scale=%f, at start, below left] {\rotatebox{%s}{false}}" % (scale*2/3, rotation)
       elif t.type == 'while':
         if t2.level > t.level:
           outangle = 0
           inangle = -90
           anchor1 = ".east"
-          additional = r" node [scale=%f, at start, below right] {true}" % (scale*2/3)
+          additional = r" node [scale=%f, at start, below right] {\rotatebox{%s}{true}}" % (scale*2/3, rotation)
         else:
           outangle = -90
           inangle = -135
           anchor1 = ".south"
-          additional = r" node [scale=%f, at start, below left] {false}" % (scale*2/3)
+          additional = r" node [scale=%f, at start, below left] {\rotatebox{%s}{false}}" % (scale*2/3, rotation)
+      elif t.type == 'loop':
+        if t2.level > t.level:
+          outangle = 0
+          inangle = -90
+          anchor1 = ".east"
+        else:
+          continue
       graph = graph + edge_format.format(
         src=t.id,
         anchor1=anchor1,
@@ -320,13 +491,20 @@ for j in (list(Job.all.values())+list(Function.all.values())):
         scale=scale
       )
   
-  graph = graph + r"\end{tikzpicture}\\" + "\n"
+  graph = graph + r"\end{tikzpicture}}"
+  graphs.append(graph)
 
+graph = ((r'\\' if vertical else '&') + "\n").join(graphs)
 
 f = open("profile.template", "r")
 template = f.read()
 f.close()
 
+if vertical:
+  tab_format = '{l}'
+else:
+  tab_format = '{'+':'.join(['c']*(len(Job.all)+len(Function.all)))+'}'
+
 f = open(profile.replace(".profile", ".tex"), "w")
-f.write(template % graph.replace("_", r"\_"))
+f.write(template % (tab_format, graph.replace("_", r"\_")))
 f.close()

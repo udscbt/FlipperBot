@@ -121,8 +121,14 @@ WHILE     = CMD('WHILE')
 WHILE_O   = CMD_O('WHILE')
 LOOP      = CMD('LOOPBACK')
 LOOP_O    = CMD_O('LOOPBACK')
+CONT      = CMD('CONTINUE')
+CONT_O    = CMD_O('CONTINUE')
+BREAK     = CMD('BREAK')
+BREAK_O   = CMD_O('BREAK')
 IF        = CMD('IF')
 IF_O      = CMD_O('IF')
+ELSE      = CMD('ELSE')
+ELSE_O    = CMD_O('ELSE')
 ENDIF     = CMD('ENDIF')
 ENDIF_O   = CMD_O('ENDIF')
 JDELAY    = CMD('JDELAY')
@@ -173,6 +179,10 @@ DECMUT    = CMD('DECLARE_MUTEX')
 DECMUT_O  = CMD_O('DECLARE_MUTEX')
 SETNUM    = CMD('SET_NUM_JOBS')
 SETNUM_O  = CMD_O('SET_NUM_JOBS')
+EXIT      = CMD('EXIT')
+EXIT_O    = CMD_O('EXIT')
+SHTDWN    = CMD('SHUTDOWN')
+SHTDWN_O  = CMD_O('SHUTDOWN')
 
 #PROFILER
 T_SETID   = CMD_P('TASK_SETID')
@@ -310,7 +320,7 @@ def parseJob(buf, start, job):
 
   return replace(buf, start+blockstart, start+blockend, block)
 
-def parseBlock(block):
+def parseBlock(block, bw=None, fw=None):
   global UNNAMED_TASKS
   if not block.startswith(CMD_PREFIX):
     i = 0
@@ -319,7 +329,7 @@ def parseBlock(block):
     if i >= len(block):
       return block
     else:
-      return block[:i]+parseBlock(block[i:])
+      return block[:i]+parseBlock(block[i:], bw=bw, fw=fw)
   
   #WHILE
   match = re.match(WHILE, block)
@@ -358,13 +368,37 @@ def parseBlock(block):
     ss = ss+e
     ee = ee+e
     if args.profiler:
-      wnode = profileWhileNext(task_fw)
-    block = replace(block, ee+1, len(block), parseBlock(block[ee+1:]))
+      wnode = profileWhileNext(task_fw, loop=(condition=="(true)"))
+    block = replace(block, ee+1, len(block), parseBlock(block[ee+1:], bw=bw, fw=fw))
     if args.profiler:
       profileWhileInside(wnode, task_bk)
     block = replace(block, ee, ee+1, LOOP_O+"(%s, %s)" % (task_bk, task_fw))
-    block = replace(block, ss, ee, parseBlock(block[ss:ee]))
+    block = replace(block, ss, ee, parseBlock(block[ss:ee], bw=task_bk, fw=task_fw))
     block = replace(block, match.start(), ss, WHILE_O+"(%s, %s, %s)" % (task_bk, task_fw, condition))
+    return block
+  
+  # CONTINUE
+  match = re.match(CONT, block)
+  if match is not None:
+    if bw is None or fw is None:
+      stderr("%s statement must only be used inside %s statements" % (CONT, WHILE))
+      sys.exit(1)
+    if args.profiler:
+      profileContinue(bw)
+    block = replace(block, match.end(), len(block), parseBlock(block[match.end():], bw=bw, fw=fw))
+    block = replace(block, match.start(), match.end(), CONT_O+"(%s)" % bw)
+    return block
+  
+  # BREAK
+  match = re.match(BREAK, block)
+  if match is not None:
+    if bw is None or fw is None:
+      stderr("%s statement must only be used inside %s statements" % (BREAK, WHILE))
+      sys.exit(1)
+    if args.profiler:
+      profileBreak(bw)
+    block = replace(block, match.end(), len(block), parseBlock(block[match.end():], bw=bw, fw=fw))
+    block = replace(block, match.start(), match.end(), BREAK_O+"(%s)" % fw)
     return block
   
   # IF
@@ -405,15 +439,15 @@ def parseBlock(block):
     ee = ee+e
     if args.profiler:
       inode = profileIfNext(task_after)
-    block = replace(block, ee+1, len(block), parseBlock(block[ee+1:]))
+    block = replace(block, ee+1, len(block), parseBlock(block[ee+1:], bw=bw, fw=fw))
     if args.profiler:
       profileIfInside(inode, task_if)
     block = replace(block, ee, ee+1, ENDIF_O+"(%s)" % (task_after))
-    block = replace(block, ss, ee, parseBlock(block[ss:ee]))
+    block = replace(block, ss, ee, parseBlock(block[ss:ee], bw=bw, fw=fw))
     block = replace(block, match.start(), ss, IF_O+"(%s, %s, %s)" % (task_if, task_after, condition))
     return block
   
-  #TBREAK
+  # TBREAK
   match = TBREAK_PATTERN_NAMED.match(block)
   if match is not None:
     task  = match.group(1).replace(" ", "")
@@ -421,7 +455,7 @@ def parseBlock(block):
       profileTbreak(task)
     block = replace(block, match.start(), match.end(), TBREAK_FULL(task))
 
-  #FUNCTION CALL
+  # FUNCTION CALL
   match = CALL_PATTERN.match(block)
   if match is not None:
     ret = match.group(3)
@@ -446,7 +480,24 @@ def parseBlock(block):
       profileCall(fun, newtask)
     return replace(block, match.start(), match.end(), fcall)
   
-  return block[0]+parseBlock(block[1:])
+  # EXIT
+  match = re.match(EXIT, block)
+  if match is not None:
+    if args.profiler:
+      profileExit()
+    block = replace(block, match.end(), len(block), parseBlock(block[match.end():], bw=bw, fw=fw))
+    block = replace(block, match.start(), match.end(), EXIT_O)
+  
+  # SHUTDOWN
+  match = re.match(SHTDWN, block)
+  if match is not None:
+    if args.profiler:
+      profileShutdown()
+    block = replace(block, match.end(), len(block), parseBlock(block[match.end():], bw=bw, fw=fw))
+    block = replace(block, match.start(), match.end(), SHTDWN_O)
+    return block
+  
+  return block[0]+parseBlock(block[1:], bw=bw, fw=fw)
 
 FUNCTION_PATTERN = re.compile(FUN+"\s*\((.+?)\)")
 PARAM_PATTERN    = re.compile("[^{]*?("+PAR+"\((.+?):(.+?)\))")

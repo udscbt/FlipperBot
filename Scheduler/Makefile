@@ -1,23 +1,34 @@
-#OTHER_FLAGS=-DSCHEMO_PROFILER
-#OTHER_OPTIONS=-p
+ifeq ($(PROFILER),true)
+ 	FLAGS=$(OTHER_FLAGS) -DSCHEMO_PROFILER
+	OPTIONS=$(OTHER_OPTIONS) -p
+else
+	FLAGS=$(OTHER_FLAGS)
+	OPTIONS=$(OTHER_OPTIONS)
+endif
 
 schemo: lib main.cpp schemop schemop_profiler.py
-	./schemop -sq $(OTHER_OPTIONS) main.cpp
-	g++ __schemo_main.cpp $(OTHER_FLAGS) -o schemo -I include -L lib -lschemo
+	./schemop -sq $(OPTIONS) main.cpp
+	g++ __schemo_main.cpp $(FLAGS) -o schemo -I include -L lib -lschemo
 
 pdf:
-	$(MAKE) schemo OTHER_OPTIONS=-p OTHER_FLAGS=-DSCHEMO_PROFILER
+	$(MAKE) schemo PROFILER=true
+ifeq ($(EXEC),true)
+	./schemo
+	cat schemo.profile >> main.cpp.profile
+endif
 	./smp2tikz main.cpp.profile
 	pdflatex main.cpp.tex
 	mv main.cpp.pdf pdf.out
+ifneq ($(KEEP),true)
 	$(MAKE) clean
+endif
 	mv pdf.out out.pdf
 
 schemo_profiler.o: schemo_profiler.h schemo_profiler.cpp
-	g++ -c $(OTHER_FLAGS) schemo_profiler.cpp
+	g++ -c $(FLAGS) schemo_profiler.cpp
 
 schemo.o: schemo.h schemo_profiler.h schemo.cpp
-	g++ -c $(OTHER_FLAGS) schemo.cpp
+	g++ -c $(FLAGS) schemo.cpp
 
 lib/libschemo.a: schemo.o schemo_profiler.o
 	ar r lib/libschemo.a schemo.o schemo_profiler.o
