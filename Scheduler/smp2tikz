@@ -8,8 +8,8 @@ rotation = 0
 unaccessible = False
 showid = False
 
-rotation = rotation%180
-if rotation < 45 or rotation > 135:
+rot = rotation%180
+if rot < 45 or rot > 135:
   vertical = True
 else:
   vertical = False
