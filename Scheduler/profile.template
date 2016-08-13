@@ -4,8 +4,19 @@
 \pgfplotsset{compat=1.12}
 \usetikzlibrary{shapes}
 \usetikzlibrary{arrows.meta}
-\usepackage{adjustbox}  %% vertical alignment
-\usepackage{arydshln}   %% dashed columns
+\usepackage{adjustbox} %% vertical alignment
+\usepackage{arydshln}  %% dashed columns
+\usepackage{varwidth}  %% maximum width of nodes
+\usepackage{calc}
+
+\newcommand{\schemoScale}{%f}
+\newcommand{\schemoRotation}{%f}
+\newcommand{\schemoUnit}{%s}
+\newcommand{\schemoWidth}{%s}
+\newcommand{\schemoSmall}{%f}
+\newcommand{\schemoLine}{%s}
+\newcommand{\schemoThick}{%s}
+
 \begin{document}
 \begin{tabular}%s
 %s

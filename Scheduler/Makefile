@@ -18,7 +18,7 @@ ifeq ($(EXEC),true)
 else
 	./schemop -sqp main.cpp
 endif
-	./smp2tikz main.cpp.profile
+	./smp2tikz $(TEX_OPTIONS) main.cpp.profile
 	pdflatex main.cpp.tex
 	mv main.cpp.pdf pdf.out
 ifneq ($(KEEP),true)

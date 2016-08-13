@@ -29,6 +29,12 @@ char rOut_old;
 char uOut_old;
 char dOut_old;
 
+int lThreshold = 256;
+int rThreshold = 768;
+
+int dThreshold = 256;
+int uThreshold = 768;
+
 bool pressed = false;
 
 enum
@@ -99,7 +105,7 @@ typedef enum
 
 @DECLARE
 
-@FUNCTION(readCommand)
+@FUNCTION(read_command)
 @PARAM(sock:WiFiClient*)
 @PARAM(cmd:fbcp::COMMAND_LINE*)
 @PARAM(timeout:unsigned long)
@@ -108,24 +114,22 @@ typedef enum
   @MEMORY
   {
     @VAR(msg:fbcp::string)
-    @VAR(end:bool)
     @VAR(t:unsigned long)
   }  
   
   @VAR(msg) = "";
-  @VAR(end) = false;
   @VAR(t) = millis();
-  @WHILE (!@VAR(end) && millis() - @VAR(t) < @PARAM(timeout))
+  @WHILE (millis() - @VAR(t) < @PARAM(timeout))
   {
     int nc = @PARAM(sock)->available();
-    for (int i = 0; i < nc && !@VAR(end); ++i)
+    for (int i = 0; i < nc; ++i)
     {
       char c = @PARAM(sock)->read();
       @VAR(msg) += c;
       
       if (c == '\n' or c == '\0')
       {
-        @VAR(end) = true;
+        @BREAK
       }
     }
   }
@@ -235,158 +239,155 @@ typedef enum
           bool noenc = (WiFi.encryptionType(@VAR(i)) == ENC_TYPE_NONE);
           Serial.println(noenc?" ":"*");
           // Search for suitable network
-          @IF (noenc)
+          if (!noenc)
           {
-            @VAR(board) = false;
-            @VAR(robot) = false;
-            @IF (ssid.startsWith(fbcp::BOARD_PREFIX))
-            {
-              Serial.println("Found suitable board network");
-              @VAR(board) = true;
+            @CONTINUE
+          }
+          
+          @VAR(board) = false;
+          @VAR(robot) = false;
+          if (ssid.startsWith(fbcp::BOARD_PREFIX))
+          {
+            Serial.println("Found suitable board network");
+            @VAR(board) = true;
+            @VAR(connected) = true;
+          }
+          else if (ssid.startsWith(fbcp::ROBOT_PREFIX))
+          {
+            Serial.println("Found suitable robot network");
+            @VAR(robot) = true;
+            @VAR(connected) = true;
+          }
+          else
+          {
+            @CONTINUE
+          }
+
+          /*******************
+           * tryConnect START *
+           ********************/
+          mode = MODE_NETCON;
+          Serial.print("Connecting to ");
+          Serial.println(ssid.c_str());
+          
+          @VAR(t1) = millis();
+
+          @WHILE (status != WL_CONNECTED && millis() - @VAR(t1) < 100000)
+          {
+            status = WiFi.begin(ssid.c_str());
+            @CALL(wait;500):null;
+            Serial.print(".");
+          }
+          Serial.println("");
+
+          @VAR(connected) = false;
+          switch (status)
+          {
+            case WL_CONNECTED:
+              Serial.println("WiFi connected");
               @VAR(connected) = true;
-            }
+              break;
+            case WL_NO_SHIELD:
+              Serial.println("No WiFi shield is present");
+              @CONTINUE
+            case WL_IDLE_STATUS:
+              Serial.println("Timeout");
+              @CONTINUE
+            case WL_NO_SSID_AVAIL:
+              Serial.println("No SSID are available");
+              @CONTINUE
+            case WL_SCAN_COMPLETED:
+              Serial.println("Scan networks is completed");
+              @CONTINUE
+            case WL_CONNECT_FAILED:
+              Serial.println("Connection failed for all the attempts");
+              @CONTINUE
+            case WL_CONNECTION_LOST:
+              Serial.println("Connection lost");
+              @CONTINUE
+            case WL_DISCONNECTED:
+              Serial.println("Disconnected from a network");
+              @CONTINUE
+          }
+          
+          Serial.print("IP address: ");
+          Serial.println(WiFi.localIP());
 
-            @IF (ssid.startsWith(fbcp::ROBOT_PREFIX))
+          mode = MODE_SERCON;
+          Serial.print("Trying to connect to ");
+          Serial.print(FBNet::GATEWAY[0]);
+          Serial.print(".");
+          Serial.print(FBNet::GATEWAY[1]);
+          Serial.print(".");
+          Serial.print(FBNet::GATEWAY[2]);
+          Serial.print(".");
+          Serial.print(FBNet::GATEWAY[3]);
+          Serial.print(":");
+          Serial.println(FBNet::PORT);
+
+          @VAR(connected) = sockOut.connect(gateway, FBNet::PORT);
+            
+          if (!@VAR(connected))
+          {
+            Serial.println("Can't connect to server");
+            @CONTINUE
+          }
+
+          Serial.println("Connected");
+          
+          @VAR(cmd).command = &fbcp::Q_SINGLE_PRESENTATION;
+          @VAR(cmd).params["serial"] = fbcp::serial;
+          fbcp::string s = fbcp::writeCommand(@VAR(cmd));
+          Serial.print("Sent: ");
+          Serial.println(s.c_str());
+          sockOut.print(s.c_str());
+          
+          @CALL(read_command;&sockOut;&@VAR(cmd);fbcp::HARD_TIMEOUT):understood;
+          @VAR(connected) = false;
+          if (understood == READ_FAIL)
+          {
+            Serial.println("Couldn't understand server response");
+          }
+          else if (understood == READ_TIMEOUT)
+          {
+            Serial.println("Server timed out");
+          }
+          else if (@VAR(cmd).command->code == fbcp::A_GRANT_ACCESS.code)
+          {
+            Serial.println("Server allowed connection");
+            @VAR(connected) = true;
+          }
+          else if (@VAR(cmd).command->code == fbcp::A_DENY_ACCESS.code)
+          {
+            Serial.println("Server refused connection");
+          }
+          else
+          {
+            Serial.println("Server answered something strange :S");
+          }
+          /*******************
+           * tryConnect STOP  *
+           ********************/
+  
+          if (@VAR(connected))
+          {
+            Serial.println("Connection estabilished");
+            
+            if (@VAR(board))
             {
-              Serial.println("Found suitable robot network");
-              @VAR(robot) = true;
-              @VAR(connected) = true;
+              mode = MODE_GAME;
+              Serial.println("Getting into Game mode");
             }
-
-            @IF (@VAR(connected))
+            if (@VAR(robot))
             {
-              /*******************
-               * tryConnect START *
-               ********************/
-              mode = MODE_NETCON;
-              Serial.print("Connecting to ");
-              Serial.println(ssid.c_str());
-              
-              @VAR(t1) = millis();
-
-              @WHILE (status != WL_CONNECTED && millis() - @VAR(t1) < 100000)
-              {
-                status = WiFi.begin(ssid.c_str());
-                @CALL(wait;500):null;
-                Serial.print(".");
-              }
-              Serial.println("");
-
-              @VAR(connected) = false;
-              switch (status)
-              {
-                case WL_CONNECTED:
-                  Serial.println("WiFi connected");
-                  @VAR(connected) = true;
-                  break;
-                case WL_NO_SHIELD:
-                  Serial.println("No WiFi shield is present");
-                  break;
-                case WL_IDLE_STATUS:
-                  Serial.println("Timeout");
-                  break;
-                case WL_NO_SSID_AVAIL:
-                  Serial.println("No SSID are available");
-                  break;
-                case WL_SCAN_COMPLETED:
-                  Serial.println("Scan networks is completed");
-                  break;
-                case WL_CONNECT_FAILED:
-                  Serial.println("Connection failed for all the attempts");
-                  break;
-                case WL_CONNECTION_LOST:
-                  Serial.println("Connection lost");
-                  break;
-                case WL_DISCONNECTED:
-                  Serial.println("Disconnected from a network");
-                  break;
-              }
-              
-              @IF (@VAR(connected))
-              {
-                Serial.print("IP address: ");
-                Serial.println(WiFi.localIP());
-
-                mode = MODE_SERCON;
-                Serial.print("Trying to connect to ");
-                Serial.print(FBNet::GATEWAY[0]);
-                Serial.print(".");
-                Serial.print(FBNet::GATEWAY[1]);
-                Serial.print(".");
-                Serial.print(FBNet::GATEWAY[2]);
-                Serial.print(".");
-                Serial.print(FBNet::GATEWAY[3]);
-                Serial.print(":");
-                Serial.println(FBNet::PORT);
-
-                @VAR(connected) = sockOut.connect(gateway, FBNet::PORT);
-                  
-                if (!@VAR(connected))
-                {
-                  Serial.println("Can't connect to server");
-                }
-
-                @IF (@VAR(connected))
-                {
-                  Serial.println("Connected");
-                  
-                  @VAR(cmd).command = &fbcp::Q_SINGLE_PRESENTATION;
-                  @VAR(cmd).params["serial"] = fbcp::serial;
-                  fbcp::string s = fbcp::writeCommand(@VAR(cmd));
-                  Serial.print("Sent: ");
-                  Serial.println(s.c_str());
-                  sockOut.print(s.c_str());
-                  
-                  @CALL(readCommand;&sockOut;&@VAR(cmd);fbcp::HARD_TIMEOUT):understood;
-                  @VAR(connected) = false;
-                  if (understood == READ_FAIL)
-                  {
-                    Serial.println("Couldn't understand server response");
-                  }
-                  else if (understood == READ_TIMEOUT)
-                  {
-                    Serial.println("Server timed out");
-                  }
-                  else if (@VAR(cmd).command->code == fbcp::A_GRANT_ACCESS.code)
-                  {
-                    Serial.println("Server allowed connection");
-                    @VAR(connected) = true;
-                  }
-                  else if (@VAR(cmd).command->code == fbcp::A_DENY_ACCESS.code)
-                  {
-                    Serial.println("Server refused connection");
-                  }
-                  else
-                  {
-                    Serial.println("Server answered something strange :S");
-                  }
-                }
-              }
-              /*******************
-               * tryConnect STOP  *
-               ********************/
+              mode = MODE_STANDALONE;
+              Serial.println("Getting into Stand Alone mode");
             }
-    
-            if (@VAR(connected))
-            {
-              Serial.println("Connection estabilished");
-              
-              if (@VAR(board))
-              {
-                mode = MODE_GAME;
-                Serial.println("Getting into Game mode");
-              }
-              if (@VAR(robot))
-              {
-                mode = MODE_STANDALONE;
-                Serial.println("Getting into Stand Alone mode");
-              }
-              schemo::schedule_job(job_client);
-            }
-            else
-            {
-              Serial.println("Connection failed");
-            }
+            schemo::schedule_job(job_client);
+          }
+          else
+          {
+            Serial.println("Connection failed");
           }
         }
       }
@@ -416,7 +417,7 @@ typedef enum
   @WHILE
   {
     @VAR(last) = millis();
-    @WHILE (sockOut.connected())
+    @WHILE ((mode == MODE_GAME || mode == MODE_STANDALONE) && sockOut.connected())
     {
       //Everything Button
       bool old = pressed;
@@ -436,7 +437,7 @@ typedef enum
         Serial.println(s.c_str());
         sockOut.print(s.c_str());
 
-        @CALL(readCommand;&sockOut;&@VAR(cmd);fbcp::SOFT_TIMEOUT):understood;
+        @CALL(read_command;&sockOut;&@VAR(cmd);fbcp::SOFT_TIMEOUT):understood;
         if (understood == READ_SUCCESS)
         {
           @VAR(last) = millis();
@@ -477,20 +478,20 @@ typedef enum
       rOut = LOW;
       uOut = LOW;
       dOut = LOW;
-      if (horizontalValue < 256)
+      if (horizontalValue < lThreshold)
       {
         lOut = HIGH;
       }
-      else if (horizontalValue > 768)
+      else if (horizontalValue > rThreshold)
       {
         rOut = HIGH;
       }
 
-      if (verticalValue < 156)
+      if (verticalValue < dThreshold)
       {
         dOut = HIGH;
       }
-      else if (verticalValue > 768)
+      else if (verticalValue > uThreshold)
       {
         uOut = HIGH;
       }
@@ -567,7 +568,7 @@ typedef enum
         Serial.println(s.c_str());
         sockOut.print(s.c_str());
 
-        @CALL(readCommand;&sockOut;&@VAR(cmd);fbcp::SOFT_TIMEOUT):understood;
+        @CALL(read_command;&sockOut;&@VAR(cmd);fbcp::SOFT_TIMEOUT):understood;
         if (understood == READ_SUCCESS)
         {
           @VAR(last) = millis();
@@ -596,6 +597,7 @@ typedef enum
         {
           sockOut.stop();
           sendStatus = SEND_FAIL;
+          @BREAK
         }
       }
       
@@ -604,7 +606,7 @@ typedef enum
         Serial.print("Sent: ");
         Serial.println(kalCmd.c_str());
         sockOut.print(kalCmd.c_str());
-        @CALL(readCommand;&sockOut;&@VAR(cmd);fbcp::SOFT_TIMEOUT):understood;
+        @CALL(read_command;&sockOut;&@VAR(cmd);fbcp::SOFT_TIMEOUT):understood;
         if (understood == READ_SUCCESS)
         {
           @VAR(last) = millis();
@@ -613,7 +615,14 @@ typedef enum
         {
           sockOut.stop();
           sendStatus = SEND_FAIL;
+          @BREAK
         }
+      }
+
+      @IF (sendStatus == SEND_BUSY)
+      {
+        @CALL(wait;WAIT_AFTER_REFUSED):null;
+        sendStatus = SEND_OK;
       }
       
       unsigned int t = millis();
@@ -627,12 +636,6 @@ typedef enum
         dt = 0;
       }
       @CALL(wait;dt):null;
-
-      @IF (sendStatus == SEND_BUSY)
-      {
-        @CALL(wait;WAIT_AFTER_REFUSED):null;
-        sendStatus = SEND_OK;
-      }
     }
 
     if (mode != MODE_IDLE && !sockOut.connected())
@@ -691,6 +694,7 @@ typedef enum
           break;
         case MODE_STANDALONE:
           ledFreq = FREQ_ON;
+          break;
         default:
           ledFreq = FREQ_OFF;          
       }
@@ -699,17 +703,17 @@ typedef enum
     if (ledFreq == FREQ_ON)
     {
       digitalWrite(ledPin, HIGH);
+      @CONTINUE
     }
     if (ledFreq == FREQ_OFF)
     {
       digitalWrite(ledPin, LOW);
+      @CONTINUE
     }
-    @IF (ledFreq != FREQ_ON && ledFreq != FREQ_OFF)
-    {
-      @CALL(wait;1000/ledFreq):null;
-      @VAR(on) = !@VAR(on);
-      digitalWrite(ledPin, @VAR(on));
-    }
+    
+    @CALL(wait;1000/ledFreq):null;
+    @VAR(on) = !@VAR(on);
+    digitalWrite(ledPin, @VAR(on));
   }
 }
 

@@ -1,16 +1,60 @@
 #!/usr/bin/env python
 import sys
 import re
+import argparse
 
 #PARAMETERS
-scale = 1
+scale_ = 1
 rotation = 0
 unaccessible = False
 showid = False
 showlast = True
 showfun = True
-showjob = False
+showjob = True
 
+parser = argparse.ArgumentParser(description='Converts ScheMo .profile files to LaTeX files', prefix_chars='-+')
+parser.add_argument('+u', '--show-unaccessible', dest='unac_true', action='store_true',
+                    help='Show unaccessible nodes in output')
+parser.add_argument('-u', '--hide-unaccessible', dest='unac_false', action='store_false',
+                    help='Hide unaccessible nodes from output')
+parser.add_argument('+i', '--show-id', dest='id_true', action='store_true',
+                    help='Show tasks ID in output')
+parser.add_argument('-i', '--hide-id', dest='id_false', action='store_false',
+                    help='Hide tasksID nodes from output')
+parser.add_argument('+l', '--show-last', dest='last_true', action='store_true',
+                    help='Show last task before end of job/function in output')
+parser.add_argument('-l', '--hide-last', dest='last_false', action='store_false',
+                    help='Hide last task before end of job/function from output')
+parser.add_argument('+f', '--show-functions', dest='fun_true', action='store_true',
+                    help='Show functions in output')
+parser.add_argument('-f', '--hide-functions', dest='fun_false', action='store_false',
+                    help='Hide functions from output')
+parser.add_argument('+j', '--show-jobs', dest='job_true', action='store_true',
+                    help='Show jobs in output')
+parser.add_argument('-j', '--hide-jobs', dest='job_false', action='store_false',
+                    help='Hide jobs from output')
+parser.add_argument('-s', '--scale', dest='scale', metavar='FACTOR',
+                    action='store', default=scale_, type=float,
+                    help='Scale factor. [Default: {}]'.format(scale_))
+parser.add_argument('-r', '--rotation', dest='rotation', metavar='ANGLE',
+                    action='store', default=rotation, type=float,
+                    help='Rotation angle. [Default: {}]'.format(rotation))
+parser.add_argument('file', metavar='FILE[.profile]', type=str,
+                    help='Profile to be processed')
+
+args = parser.parse_args()
+scale_ = args.scale
+rotation = args.rotation
+def mostlyTrue(a, b, c):
+  return (a and b) or (b and c) or (a and c)
+unaccessible = mostlyTrue(unaccessible, args.unac_true, args.unac_false)
+showid = mostlyTrue(showid, args.id_true, args.id_false)
+showlast = mostlyTrue(showlast, args.last_true, args.last_false)
+showfun = mostlyTrue(showfun, args.fun_true, args.fun_false)
+showjob = mostlyTrue(showjob, args.job_true, args.job_false)
+
+
+scale = scale_*scale_
 rot = rotation%180
 if rot < 45 or rot > 135:
   vertical = True
@@ -59,7 +103,10 @@ class Task:
   all = {}
   
   def __init__(self, name=None, id=None):
-    self.name = name
+    if name is not None:
+      self.name = parseName(name)
+    else:
+      self.name = None
     if id is None:
       id = max(Task.all.keys())+1
     self.id = id
@@ -88,7 +135,7 @@ class Task:
       self._out.append(task)
   
   def setPosition(self, position):
-    self.position = position
+    self.position = position*scale_
     if self.job is not None and self.job.maxpos < position:
       self.job.maxpos = position
   
@@ -255,7 +302,9 @@ def parseFlow(flow, start, level, parent):
       last = t
     i = i+1
 
-profile = sys.argv[1]
+profile = args.file
+if not profile.endswith(".profile"):
+  profile = profile+".profile"
 f = open(profile, "r")
 
 line = readLine(f)
@@ -346,29 +395,29 @@ maxpos = maxpos + 1
     #~ print('I')
 #~ print("\033[{}f".format(maxpos+2))
 
-job_format = r"\node [scale={scale}, draw, thick] (j{id}) at ({x},{y}) {{\rotatebox{{{rotation}}}{{\textbf{{{job.name}}}}}}};"+"\n"
-fun_format = r"\node [scale={scale}, draw] (j{id}) at ({x},{y}) {{\rotatebox{{{rotation}}}{{\textit{{{job.name}}}}}}};"+"\n"
-task_format = r"\node [scale={scale}, draw, circle] (t{id}) at ({x},{y}) {{\rotatebox{{{rotation}}}{{%s}}}};" % ("{node.id}" if showid else "")+"\n"
-while_format = r"\node [scale={scale}, draw, diamond] (t{id}) at ({x},{y}) {{\rotatebox{{{rotation}}}{{\texttt{{while}}}}}};"+"\n"
-loop_format = r"\node [scale={scale}, draw, diamond] (t{id}) at ({x},{y}) {{\rotatebox{{{rotation}}}{{\texttt{{loop}}}}}};"+"\n"
-if_format = r"\node [scale={scale}, draw, diamond] (t{id}) at ({x},{y}) {{\rotatebox{{{rotation}}}{{\texttt{{if}}}}}};"+"\n"
-call_format = r"\node [scale={scale}, draw, rectangle] (t{id}) at ({x},{y}) {{\rotatebox{{{rotation}}}{{\texttt{{call}} \textit{{{node.name}}}}}}};"+"\n"
+job_format = r"\node [scale=\schemoScale, draw, line width=\schemoThick] (j{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{\textbf{{\begin{{varwidth}}{{\schemoWidth}}{job.name}\end{{varwidth}}}}}}}};"+"\n"
+fun_format = r"\node [scale=\schemoScale, draw, line width=\schemoLine] (j{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{\textit{{\begin{{varwidth}}{{\schemoWidth}}{job.name}\end{{varwidth}}}}}}}};"+"\n"
+task_format = r"\node [scale=\schemoScale, draw, circle, line width=\schemoLine] (t{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{%s}}}};" % ("{node.id}" if showid else "")+"\n"
+while_format = r"\node [scale=\schemoScale, draw, diamond, line width=\schemoLine] (t{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{\texttt{{while}}}}}};"+"\n"
+loop_format = r"\node [scale=\schemoScale, draw, diamond, line width=\schemoLine] (t{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{\texttt{{loop}}}}}};"+"\n"
+if_format = r"\node [scale=\schemoScale, draw, diamond, line width=\schemoLine] (t{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{\texttt{{if}}}}}};"+"\n"
+call_format = r"\node [scale=\schemoScale, draw, rectangle, line width=\schemoLine] (t{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{\begin{{varwidth}}{{\schemoWidth}}\texttt{{call}} \textit{{{node.name}}}\end{{varwidth}}}}}};"+"\n"
 stop_format = (
-  r"\node [scale={scale}, draw, circle] (t{id}) at ({x},{y}) {{\rotatebox{{{rotation}}}{{}}}};"+"\n"+
-  r"\node [scale={scale}, draw, cross out] at (t{id}) {{\rotatebox{{{rotation}}}{{}}}};"+"\n"+
-  r"\node [scale={scale}, above] at (t{id}.north) {{\rotatebox{{{rotation}}}{{STOP}}}};"+"\n"
+  r"\node [scale=\schemoScale, draw, circle, line width=\schemoLine] (t{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{}}}};"+"\n"+
+  r"\node [scale=\schemoScale, draw, cross out, line width=\schemoLine] at (t{id}) {{\rotatebox{{\schemoRotation}}{{}}}};"+"\n"+
+  r"\node [scale=\schemoScale, above] at (t{id}.north) {{\rotatebox{{\schemoRotation}}{{STOP}}}};"+"\n"
 )
 return_format = (
-  r"\node [scale={scale}, draw, circle] (t{id}) at ({x},{y}) {{\rotatebox{{{rotation}}}{{}}}};"+"\n"+
-  r"\node [scale={scale}, draw, cross out] at (t{id}) {{\rotatebox{{{rotation}}}{{}}}};"+"\n"+
-  r"\node [scale={scale}, above] at (t{id}.north) {{\rotatebox{{{rotation}}}{{RETURN}}}};"+"\n"
+  r"\node [scale=\schemoScale, draw, circle, line width=\schemoLine] (t{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{}}}};"+"\n"+
+  r"\node [scale=\schemoScale, draw, cross out, line width=\schemoLine] at (t{id}) {{\rotatebox{{\schemoRotation}}{{}}}};"+"\n"+
+  r"\node [scale=\schemoScale, above] at (t{id}.north) {{\rotatebox{{\schemoRotation}}{{RETURN}}}};"+"\n"
 )
-shutdown_format = r"\node [scale={scale}, draw, star, star points=10] (t{id}) at ({x},{y}) {{\rotatebox{{{rotation}}}{{\textbf{{!}}}}}};"+"\n"
+shutdown_format = r"\node [scale=\schemoScale, draw, star, star points=10, line width=\schemoLine] (t{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{\textbf{{!}}}}}};"+"\n"
 
-edge_format = r"\draw [scale={scale}, -{{Latex[scale={scale}]}}, thick] (t{src}{anchor1}) to [out={outangle}, in={inangle}]{additional} (t{dst}{anchor2});"+"\n"
-jump_format = r"\draw [scale={scale}, dashed, -{{Latex[scale={scale}]}}] (t{src}{anchor1}) to [out={outangle}, in={inangle}]{additional} (t{dst}{anchor2});"+"\n"
+edge_format = r"\draw [-{{Latex[scale=\schemoScale]}}, line width=\schemoThick] (t{src}{anchor1}) to [out={outangle}, in={inangle}]{additional} (t{dst}{anchor2});"+"\n"
+jump_format = r"\draw [dashed, -{{Latex[scale=\schemoScale]}}, line width=\schemoLine] (t{src}{anchor1}) to [out={outangle}, in={inangle}]{additional} (t{dst}{anchor2});"+"\n"
 
-order_format = r"\node [scale={scale}, above right] at (t{task}.north east) {{\rotatebox{{{rotation}}}{{{order}}}}};"+"\n"
+order_format = r"\node [scale=\schemoSmall, above right] at (t{task}.north east) {{\rotatebox{{\schemoRotation}}{{{order}}}}};"+"\n"
 
 def addNode(t, graph):
   if t.type == 'task':
@@ -390,12 +439,10 @@ def addNode(t, graph):
     node_format = shutdown_format
   graph = graph + node_format.format(
     id=t.id,
-    x=2*t.position+2,
-    y=2*t.job.position*maxlev+maxlev+t.level,
+    x=2*(t.position+1),
+    y=t.level,
     #~ name=t.id,
-    node=t,
-    scale=scale,
-    rotation=rotation
+    node=t
   )
   if len(t.order)>3:
     order = "{}, {} ... {}".format(t.order[0], t.order[1], t.order[-1])
@@ -403,9 +450,7 @@ def addNode(t, graph):
     order = ", ".join(map(str, t.order))
   graph = graph + order_format.format(
     task=t.id,
-    order=order,
-    scale=scale*2/3,
-    rotation=rotation
+    order=order
   )
   return graph
 
@@ -425,15 +470,15 @@ def addEdges(t, graph):
           if j.stop in t._out:
             continue
           text = 'return'
-        additional = r" node [scale=%f, at start, below right] {\rotatebox{%s}{%s}}" % (scale*2/3, rotation, text)
+        additional = r" node [scale=\schemoSmall, at start, below right] {\rotatebox{\schemoRotation}{%s}}" % text
       else:
         outangle = -90
         inangle = 180
-        additional = r" node [scale=%f, at start, below right] {\rotatebox{%s}{break}}" % (scale*2/3, rotation)
+        additional = r" node [scale=\schemoSmall, at start, below right] {\rotatebox{\schemoRotation}{break}}"
     else:
       outangle = 90
       inangle = 90
-      additional = r" node [scale=%f, at start, above left] {\rotatebox{%s}{continue}}" % (scale*2/3, rotation)
+      additional = r" node [scale=\schemoSmall, at start, above left] {\rotatebox{\schemoRotation}{continue}}"
     graph = graph + jump_format.format(
       src=t.id,
       anchor1=anchor1,
@@ -441,8 +486,7 @@ def addEdges(t, graph):
       anchor2=anchor2,
       outangle=outangle,
       inangle=inangle,
-      additional=additional,
-      scale=scale
+      additional=additional
     )
   for t2 in t._out:
     outangle = 0
@@ -506,7 +550,7 @@ if showfun:
 if showjob:
   l = l + list(Job.all.values())
 for j in (l):
-  graph = r"\adjustbox{valign=t}{\begin{tikzpicture}[x=%fcm, y=%fcm, transform shape, rotate=-%s]" % (scale, scale, rotation) + "\n"
+  graph = r"\adjustbox{valign=t}{\begin{tikzpicture}[x=\schemoUnit, y=\schemoUnit, transform shape, rotate=-\schemoRotation]"+"\n"
   if isinstance(j, Job):
     node_format = job_format
   elif isinstance(j, Function):
@@ -514,7 +558,7 @@ for j in (l):
   graph = graph + node_format.format(
     id=j.id,
     x=0,
-    y=2*j.position*maxlev+maxlev,
+    y=0,
     job=j,
     scale=scale,
     rotation=rotation
@@ -559,5 +603,17 @@ else:
   tab_format = '{'+':'.join(['c']*(len(Job.all)+len(Function.all)))+'}'
 
 f = open(profile.replace(".profile", ".tex"), "w")
-f.write(template % (tab_format, graph.replace("_", r"\_")))
+f.write(
+  template % (
+    scale,
+    rotation,
+    str(scale_*10)+"mm",
+    "15mm",
+    scale*2/3,
+    str(scale*0.4)+"pt",
+    str(scale*0.8)+"pt",
+    tab_format,
+    graph.replace("_", r"\_")
+  )
+)
 f.close()
