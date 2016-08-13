@@ -666,20 +666,22 @@ for name in args.files:
     if match is None:
       break
     fun = match.group(1).replace(" ", "")
+    ms = lastfun + match.start()
+    me = lastfun + match.end()
     if fun in TASKS:
       stderr("Error: multiple uses of task name '%s' (note: %ss are tasks)" % (fun, FUN))
       stderr(
-        buf[match.start()-100:match.start()]+
+        buf[min(0, ms-100):ms]+
         termColors['RED']+
         termColors['BOLD']+
-          buf[match.start():match.end()]+
+          buf[ms:me]+
         termColors['END']+
-        buf[match.end():match.end()+100]
+        buf[me:max(len(buf), me+100)]
       )
       
       sys.exit(1)
     TASKS.append(fun)
-    lastfun = match.end()
+    lastfun = me
   
   # UNNAMED TBREAKS
   while True:
