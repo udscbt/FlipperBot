@@ -2,6 +2,7 @@ import socket
 from threading import Thread, Lock
 from time import time, sleep, strftime
 from .. import fbcp
+from ..fbcp import common
 from collections import OrderedDict as OD
 from .shared import SharedVariable, ThreadEx, termColors
 from ..robot import Robot
@@ -65,14 +66,13 @@ class ClientThread (ThreadEx):
       else:
         buf = ""
         while not self._stopped:
-          #self.sockIn.settimeout(10)
-          #self.sockIn.settimeout(1000)
+          self.sockIn.settimeout(fbcp.HARD_TIMEOUT)
           try:
             c = self.sockIn.recv(1).decode("UTF-8")
           except socket.timeout:
-            #~ self.debug("Disconnected")
-            #~ self.remove()
-            #~ self.stop()
+            self.debug("Disconnected")
+            self.remove()
+            self.stop()
             return
           buf = buf + c
           if c == '\n':
@@ -83,6 +83,14 @@ class ClientThread (ThreadEx):
         if not self.cmdIn.parse(buf):
           self.debug("Can't understand message")
           self.cmdOut.command = fbcp.Command.A_ERROR
+          s = self.cmdOut.write()
+          self.sockIn.send(s.encode("UTF-8"))
+          self.debug("Sent:", s)
+          return
+        
+        self.cmdOut = fbcp.common.handleRequest(self.cmdIn)
+        if self.cmdOut.command != fbcp.Command.NULL:
+          self.debug("Library managed")
           s = self.cmdOut.write()
           self.sockIn.send(s.encode("UTF-8"))
           self.debug("Sent:", s)
@@ -250,6 +258,7 @@ class RobotThread (ThreadEx):
       parent=self
     )
     self.direction = self.server.game.robots[index].direction
+    self.last = time()
     super(RobotThread, self).__init__(name="client[robot{}]".format(self.index))
   
   def loop(self):
@@ -277,14 +286,18 @@ class RobotThread (ThreadEx):
         cmd.params['direction'] = fbcp.Param.DIRECTION_STOP.id
       self.direction = d
       msg = cmd.write()
-      print("Send dir:", msg)
+      self.debug("Send dir:", msg)
       self.sockOut.send(msg.encode("UTF-8"))
+      self.last = time()
+    elif time() - self.last > fbcp.HARD_TIMEOUT/2:
+      self.sockOut.send(fbcp.CommandLine(fbcp.Command.Q_HEARTBEAT).write())
+      self.last = time()
   
 class Server (ThreadEx):
   address = '192.168.1.1'
   port = 10000
   
-  def __init__(self, game,dbgFlag=False):
+  def __init__(self, game, dbgFlag=False):
     self.game = game
     self.debug = Debug(
       log=self.game.log,

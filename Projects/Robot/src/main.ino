@@ -27,7 +27,6 @@ fbcp::string fbcp::serial;
 const char serial[] = "00001";
 fbcp::string ssid;
 int status = WL_IDLE_STATUS;
-bool AP = true;
 
 const IPAddress host(
   FBNet::GATEWAY[0],
@@ -62,7 +61,6 @@ enum
 } mode = MODE_IDLE;
 
 float ledFreq = 0;
-bool ledAuto = true;
 
 enum
 {
@@ -74,6 +72,7 @@ enum
 
 bool hit = false;
 fbcp::string hitCmd;
+fbcp::string kalCmd;
 
 typedef enum
 {
@@ -94,9 +93,6 @@ typedef enum
   {
     @VAR(msg:fbcp::string)
     @VAR(end:bool)
-    @VAR(nc:int)
-    @VAR(c:char)
-    @VAR(i:int)
     @VAR(t:unsigned long)
   }  
   
@@ -105,19 +101,16 @@ typedef enum
   @VAR(t) = millis();
   @WHILE (!@VAR(end) && millis() - @VAR(t) < @PARAM(timeout))
   {
-    @VAR(nc) = @PARAM(sock)->available();
-    @VAR(i) = 0;
-    @WHILE (!@VAR(end) && @VAR(i) < @VAR(nc))
+    int nc = @PARAM(sock)->available();
+    for (int i = 0; i < nc && !@VAR(end); ++i)
     {
-      @VAR(c) = @PARAM(sock)->read();
-      @VAR(msg) += @VAR(c);
+      char c = @PARAM(sock)->read();
+      @VAR(msg) += c;
       
-      if (@VAR(c) == '\n' or @VAR(c) == '\0')
+      if (c == '\n' or c == '\0')
       {
         @VAR(end) = true;
       }
-      
-      ++@VAR(i);
     }
   }
   
@@ -131,7 +124,7 @@ typedef enum
     @RETURN(READ_TIMEOUT);
   }
   
-  @IF (@VAR(c) == '\0')
+  @IF (@VAR(msg)[@VAR(msg).length()-1] == '\0')
   {
     Serial.println(F("Remote host said something REALLY strange :S"));
     @RETURN(READ_FAIL);
@@ -339,8 +332,6 @@ typedef enum
             {
               Serial.println(F("Connection estabilished"));
               mode = MODE_GAME;
-              
-              //~ schemo::schedule_job(job_client);
             }
             else
             {
@@ -370,83 +361,102 @@ typedef enum
   }
 }
 
-//~ @JOB(job_client)
-//~ {
-  //~ @MEMORY
-  //~ {
-    //~ @VAR(cmd:fbcp::COMMAND_LINE)
-  //~ }
+@JOB(job_client)
+{
+  @MEMORY
+  {
+    @VAR(cmd:fbcp::COMMAND_LINE)
+    @VAR(t:unsigned long)
+  }
+  
+  @WHILE
+  {
+    @VAR(t) = millis();
+    @WHILE (mode == MODE_GAME && sockOut.connected())
+    {
+      @VAR(cmd).command = &fbcp::Q_ROBOT_COMMAND;
 
-  //~ @WHILE
-  //~ {
-    //~ @WHILE (sockOut.connected())
-    //~ {
-      //~ @VAR(cmd).command = &fbcp::Q_ROBOT_COMMAND;
+      if (digitalRead(HIT))
+      {
+        if (!hit)
+        {
+          hit = true;
+          sendStatus = SEND_NEW;
+        }
+      }
+      else
+      {
+        hit = false;
+      }
+      
+      @IF (sendStatus == SEND_BUSY || sendStatus == SEND_NEW)
+      {
+        Serial.print("Sent: ");
+        Serial.println(hitCmd.c_str());
+        sockOut.print(hitCmd.c_str());
 
-      //~ if (digitalRead(HIT))
-      //~ {
-        //~ if (!hit)
-        //~ {
-          //~ hit = true;
-          //~ sendStatus = SEND_NEW;
-        //~ }
-      //~ }
-      //~ else
-      //~ {
-        //~ hit = false;
-      //~ }
+        @CALL(readCommand;&sockOut;&@VAR(cmd);fbcp::SOFT_TIMEOUT):understood;
+        if (understood == READ_SUCCESS)
+        {
+          @VAR(t) = millis();
+          if (@VAR(cmd).command->code == fbcp::A_ACCEPT.code)
+          {
+            Serial.println("Command was accepted");
+            sendStatus = SEND_OK;
+          }
+          else if (@VAR(cmd).command->code == fbcp::A_REFUSE.code)
+          {
+            Serial.println("Command was refused");
+            sendStatus = SEND_BUSY;
+          }
+          else if (@VAR(cmd).command->code == fbcp::A_ERROR.code)
+          {
+            Serial.println("Server didn't understand command");
+            sendStatus = SEND_FAIL;
+          }
+          else
+          {
+            Serial.println("Server answered something strange");
+            sendStatus = SEND_FAIL;
+          }
+        }
+        else if (understood == READ_FAIL)
+        {
+          Serial.println("Server answered something strange");
+          sendStatus = SEND_FAIL;
+        }
+        else if (understood == READ_TIMEOUT)
+        {
+          sockOut.stop();
+          sendStatus = SEND_FAIL;
+        }
+      }
+      
+      @IF (millis() - @VAR(t) > fbcp::HARD_TIMEOUT/2)
+      {
+        Serial.print("Sent: ");
+        Serial.println(kalCmd.c_str());
+        sockOut.print(kalCmd.c_str());
+        @CALL(readCommand;&sockOut;&@VAR(cmd);fbcp::SOFT_TIMEOUT):understood;
+        if (understood == READ_SUCCESS)
+        {
+          @VAR(t) = millis();
+        }
+        else if (understood == READ_TIMEOUT)
+        {
+          sockOut.stop();
+          sendStatus = SEND_FAIL;
+        }
+      }
+    }
 
-      //~ @IF (sendStatus == SEND_FAIL || sendStatus == SEND_NEW)
-      //~ {
-        //~ Serial.print("Sent: ");
-        //~ Serial.println(hitCmd.c_str());
-        //~ sockOut.print(hitCmd.c_str());
-
-        //~ @CALL(readCommand;&sockOut;&@VAR(cmd);1000):understood;
-        //~ if (understood)
-        //~ {
-          //~ if (@VAR(cmd).command->code == fbcp::A_ACCEPT.code)
-          //~ {
-            //~ Serial.println("Command was accepted");
-            //~ sendStatus = SEND_OK;
-          //~ }
-          //~ else if (@VAR(cmd).command->code == fbcp::A_REFUSE.code)
-          //~ {
-            //~ Serial.println("Command was refused");
-            //~ sendStatus = SEND_BUSY;
-          //~ }
-          //~ else if (@VAR(cmd).command->code == fbcp::A_ERROR.code)
-          //~ {
-            //~ Serial.println("Server didn't understand command");
-            //~ sendStatus = SEND_FAIL;
-          //~ }
-          //~ else
-          //~ {
-            //~ Serial.println("Server answered something strange");
-            //~ sendStatus = SEND_FAIL;
-          //~ }
-        //~ }
-        //~ else
-        //~ {
-          //~ sockOut.stop();
-          //~ sendStatus = SEND_FAIL;
-        //~ }
-      //~ }
-
-      //~ @IF (sendStatus == SEND_BUSY)
-      //~ {
-        //~ @CALL(wait;WAIT_AFTER_REFUSED):null;
-        //~ sendStatus = SEND_OK;
-      //~ }
-    //~ }
-
-    //~ if (mode != MODE_IDLE && !sockOut.connected())
-    //~ {
-      //~ Serial.println("Disconnected");
-      //~ mode = MODE_IDLE;
-    //~ }
-  //~ }
-//~ }
+    if (mode == MODE_GAME && !sockOut.connected())
+    {
+      Serial.println("Disconnected");
+      mode = MODE_IDLE;
+    }
+  }
+}
 
 void leftMotor(int dir)
 {
@@ -549,6 +559,7 @@ void rightMotor(int dir)
           @CALL(readCommand;&@VAR(client);&@VAR(cmd);fbcp::HARD_TIMEOUT):understood;
           fbcp::COMMAND_LINE cmd;
           cmd.command = &fbcp::A_ACCEPT;
+
           if (understood == READ_FAIL)
           {
             cmd.command = &fbcp::A_ERROR;
@@ -559,23 +570,28 @@ void rightMotor(int dir)
             cmd.command = NULL;
             Serial.println(F("Client timed out"));
           }
+          else if (fbcp::common::handleRequest(@VAR(cmd), cmd))
+          {
+            Serial.println("Library managed");
+          }
           else if (@VAR(cmd).command->code == fbcp::Q_ROBOT_COMMAND.code)
           {
             Serial.println(F("Change direction"));
+            bool hit = digitalRead(HIT);
             if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_FORWARD_LEFT.str)
             {
-              leftMotor(0);
+              leftMotor(hit?-1:0);
               rightMotor(1);
             }
             else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_FORWARD.str)
             {
-              leftMotor(1);
-              rightMotor(1);
+              leftMotor(hit?0:1);
+              rightMotor(hit?0:1);
             }
             else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_FORWARD_RIGHT.str)
             {
               leftMotor(1);
-              rightMotor(0);
+              rightMotor(hit?-1:0);
             }
             else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_LEFT.str)
             {
@@ -768,6 +784,8 @@ void setup()
   fbcp::COMMAND_LINE cmd;
   cmd.command = &fbcp::Q_HIT;
   hitCmd = fbcp::writeCommand(cmd);
+  cmd.command = &fbcp::Q_HEARTBEAT;
+  kalCmd = fbcp::writeCommand(cmd);
   
   //ScheMo
   Serial.println(F("ScheMo"));
@@ -779,6 +797,7 @@ void setup()
   schemo::schedule_job(job_link);
   schemo::schedule_job(job_network);
   schemo::schedule_job(job_server);
+  schemo::schedule_job(job_client);
   schemo::schedule_job(avoid_breaking);
   Serial.println(F("Job scheduled"));
 

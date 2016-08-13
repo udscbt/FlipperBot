@@ -4,6 +4,10 @@ BOARD_PREFIX = "FlipperBot-Board-"
 ROBOT_PREFIX = "FlipperBot-Robot-"
 CONTR_PREFIX = "FlipperBot-Controller-"
 
+HARD_TIMEOUT = 10000
+SOFT_TIMEOUT = 1000
+FAKE_TIMEOUT = 100
+
 class Command:
   code = 0
   

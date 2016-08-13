@@ -22,7 +22,6 @@ bool fbcp::common::handleRequest(fbcp::COMMAND_LINE& in, fbcp::COMMAND_LINE& out
   }
   else if (in.command->code == fbcp::Q_HELP.code)
   {
-    fbcp::COMMAND_LINE command;
     fbcp::COMMAND* cmd;
     cmd = fbcp::findCommand(in.params["command"]+"\n");
     if (cmd == fbcp::NULL_COMMAND)
@@ -35,6 +34,11 @@ bool fbcp::common::handleRequest(fbcp::COMMAND_LINE& in, fbcp::COMMAND_LINE& out
     {
       out.other += " <" + *it + ">";
     }
+    return true;
+  }
+  else if (in.command->code == fbcp::Q_HEARTBEAT.code)
+  {
+    out.command = &fbcp::A_HEARTBEAT;
     return true;
   }
   else

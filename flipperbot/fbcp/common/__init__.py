@@ -16,6 +16,8 @@ def handleRequest(req):
         return CommandLine(Command.A_DATA, {}, ("Usage: %s" % command.id) + (" " if len(command.params) > 0 else "") + (" ".join(["<%s>" % p for p in command.params])))
     else:
       return CommandLine()
+  elif req.command == Command.Q_HEARTBEAT:
+    return CommandLine(Command.A_HEARTBEAT)
   else:
     return CommandLine()
 
