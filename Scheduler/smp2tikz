@@ -7,6 +7,9 @@ scale = 1
 rotation = 0
 unaccessible = False
 showid = False
+showlast = True
+showfun = True
+showjob = False
 
 rot = rotation%180
 if rot < 45 or rot > 135:
@@ -112,30 +115,35 @@ def parseFlow(flow, start, level, parent):
       if inner:
         raise FormatError()
       else:
-        #~ # Replace last task with stop
-        #~ s = parent.job.stop
-        #~ for t in s._in:
-          #~ last.enter(t)
-          #~ t.exit(last)
-          #~ t._out.remove(s)
-        #~ for t in s._out:
-          #~ last.exit(t)
-          #~ t.enter(last)
-          #~ t._in.remove(s)
-        #~ for t in s.o_in:
-          #~ last.enter(t, jump=True)
-          #~ t.exit(last, jump=True)
-          #~ t.o_out.remove(s)
-        #~ for t in s.o_out:
-          #~ last.exit(t, jump=True)
-          #~ t.enter(last, jump=True)
-          #~ t.o_in.remove(s)
-        #~ last.type = 'stop'
-        #~ parent.job.stop = last
-        #~ Task.all.pop(s.id)
-        last.exit(parent.job.stop)
-        parent.job.stop.enter(last)
-        parent.job.stop.setPosition(parent.job.maxpos+1)
+        if showlast:
+          last.exit(parent.job.stop)
+          parent.job.stop.enter(last)
+          parent.job.stop.setPosition(parent.job.maxpos+1)
+        else:
+          s = parent.job.stop
+          for t in s._in:
+            if t != last:
+              last.enter(t)
+              t.exit(last)
+            t._out.remove(s)
+          for t in s._out:
+            if t != last:
+              last.exit(t)
+              t.enter(last)
+            t._in.remove(s)
+          for t in s.o_in:
+            if t != last:
+              last.enter(t, jump=True)
+              t.exit(last, jump=True)
+            t.o_out.remove(s)
+          for t in s.o_out:
+            if t != last:
+              last.exit(t, jump=True)
+              t.enter(last, jump=True)
+            t.o_in.remove(s)
+          last.type = 'stop'
+          parent.job.stop = last
+          Task.all.pop(s.id)
         return None
     elif flow[i] == ']':
       if inner:
@@ -414,6 +422,8 @@ def addEdges(t, graph):
         if isinstance(j, Job):
           text = 'exit'
         elif isinstance(j, Function):
+          if j.stop in t._out:
+            continue
           text = 'return'
         additional = r" node [scale=%f, at start, below right] {\rotatebox{%s}{%s}}" % (scale*2/3, rotation, text)
       else:
@@ -490,7 +500,12 @@ def addEdges(t, graph):
   return graph
 
 graphs = []
-for j in (list(Function.all.values())+list(Job.all.values())):
+l = []
+if showfun:
+  l = l + list(Function.all.values())
+if showjob:
+  l = l + list(Job.all.values())
+for j in (l):
   graph = r"\adjustbox{valign=t}{\begin{tikzpicture}[x=%fcm, y=%fcm, transform shape, rotate=-%s]" % (scale, scale, rotation) + "\n"
   if isinstance(j, Job):
     node_format = job_format
