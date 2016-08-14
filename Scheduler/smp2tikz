@@ -395,8 +395,8 @@ maxpos = maxpos + 1
     #~ print('I')
 #~ print("\033[{}f".format(maxpos+2))
 
-job_format = r"\node [scale=\schemoScale, draw, line width=\schemoThick] (j{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{\textbf{{\begin{{varwidth}}{{\schemoWidth}}{job.name}\end{{varwidth}}}}}}}};"+"\n"
-fun_format = r"\node [scale=\schemoScale, draw, line width=\schemoLine] (j{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{\textit{{\begin{{varwidth}}{{\schemoWidth}}{job.name}\end{{varwidth}}}}}}}};"+"\n"
+job_format = r"\node [scale=\schemoScale, draw, line width=\schemoThick] (j{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{\textbf{{{job.name}}}}}}};"+"\n"
+fun_format = r"\node [scale=\schemoScale, draw, line width=\schemoLine] (j{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{\textit{{{job.name}}}}}}};"+"\n"
 task_format = r"\node [scale=\schemoScale, draw, circle, line width=\schemoLine] (t{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{%s}}}};" % ("{node.id}" if showid else "")+"\n"
 while_format = r"\node [scale=\schemoScale, draw, diamond, line width=\schemoLine] (t{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{\texttt{{while}}}}}};"+"\n"
 loop_format = r"\node [scale=\schemoScale, draw, diamond, line width=\schemoLine] (t{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{\texttt{{loop}}}}}};"+"\n"
