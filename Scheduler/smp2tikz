@@ -11,6 +11,8 @@ showid = False
 showlast = True
 showfun = True
 showjob = True
+showopt = True
+showback = True
 
 parser = argparse.ArgumentParser(description='Converts ScheMo .profile files to LaTeX files', prefix_chars='-+')
 parser.add_argument('+u', '--show-unaccessible', dest='unac_true', action='store_true',
@@ -33,6 +35,15 @@ parser.add_argument('+j', '--show-jobs', dest='job_true', action='store_true',
                     help='Show jobs in output')
 parser.add_argument('-j', '--hide-jobs', dest='job_false', action='store_false',
                     help='Hide jobs from output')
+parser.add_argument('+o', '--show-optional', dest='opt_true', action='store_true',
+                    help='Show optional edges (break and continue) in output')
+parser.add_argument('-o', '--hide-optional', dest='opt_false', action='store_false',
+                    help='Hide optional edges (break and continue) from output')
+parser.add_argument('+b', '--show-backjumps', dest='back_true', action='store_true',
+                    help='Show backjumps in output')
+parser.add_argument('-b', '--hide-backjumps', dest='back_false', action='store_false',
+                    help='Hide backjumps from output')
+
 parser.add_argument('-s', '--scale', dest='scale', metavar='FACTOR',
                     action='store', default=scale_, type=float,
                     help='Scale factor. [Default: {}]'.format(scale_))
@@ -52,6 +63,8 @@ showid = mostlyTrue(showid, args.id_true, args.id_false)
 showlast = mostlyTrue(showlast, args.last_true, args.last_false)
 showfun = mostlyTrue(showfun, args.fun_true, args.fun_false)
 showjob = mostlyTrue(showjob, args.job_true, args.job_false)
+showopt = mostlyTrue(showopt, args.opt_true, args.opt_false)
+showback = mostlyTrue(showback, args.back_true, args.back_false)
 
 
 scale = scale_*scale_
@@ -121,18 +134,24 @@ class Task:
     self.type = 'task'
     self.order = []
     self.visited = False
+    self.mutexes = []
+    self.crit = False
   
   def enter(self, task, jump=False):
     if jump:
-      self.o_in.append(task)
+      if task not in self.o_in:
+        self.o_in.append(task)
     else:
-      self._in.append(task)
+      if task not in self._in:
+        self._in.append(task)
   
   def exit(self, task, jump=False):
     if jump:
-      self.o_out.append(task)
+      if task not in self.o_out:
+        self.o_out.append(task)
     else:
-      self._out.append(task)
+      if task not in self._out:
+        self._out.append(task)
   
   def setPosition(self, position):
     self.position = position*scale_
@@ -150,14 +169,18 @@ def readLine(f):
     line = f.readline()
   return line.replace("\n", "")
 
+mutexes = 0
 def parseFlow(flow, start, level, parent):
   global current
+  global mutexes
   inner = (flow[start] == '[')
   i = start+1 if inner else start
   last = None
   while True:
     if last is not None:
       current = last
+      if mutexes > 0:
+        current.crit = True
     if flow[i] == 'S':
       if inner:
         raise FormatError()
@@ -286,6 +309,18 @@ def parseFlow(flow, start, level, parent):
       t.enter(last, jump=True)
     elif flow[i] == 'S!':
       last.type = 'shutdown'
+    elif flow[i] == 'CS':
+      if last is None:
+        last = parent
+      last.mutexes.append((flow[i+2], True))
+      mutexes = mutexes + 1
+      i = i + 3
+    elif flow[i] == 'CE':
+      if last is None:
+        last = parent
+      last.mutexes.append((flow[i+2], False))
+      mutexes = mutexes - 1
+      i = i + 3
     else:
       try:
         t = Task.all[int(flow[i])]
@@ -397,22 +432,24 @@ maxpos = maxpos + 1
 
 job_format = r"\node [scale=\schemoScale, draw, line width=\schemoThick] (j{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{\textbf{{{job.name}}}}}}};"+"\n"
 fun_format = r"\node [scale=\schemoScale, draw, line width=\schemoLine] (j{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{\textit{{{job.name}}}}}}};"+"\n"
-task_format = r"\node [scale=\schemoScale, draw, circle, line width=\schemoLine] (t{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{%s}}}};" % ("{node.id}" if showid else "")+"\n"
-while_format = r"\node [scale=\schemoScale, draw, diamond, line width=\schemoLine] (t{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{\texttt{{while}}}}}};"+"\n"
-loop_format = r"\node [scale=\schemoScale, draw, diamond, line width=\schemoLine] (t{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{\texttt{{loop}}}}}};"+"\n"
-if_format = r"\node [scale=\schemoScale, draw, diamond, line width=\schemoLine] (t{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{\texttt{{if}}}}}};"+"\n"
-call_format = r"\node [scale=\schemoScale, draw, rectangle, line width=\schemoLine] (t{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{\begin{{varwidth}}{{\schemoWidth}}\texttt{{call}} \textit{{{node.name}}}\end{{varwidth}}}}}};"+"\n"
+
+common_format = r"\node [scale=\schemoScale, draw, %(shape)s, line width=\schemoLine{critsec}] (t{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{%(label)s}}}};"+"\n"
+task_format   = common_format % {'shape':'circle',    'label':r"%s{mutex}" % ("{node.id}" if showid else "")}
+while_format  = common_format % {'shape':'diamond',   'label':r"\texttt{{while}}"}
+loop_format   = common_format % {'shape':'diamond',   'label':r"\texttt{{loop}}"}
+if_format     = common_format % {'shape':'diamond',   'label':r"\texttt{{if}}"}
+call_format   = common_format % {'shape':'rectangle', 'label':r"\begin{{varwidth}}{{\schemoWidth}}\texttt{{call}} \textit{{{node.name}}}\end{{varwidth}}"}
 stop_format = (
-  r"\node [scale=\schemoScale, draw, circle, line width=\schemoLine] (t{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{}}}};"+"\n"+
-  r"\node [scale=\schemoScale, draw, cross out, line width=\schemoLine] at (t{id}) {{\rotatebox{{\schemoRotation}}{{}}}};"+"\n"+
+  common_format % {'shape':'circle', 'label':r""} +
+  common_format % {'shape':'cross out', 'label':r""} +
   r"\node [scale=\schemoScale, above] at (t{id}.north) {{\rotatebox{{\schemoRotation}}{{STOP}}}};"+"\n"
 )
 return_format = (
-  r"\node [scale=\schemoScale, draw, circle, line width=\schemoLine] (t{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{}}}};"+"\n"+
-  r"\node [scale=\schemoScale, draw, cross out, line width=\schemoLine] at (t{id}) {{\rotatebox{{\schemoRotation}}{{}}}};"+"\n"+
+  common_format % {'shape':'circle', 'label':r""} +
+  common_format % {'shape':'cross out', 'label':r""} +
   r"\node [scale=\schemoScale, above] at (t{id}.north) {{\rotatebox{{\schemoRotation}}{{RETURN}}}};"+"\n"
 )
-shutdown_format = r"\node [scale=\schemoScale, draw, star, star points=10, line width=\schemoLine] (t{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{\textbf{{!}}}}}};"+"\n"
+shutdown_format = common_format % {'shape':'star, star points=10', 'label':r"\textbf{{!}}"}
 
 edge_format = r"\draw [-{{Latex[scale=\schemoScale]}}, line width=\schemoThick] (t{src}{anchor1}) to [out={outangle}, in={inangle}]{additional} (t{dst}{anchor2});"+"\n"
 jump_format = r"\draw [dashed, -{{Latex[scale=\schemoScale]}}, line width=\schemoLine] (t{src}{anchor1}) to [out={outangle}, in={inangle}]{additional} (t{dst}{anchor2});"+"\n"
@@ -437,12 +474,24 @@ def addNode(t, graph):
       node_format = return_format
   elif t.type == 'shutdown':
     node_format = shutdown_format
+  lock = False
+  unlock = False
+  for m in t.mutexes:
+    if m[1]:
+      lock = True
+    else:
+      unlock = True
   graph = graph + node_format.format(
     id=t.id,
     x=2*(t.position+1),
     y=t.level,
-    #~ name=t.id,
-    node=t
+    node=t,
+    mutex="{}{}{}".format(
+      " " if showid else "",
+      r"\faLock" if lock else "",
+      r"\faUnlockAlt" if unlock else ""
+    ),
+    critsec=", fill=lightgray" if t.crit else ""
   )
   if len(t.order)>3:
     order = "{}, {} ... {}".format(t.order[0], t.order[1], t.order[-1])
@@ -455,7 +504,7 @@ def addNode(t, graph):
   return graph
 
 def addEdges(t, graph):
-  for t2 in t.o_out:
+  for t2 in (t.o_out if showopt else []):
     anchor1 = ""
     anchor2 = ""
     additional = ""
@@ -475,10 +524,12 @@ def addEdges(t, graph):
         outangle = -90
         inangle = 180
         additional = r" node [scale=\schemoSmall, at start, below right] {\rotatebox{\schemoRotation}{break}}"
-    else:
+    elif showback:
       outangle = 90
       inangle = 90
       additional = r" node [scale=\schemoSmall, at start, above left] {\rotatebox{\schemoRotation}{continue}}"
+    else:
+      continue
     graph = graph + jump_format.format(
       src=t.id,
       anchor1=anchor1,
@@ -494,6 +545,8 @@ def addEdges(t, graph):
     anchor1 = ""
     anchor2 = ""
     additional = ""
+    if t2.position < t.position and not showback:
+      continue
     if t2.level < t.level:
       if t2.type == 'while' or t2.type == 'loop':
         outangle = 90

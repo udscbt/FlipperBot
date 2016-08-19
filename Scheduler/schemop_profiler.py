@@ -78,6 +78,7 @@ class TaskNode:
     self.brk = None
     self.ext = False
     self.shd = False
+    self.mtx = {'start':[], 'end':[]}
     TaskNode.TASK_NODES.append(self)
   
   @staticmethod
@@ -102,6 +103,10 @@ class TaskNode:
       s = s + " R"
     if self.shd:
       s = s + " S!"
+    for m in self.mtx['start']:
+      s = s + " CS ( {} )".format(m.id)
+    for m in self.mtx['end']:
+      s = s + " CE ( {} )".format(m.id)
     return s
 
 class WhileNode:
@@ -154,6 +159,30 @@ class CallNode:
   def __str__(self):
     return "F ( {} )".format(self.fun.id)
 
+class MutexNode:
+  MUTEX_ID = 0
+  MUTEX_NODES = []
+  def __new__(cls, name):
+    m = MutexNode.get(name)
+    if m is None:
+      m = object.__new__(cls)
+      m.name = name
+      m.id = MutexNode.newId()
+      MutexNode.MUTEX_NODES.append(m)
+    return m
+  
+  @staticmethod
+  def newId():
+    MutexNode.MUTEX_ID = MutexNode.MUTEX_ID+1
+    return str(MutexNode.MUTEX_ID)
+  
+  @staticmethod
+  def get(mutex):
+    for m in MutexNode.MUTEX_NODES:
+      if m.name == mutex:
+        return m
+    return None
+
 def profileJob(job, task):
   global current_job
   global current_task
@@ -173,28 +202,30 @@ def profileTbreak(task):
   current_task.next = TaskNode(task)
   current_task = current_task.next
 
-def profileWhileInside(wnode, task):
-  global current_task
-  wnode.inside = TaskNode(task)
-  current_task = wnode.inside
-
-def profileWhileNext(task, loop=False):
+def profileWhileInside(task, loop=False):
   global current_task
   wnode = WhileNode(loop)
   current_task.next = wnode
+  wnode.inside = TaskNode(task)
+  current_task = wnode.inside
+  return wnode
+
+def profileWhileNext(wnode, task):
+  global current_task
   wnode.next = TaskNode(task)
   current_task = wnode.next
   return wnode
 
-def profileIfInside(inode, task):
-  global current_task
-  inode.inside = TaskNode(task)
-  current_task = inode.inside
-
-def profileIfNext(task):
+def profileIfInside(task):
   global current_task
   inode = IfNode()
   current_task.next = inode
+  inode.inside = TaskNode(task)
+  current_task = inode.inside
+  return inode
+
+def profileIfNext(inode, task):
+  global current_task
   inode.next = TaskNode(task)
   current_task = inode.next
   return inode
@@ -225,3 +256,13 @@ def profileShutdown():
 
 def profileReturn():
   profileExit()
+
+def profileCritStart(mutex):
+  global current_task
+  m = MutexNode(mutex)
+  current_task.mtx['start'].append(m)
+
+def profileCritEnd(mutex):
+  global current_task
+  m = MutexNode(mutex)
+  current_task.mtx['end'].append(m)

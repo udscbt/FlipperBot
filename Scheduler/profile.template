@@ -4,9 +4,10 @@
 \pgfplotsset{compat=1.12}
 \usetikzlibrary{shapes}
 \usetikzlibrary{arrows.meta}
-\usepackage{adjustbox} %% vertical alignment
-\usepackage{arydshln}  %% dashed columns
-\usepackage{varwidth}  %% maximum width of nodes
+\usepackage{adjustbox}   %% vertical alignment
+\usepackage{arydshln}    %% dashed columns
+\usepackage{varwidth}    %% maximum width of nodes
+\usepackage{fontawesome} %% padlock symbols
 \usepackage{calc}
 
 \newcommand{\schemoScale}{%f}
