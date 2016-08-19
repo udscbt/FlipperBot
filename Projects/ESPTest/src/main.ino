@@ -1,6 +1,6 @@
 #include "schemo.h"
 #include "fbcp.common.h"
-#include "FBNet.h"	
+#include "FBNet.h"
 
 #include <ESP8266WiFi.h>
 
@@ -8,7 +8,7 @@ const char L_MOTOR = 16;
 const char R_MOTOR = 14;
 const char HIT     = 05;
 const char BUZ     = 04;
-const char LED     = 13;
+const char LED     = 15;
 
 
 
@@ -25,26 +25,19 @@ void setup()
   pinMode(L_MOTOR, OUTPUT);
   analogWrite(L_MOTOR, 0);
   pinMode(HIT, INPUT);
+  Serial.setTimeout(500);
 }
 
+int i = 0;
 void loop()
 {
+  long n = Serial.parseInt();
+  if (n)
+  {
+	analogWrite(R_MOTOR, n);
+	Serial.print("R_MOTOR: ");
+	Serial.println(n);
+  }
+  Serial.println(i++);
   
-  analogWrite(R_MOTOR, 1);
-  analogWrite(L_MOTOR, 99);
-  Serial.println("Forward");
-  delay(1000);
-  analogWrite(R_MOTOR, 0);
-  analogWrite(L_MOTOR, 0);
-  Serial.println("Stop");
-  digitalWrite(LED, HIGH);
-  digitalWrite(BUZ, LOW);
-  delay(500);
-  digitalWrite(LED, LOW);
-  digitalWrite(BUZ, HIGH);
-  delay(500);
-  analogWrite(R_MOTOR, 99);
-  analogWrite(L_MOTOR, 1);
-  Serial.println("Backward");
-  delay(1000);
 }

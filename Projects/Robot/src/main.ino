@@ -1,16 +1,21 @@
 #include "schemo.h"
 #include "fbcp.common.h"
 #include "FBNet.h"
+#include "motors.h"
 
 #include <ESP8266WiFi.h>
 
 typedef unsigned char byte;
 
-const char L_MOTOR = 16;
-const char R_MOTOR = 14;
-const char HIT     = 05;
-const char BUZ     = 04; //GREEN
-const char LED     = 13; //RED
+const unsigned char L_MOTOR = 16;
+const unsigned char R_MOTOR = 14;
+const unsigned char HIT     = 05;
+const unsigned char BUZ     = 04; //GREEN
+//const unsigned char LED     = 13; //RED
+const unsigned char LED     = 15; //RED
+
+Motor leftMotor(Motor::LEFT | Motor::OLD | Motor::pin(L_MOTOR));
+Motor rightMotor(Motor::RIGHT | Motor::NEW | Motor::pin(R_MOTOR));
 
 enum
 {
@@ -451,38 +456,6 @@ typedef enum
   }
 }
 
-void leftMotor(int dir)
-{
-  if (dir > 0)
-  {
-    analogWrite(L_MOTOR, 99);
-  }
-  else if (dir < 0)
-  {
-    analogWrite(L_MOTOR, 1);
-  }
-  else
-  {
-    analogWrite(L_MOTOR, 0);
-  }
-}
-
-void rightMotor(int dir)
-{
-  if (dir > 0)
-  {
-    analogWrite(R_MOTOR, 1);
-  }
-  else if (dir < 0)
-  {
-    analogWrite(R_MOTOR, 99);
-  }
-  else
-  {
-    analogWrite(R_MOTOR, 0);
-  }
-}
-
 @JOB (job_server)
 {
   @MEMORY
@@ -573,48 +546,48 @@ void rightMotor(int dir)
             bool hit = digitalRead(HIT);
             if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_FORWARD_LEFT.str)
             {
-              leftMotor(hit?-1:0);
-              rightMotor(1);
+              leftMotor.value(hit?-1:0);
+              rightMotor.value(1);
             }
             else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_FORWARD.str)
             {
-              leftMotor(hit?0:1);
-              rightMotor(hit?0:1);
+              leftMotor.value(hit?0:1);
+              rightMotor.value(hit?0:1);
             }
             else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_FORWARD_RIGHT.str)
             {
-              leftMotor(1);
-              rightMotor(hit?-1:0);
+              leftMotor.value(1);
+              rightMotor.value(hit?-1:0);
             }
             else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_LEFT.str)
             {
-              leftMotor(-1);
-              rightMotor(1);
+              leftMotor.value(-1);
+              rightMotor.value(1);
             }
             else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_STOP.str)
             {
-              leftMotor(0);
-              rightMotor(0);
+              leftMotor.value(0);
+              rightMotor.value(0);
             }
             else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_RIGHT.str)
             {
-              leftMotor(1);
-              rightMotor(-1);
+              leftMotor.value(1);
+              rightMotor.value(-1);
             }
             else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_BACKWARD_LEFT.str)
             {
-              leftMotor(0);
-              rightMotor(-1);
+              leftMotor.value(0);
+              rightMotor.value(-1);
             }
             else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_BACKWARD.str)
             {
-              leftMotor(-1);
-              rightMotor(-1);
+              leftMotor.value(-1);
+              rightMotor.value(-1);
             }
             else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_BACKWARD_RIGHT.str)
             {
-              leftMotor(-1);
-              rightMotor(0);
+              leftMotor.value(-1);
+              rightMotor.value(0);
             }
           }
           else if (@VAR(cmd).command->code == fbcp::Q_MOTOR_COMMAND.code)
@@ -627,18 +600,18 @@ void rightMotor(int dir)
             if (@VAR(cmd).params["motor"] == fbcp::MOTOR_BOTH.str) {left = true; right=true;}
             if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_FORWARD.str)
             {
-              if (left) leftMotor(1);
-              if (right) rightMotor(1);
+              if (left) leftMotor.value(1);
+              if (right) rightMotor.value(1);
             }
             else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_STOP.str)
             {
-              if (left) leftMotor(0);
-              if (right) rightMotor(0);
+              if (left) leftMotor.value(0);
+              if (right) rightMotor.value(0);
             }
             else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_BACKWARD.str)
             {
-              if (left) leftMotor(-1);
-              if (right) rightMotor(-1);
+              if (left) leftMotor.value(-1);
+              if (right) rightMotor.value(-1);
             }
           }
           else if (@VAR(cmd).command->code == fbcp::Q_CLEAN.code)
