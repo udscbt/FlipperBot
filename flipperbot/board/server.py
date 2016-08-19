@@ -289,8 +289,8 @@ class RobotThread (ThreadEx):
       self.debug("Send dir:", msg)
       self.sockOut.send(msg.encode("UTF-8"))
       self.last = time()
-    elif time() - self.last > fbcp.HARD_TIMEOUT/2:
-      self.sockOut.send(fbcp.CommandLine(fbcp.Command.Q_HEARTBEAT).write())
+    elif (time() - self.last)*1000 > fbcp.HARD_TIMEOUT/2:
+      self.sockOut.send(fbcp.CommandLine(fbcp.Command.Q_HEARTBEAT).write().encode("UTF-8"))
       self.last = time()
   
 class Server (ThreadEx):

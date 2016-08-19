@@ -1,4 +1,4 @@
-eimport tkinter as tk
+import tkinter as tk
 from time import time
 from ..controller import Controller
 
@@ -55,7 +55,7 @@ class Joystick (tk.Canvas):
     self._autostop = autostop
     self.input()
     self.bind('<Configure>', self.config)
-    self.ka_after
+    self.ka_after = None
   
   directionKeys = {
     'Left'     : Controller.Direction.LEFT,
@@ -313,7 +313,7 @@ class Joystick (tk.Canvas):
       if cmd.parse(buf):
         if cmd.command == fbcp.Command.A_GRANT_ACCESS:
           self.connected = True
-          self.ka_after = self.after(fbcp.HARD_TIMEOUT/2, self.keepAlive)
+          self.ka_after = self.after(int(fbcp.HARD_TIMEOUT/2), self.keepAlive)
           return True
         else:
           print("Wrong answer")
@@ -332,7 +332,7 @@ class Joystick (tk.Canvas):
       cmd = fbcp.CommandLine()
       cmd.command = fbcp.Command.Q_HEARTBEAT
       self.socket.send(cmd.write().encode('utf-8'))
-      self.ka_after = self.after(fbcp.HARD_TIMEOUT/2, self.keepAlive)
+      self.ka_after = self.after(int(fbcp.HARD_TIMEOUT/2), self.keepAlive)
 
 class JoystickContainer (tk.Frame):
   def __init__(self, serial, autostop=True, master=None):
