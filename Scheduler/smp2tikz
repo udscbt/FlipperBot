@@ -4,15 +4,19 @@ import re
 import argparse
 
 #PARAMETERS
-scale_ = 1
-rotation = 0
-unaccessible = False
-showid = False
+showunac = False
+showid   = False
 showlast = True
-showfun = True
-showjob = True
-showopt = True
+showfun  = True
+showjob  = True
+showadd  = True
 showback = True
+showord  = True
+
+showcol = True
+
+scale_   = 1
+rotation = 0
 
 parser = argparse.ArgumentParser(description='Converts ScheMo .profile files to LaTeX files', prefix_chars='-+')
 parser.add_argument('+u', '--show-unaccessible', dest='unac_true', action='store_true',
@@ -35,14 +39,23 @@ parser.add_argument('+j', '--show-jobs', dest='job_true', action='store_true',
                     help='Show jobs in output')
 parser.add_argument('-j', '--hide-jobs', dest='job_false', action='store_false',
                     help='Hide jobs from output')
-parser.add_argument('+o', '--show-optional', dest='opt_true', action='store_true',
-                    help='Show optional edges (break and continue) in output')
-parser.add_argument('-o', '--hide-optional', dest='opt_false', action='store_false',
-                    help='Hide optional edges (break and continue) from output')
+parser.add_argument('+a', '--show-additional', dest='add_true', action='store_true',
+                    help='Show additional edges (break and continue) in output')
+parser.add_argument('-a', '--hide-additional', dest='add_false', action='store_false',
+                    help='Hide additional edges (break and continue) from output')
 parser.add_argument('+b', '--show-backjumps', dest='back_true', action='store_true',
                     help='Show backjumps in output')
 parser.add_argument('-b', '--hide-backjumps', dest='back_false', action='store_false',
                     help='Hide backjumps from output')
+parser.add_argument('+o', '--show-order', dest='ord_true', action='store_true',
+                    help='Show order of execution of tasks (if available)')
+parser.add_argument('-o', '--hide-order', dest='ord_false', action='store_false',
+                    help='Hide order of execution of tasks (if available)')
+
+parser.add_argument('+c', '--colour', '--color', dest='col_true', action='store_true',
+                    help='Make output in colour')
+parser.add_argument('-c', '--grayscale', '--greyscale', dest='col_false', action='store_false',
+                    help='Make output in grayscale')
 
 parser.add_argument('-s', '--scale', dest='scale', metavar='FACTOR',
                     action='store', default=scale_, type=float,
@@ -58,14 +71,75 @@ scale_ = args.scale
 rotation = args.rotation
 def mostlyTrue(a, b, c):
   return (a and b) or (b and c) or (a and c)
-unaccessible = mostlyTrue(unaccessible, args.unac_true, args.unac_false)
+showunac = mostlyTrue(showunac, args.unac_true, args.unac_false)
 showid = mostlyTrue(showid, args.id_true, args.id_false)
 showlast = mostlyTrue(showlast, args.last_true, args.last_false)
 showfun = mostlyTrue(showfun, args.fun_true, args.fun_false)
 showjob = mostlyTrue(showjob, args.job_true, args.job_false)
-showopt = mostlyTrue(showopt, args.opt_true, args.opt_false)
+showadd = mostlyTrue(showadd, args.add_true, args.add_false)
 showback = mostlyTrue(showback, args.back_true, args.back_false)
 
+showcol = mostlyTrue(showcol, args.col_true, args.col_false)
+if showcol:
+  critsec_colours = [
+    'red',
+    'green',
+    'blue',
+    'cyan ',
+    'magenta',
+    'yellow',
+    'black',
+    'gray',
+    'darkgray',
+    'lightgray',
+    'brown',
+    'lime',
+    'olive',
+    'orange',
+    'pink',
+    'purple',
+    'teal',
+    'violet',
+    'white'
+  ]
+  critsec_option = "fill="
+else:
+  critsec_colours = [
+    'horizontal lines',
+    'vertical lines',
+    'north east lines',
+    'north west lines',
+    'grid',
+    'crosshatch',
+    'dots',
+    'crosshatch dots',
+    'fivepointed stars',
+    'sixpointed stars'
+  ]
+  critsec_option = "pattern="
+
+critsec_command = r"\schemoColour"
+critsec_commands = []
+critsec_declarations = []
+for i in range(len(critsec_colours)):
+  critsec_commands.append(
+    critsec_command+"{%d}" % i
+  )
+  critsec_declarations.append(
+    "\\ifnum#1={i} {col}".format(
+      i=i,
+      col=critsec_colours[i]
+    )
+  )
+critsec_declarations = (
+  "\\newcommand{%(cmd)s}[1]{%%\n  %(def)s%%\n%(fi)s%%\n}" %
+  {
+    'cmd' : critsec_command,
+    'def' : "%\n  \\else".join(critsec_declarations),
+    'fi'  : "%\n".join(["  \\fi"]*len(critsec_declarations))
+  }
+)
+critsec_fill = [critsec_option+x for x in critsec_commands]
 
 scale = scale_*scale_
 rot = rotation%180
@@ -125,8 +199,8 @@ class Task:
     self.id = id
     self._in = []
     self._out = []
-    self.o_in = []
-    self.o_out = []
+    self.a_in = []
+    self.a_out = []
     Task.all[self.id] = self
     self.level = 0
     self.position = 0
@@ -135,20 +209,20 @@ class Task:
     self.order = []
     self.visited = False
     self.mutexes = []
-    self.crit = False
+    self.crit = []
   
   def enter(self, task, jump=False):
     if jump:
-      if task not in self.o_in:
-        self.o_in.append(task)
+      if task not in self.a_in:
+        self.a_in.append(task)
     else:
       if task not in self._in:
         self._in.append(task)
   
   def exit(self, task, jump=False):
     if jump:
-      if task not in self.o_out:
-        self.o_out.append(task)
+      if task not in self.a_out:
+        self.a_out.append(task)
     else:
       if task not in self._out:
         self._out.append(task)
@@ -169,7 +243,7 @@ def readLine(f):
     line = f.readline()
   return line.replace("\n", "")
 
-mutexes = 0
+mutexes = []
 def parseFlow(flow, start, level, parent):
   global current
   global mutexes
@@ -179,8 +253,7 @@ def parseFlow(flow, start, level, parent):
   while True:
     if last is not None:
       current = last
-      if mutexes > 0:
-        current.crit = True
+    current.crit = current.crit + [m for m in mutexes if m not in current.crit]
     if flow[i] == 'S':
       if inner:
         raise FormatError()
@@ -201,16 +274,16 @@ def parseFlow(flow, start, level, parent):
               last.exit(t)
               t.enter(last)
             t._in.remove(s)
-          for t in s.o_in:
+          for t in s.a_in:
             if t != last:
               last.enter(t, jump=True)
               t.exit(last, jump=True)
-            t.o_out.remove(s)
-          for t in s.o_out:
+            t.a_out.remove(s)
+          for t in s.a_out:
             if t != last:
               last.exit(t, jump=True)
               t.enter(last, jump=True)
-            t.o_in.remove(s)
+            t.a_in.remove(s)
           last.type = 'stop'
           parent.job.stop = last
           Task.all.pop(s.id)
@@ -312,14 +385,16 @@ def parseFlow(flow, start, level, parent):
     elif flow[i] == 'CS':
       if last is None:
         last = parent
-      last.mutexes.append((flow[i+2], True))
-      mutexes = mutexes + 1
+      m = int(flow[i+2])
+      last.mutexes.append((m, True))
+      mutexes.append(m)
       i = i + 3
     elif flow[i] == 'CE':
       if last is None:
         last = parent
-      last.mutexes.append((flow[i+2], False))
-      mutexes = mutexes - 1
+      m = int(flow[i+2])
+      last.mutexes.append((m, False))
+      mutexes.remove(m)
       i = i + 3
     else:
       try:
@@ -397,9 +472,8 @@ for i in range(funn):
 
 line = readLine(f)
 line = readLine(f)
-i = 0
+i = 1
 while line != '':
-  line = line.replace('\n', '')
   job, task, start, end = line.split('\t')
   Task.all[int(task)].order.append(i)
   i = i+1
@@ -476,6 +550,9 @@ def addNode(t, graph):
     node_format = shutdown_format
   lock = False
   unlock = False
+  colour = ""
+  if len(t.crit) > 0:
+    colour = critsec_fill[t.crit[-1]%len(critsec_fill)]
   for m in t.mutexes:
     if m[1]:
       lock = True
@@ -487,24 +564,25 @@ def addNode(t, graph):
     y=t.level,
     node=t,
     mutex="{}{}{}".format(
-      " " if showid else "",
+      " " if (showid and (lock or unlock)) else "",
       r"\faLock" if lock else "",
       r"\faUnlockAlt" if unlock else ""
     ),
-    critsec=", fill=lightgray" if t.crit else ""
+    critsec=", {}".format(colour) if len(t.crit)>0 else ""
   )
-  if len(t.order)>3:
-    order = "{}, {} ... {}".format(t.order[0], t.order[1], t.order[-1])
-  else:
-    order = ", ".join(map(str, t.order))
-  graph = graph + order_format.format(
-    task=t.id,
-    order=order
-  )
+  if showord:
+    if len(t.order)>3:
+      order = "{}, {} ... {}".format(t.order[0], t.order[1], t.order[-1])
+    else:
+      order = ", ".join(map(str, t.order))
+    graph = graph + order_format.format(
+      task=t.id,
+      order=order
+    )
   return graph
 
 def addEdges(t, graph):
-  for t2 in (t.o_out if showopt else []):
+  for t2 in (t.a_out if showadd else []):
     anchor1 = ""
     anchor2 = ""
     additional = ""
@@ -618,7 +696,7 @@ for j in (l):
   )
   
   tasks = []
-  if unaccessible:
+  if showunac:
     for t in Task.all.values():
       if t.job != j:
         continue
@@ -633,7 +711,7 @@ for j in (l):
       tasks.append(t)
       for t2 in t._out:
         ts.append(t2)
-      for t2 in t.o_out:
+      for t2 in t.a_out:
         ts.append(t2)
   
   for t in tasks:
@@ -657,16 +735,17 @@ else:
 
 f = open(profile.replace(".profile", ".tex"), "w")
 f.write(
-  template % (
-    scale,
-    rotation,
-    str(scale_*10)+"mm",
-    "15mm",
-    scale*2/3,
-    str(scale*0.4)+"pt",
-    str(scale*0.8)+"pt",
-    tab_format,
-    graph.replace("_", r"\_")
-  )
+  template % {
+    'scale'    : scale,
+    'rotation' : rotation,
+    'unit'     : str(scale_*10)+"mm",
+    'width'    : "15mm",
+    'small'    : scale*2/3,
+    'line'     : str(scale*0.4)+"pt",
+    'thick'    : str(scale*0.8)+"pt",
+    'format'   : tab_format,
+    'content'  : graph.replace("_", r"\_"),
+    'colours'  : critsec_declarations,
+  }
 )
 f.close()

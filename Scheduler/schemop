@@ -205,15 +205,15 @@ def JOB_NAME():
 def JOB_FULL(job, task):
   return JOB_O+"("+job+","+task+")"
 
-JOBS = {}
+JOBS = OrderedDict()
 UNNAMED_JOBS = 0
 
 TASK_PREFIX = 'task_'
 TASK_INDEX  = 0
-TBREAK_PATTERN_UNNAMED = re.compile("("+TBREAK+")\s*?[^(]")
-TBREAK_PATTERN_NAMED = re.compile(TBREAK+"\s*?\(([^,]+?)\)")
-TASK_PATTERN_UNNAMED = re.compile("("+JOB+")\s*?[^(]")
-TASK_PATTERN_NAMED = re.compile(JOB+"\s*?\(([^,]+?)\)")
+TBREAK_PATTERN_UNNAMED = re.compile("("+TBREAK+")\s*[^(]")
+TBREAK_PATTERN_NAMED = re.compile(TBREAK+"\s*\(([^,]+?)\)")
+TASK_PATTERN_UNNAMED = re.compile("("+JOB+")\s*[^(]")
+TASK_PATTERN_NAMED = re.compile(JOB+"\s*\(([^,]+?)\)")
 def TASK_NAME():
   global TASK_INDEX
   name = VAR_PREFIX+TASK_PREFIX+str(TASK_INDEX)
@@ -463,7 +463,7 @@ def parseBlock(block, bw=None, fw=None):
     edited = block[:newindex]
     if args.profiler:
       profileTbreak(task)
-    block = replace(block, match.start(), match.end(), TBREAK_FULL(task))
+    edited = replace(edited, match.start(), match.end(), TBREAK_FULL(task))
 
   # FUNCTION CALL
   match = CALL_PATTERN.match(block)
@@ -725,8 +725,9 @@ for path in args.files:
     )
   
   # NAMED TBREAKS
+  lastmatch = 0
   while True:
-    match = TBREAK_PATTERN_NAMED.search(buf)
+    match = TBREAK_PATTERN_NAMED.search(buf[lastmatch:])
     if match is None:
       break
     task  = match.group(1).replace(" ", "")
@@ -734,6 +735,7 @@ for path in args.files:
       stderr("Error: multiple uses of task name '%s'" % task)
       sys.exit(1)
     TASKS.append(task)
+    lastmatch = match.end()
     #~ buf = replace(buf, match.start(), match.end(), TBREAK_FULL(task))
   
   #FUNCTION NAMES
@@ -761,15 +763,17 @@ for path in args.files:
     lastfun = me
   
   # UNNAMED TBREAKS
+  lastmatch = 0
   while True:
-    match = TBREAK_PATTERN_UNNAMED.search(buf)
+    match = TBREAK_PATTERN_UNNAMED.search(buf[lastmatch:])
     if match is None:
       break
     task = TASK_NAME()
     UNNAMED_TASKS = UNNAMED_TASKS + 1
     TASKS.append(task)
     #~ buf = replace(buf, match.regs[1][0], match.regs[1][1], TBREAK_FULL(task))
-    buf = replace(buf, match.regs[1][0], match.regs[1][1], TBREAK+"("+task+")")
+    buf = replace(buf, lastmatch+match.regs[1][0], lastmatch+match.regs[1][1], TBREAK+"("+task+")")
+    lastmatch = lastmatch + match.regs[1][1]
   
   # FUNCTION DEFINITIONS
   while True:

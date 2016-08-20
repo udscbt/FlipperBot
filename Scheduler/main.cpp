@@ -3,60 +3,40 @@
 
 @DECLARE
 
-@JOB
+@JOB (job_1)
 {
-  @MEMORY
+  @TBREAK
+  @TBREAK
+  @CRITSEC (hello)
   {
-    @VAR(i:int)
-  }
-  @VAR(i) = 0;
-  @WHILE
-  {
-    printf("%d\n", @VAR(i)++);
+    @TBREAK
+    @TBREAK
   }
 }
 
-@JOB (schemo_test)
+@JOB (job_2)
 {
-  @MEMORY
+  @CRITSEC (ciao)
   {
-    @VAR(i:int)
-  }
-  @VAR(i) = 0;
-  @WHILE (@VAR(i) < 10)
-  {
-    ++@VAR(i);
-  }
-}
-
-@JOB
-{
-  @MEMORY
-  {
-    @VAR(i:int)
-  }
-  @VAR(i) = -1;
-  @WHILE
-  {
-    @CRITSEC (ciao)
+    @CRITSEC (hello)
     {
-      if (@VAR(i) > 10)
-      {
-        @EXIT
-      }
-      ++@VAR(i);
-      printf("%c\n", 'A'+@VAR(i));
-      @IF (@VAR(i) % 5)
-      {
-        @CONTINUE
-      }
-      @IF (@VAR(i) == 10)
-      {
-        @SHUTDOWN
-      }
-      printf("!!!\n");
+      @TBREAK
+      @TBREAK
     }
+    @TBREAK
   }
+  @TBREAK
+  @TBREAK
+
+}
+
+@JOB (job_3)
+{
+  @CRITSEC (ciao)
+  {
+    @TBREAK
+  }
+  @TBREAK
 }
 
 int main()

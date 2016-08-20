@@ -4,23 +4,25 @@
 \pgfplotsset{compat=1.12}
 \usetikzlibrary{shapes}
 \usetikzlibrary{arrows.meta}
+\usetikzlibrary{patterns}
 \usepackage{adjustbox}   %% vertical alignment
 \usepackage{arydshln}    %% dashed columns
 \usepackage{varwidth}    %% maximum width of nodes
 \usepackage{fontawesome} %% padlock symbols
 \usepackage{calc}
 
-\newcommand{\schemoScale}{%f}
-\newcommand{\schemoRotation}{%f}
-\newcommand{\schemoUnit}{%s}
-\newcommand{\schemoWidth}{%s}
-\newcommand{\schemoSmall}{%f}
-\newcommand{\schemoLine}{%s}
-\newcommand{\schemoThick}{%s}
+\newcommand{\schemoScale}{%(scale)f}
+\newcommand{\schemoRotation}{%(rotation)f}
+\newcommand{\schemoUnit}{%(unit)s}
+\newcommand{\schemoWidth}{%(width)s}
+\newcommand{\schemoSmall}{%(small)f}
+\newcommand{\schemoLine}{%(line)s}
+\newcommand{\schemoThick}{%(thick)s}
+%(colours)s
 
 \begin{document}
-\begin{tabular}%s
-%s
+\begin{tabular}%(format)s
+%(content)s
 \end{tabular}
 \end{document}
 

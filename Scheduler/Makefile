@@ -6,6 +6,8 @@ else
 	OPTIONS=$(OTHER_OPTIONS)
 endif
 
+TEX=pdflatex
+
 schemo: lib main.cpp schemop schemop_profiler.py
 	./schemop -sq $(OPTIONS) main.cpp
 	g++ __schemo_main.cpp $(FLAGS) -o schemo -I include -L lib -lschemo
@@ -19,7 +21,7 @@ else
 	./schemop -sqp main.cpp
 endif
 	./smp2tikz $(TEX_OPTIONS) main.cpp.profile
-	pdflatex main.cpp.tex
+	$(TEX) main.cpp.tex
 	mv main.cpp.pdf pdf.out
 ifneq ($(KEEP),true)
 	$(MAKE) clean
