@@ -257,9 +257,12 @@ def profileShutdown():
 def profileReturn():
   profileExit()
 
-def profileCritStart(mutex):
+def profileCritStart(mutex, task):
   global current_task
   m = MutexNode(mutex)
+  t = TaskNode(task)
+  current_task.next = t
+  current_task = t
   current_task.mtx['start'].append(m)
 
 def profileCritEnd(mutex):

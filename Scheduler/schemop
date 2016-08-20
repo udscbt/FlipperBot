@@ -549,7 +549,7 @@ def parseBlock(block, bw=None, fw=None):
     edited = block[:newindex]
     edited = replace(edited, e, e+1, MUTEXE_O+"(%s)" % mutex)
     if args.profiler:
-      profileCritStart(mutex)
+      profileCritStart(mutex, task)
     edited = replace(edited, s, e, parseBlock(edited[s:e], bw=bw, fw=fw))
     if args.profiler:
       profileCritEnd(mutex)
