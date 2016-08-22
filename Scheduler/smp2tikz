@@ -323,12 +323,13 @@ def parseFlow(flow, start, level, parent):
   i = start+1 if inner else start
   last = None
   while True:
-    if last is not None:
-      current = last
+    if last is None:
+      last = parent
+    current = last
     current.crit = current.crit + [m for m in mutexes if m not in current.crit]
     if flow[i] == 'S':
       if inner:
-        raise FormatError()
+        raise Exception("Job stopped while in inner block")
       else:
         if showlast:
           last.exit(parent.job.stop)
@@ -368,15 +369,13 @@ def parseFlow(flow, start, level, parent):
             last.exit(parent)
         return i
       else:
-        raise FormatError()
+        raise Exception("End of block encountered while outside of block")
     elif flow[i] == 'W':
       t = Task()
       t.type = 'while'
       t.job = parent.job
       t.setPosition(parent.job.maxpos+1)
       t.setLevel(level)
-      if last is None:
-        last = parent
       last.exit(t)
       t.enter(last)
       last = t
@@ -387,8 +386,6 @@ def parseFlow(flow, start, level, parent):
       t.job = parent.job
       t.setPosition(parent.job.maxpos+1)
       t.setLevel(level)
-      if last is None:
-        last = parent
       last.exit(t)
       t.enter(last)
       last = t
@@ -399,16 +396,17 @@ def parseFlow(flow, start, level, parent):
       t.job = parent.job
       t.setPosition(parent.job.maxpos+1)
       t.setLevel(level)
-      if last is None:
-        last = parent
       last.exit(t)
       t.enter(last)
       last = t
       i = parseFlow(flow, i+1, level+1, last)
-      t1 = current
-      t2 = Task.all[int(flow[i+1])]
-      t1.exit(t2)
-      t2.enter(t1)
+      ti = current
+      if flow[i+1] == '[':
+        i = parseFlow(flow, i+1, level-1, last)
+        last = current
+      tn = Task.all[int(flow[i+1])]
+      ti.exit(tn)
+      tn.enter(ti)
     elif flow[i] == 'F':
       fun = Function.all[int(flow[i+2])]
       i = i + 3
@@ -417,15 +415,11 @@ def parseFlow(flow, start, level, parent):
       t.job = parent.job
       t.setPosition(parent.job.maxpos+1)
       t.setLevel(level)
-      if last is None:
-        last = parent
       last.exit(t)
       t.enter(last)
       last = t
     elif flow[i] == 'C':
       if inner:
-        if last is None:
-          last = parent
         t = Task.all[int(flow[i+2])]
         w = None
         for w in Task.all.values():
@@ -437,17 +431,15 @@ def parseFlow(flow, start, level, parent):
           w.enter(last, jump=True)
         i = i + 3
       else:
-        raise FormatError()
+        raise Exception("Continue found outside of cycle")
     elif flow[i] == 'B':
       if inner:
-        if last is None:
-          last = parent
         t = Task.all[int(flow[i+2])]
         last.exit(t, jump=True)
         t.enter(last, jump=True)
         i = i + 3
       else:
-        raise FormatError()
+        raise Exception("Break found outside of cycle")
     elif flow[i] == 'R':
       t = parent.job.stop
       last.exit(t, jump=True)
@@ -455,15 +447,11 @@ def parseFlow(flow, start, level, parent):
     elif flow[i] == 'S!':
       last.type = 'shutdown'
     elif flow[i] == 'CS':
-      if last is None:
-        last = parent
       m = int(flow[i+2])
       last.mutexes.append((m, True))
       mutexes.append(m)
       i = i + 3
     elif flow[i] == 'CE':
-      if last is None:
-        last = parent
       m = int(flow[i+2])
       last.mutexes.append((m, False))
       mutexes.remove(m)
@@ -472,12 +460,10 @@ def parseFlow(flow, start, level, parent):
       try:
         t = Task.all[int(flow[i])]
       except:
-        continue
+        raise Warning("Unrecognized token: {}".format(flow[i]))
       t.job = parent.job
       t.setPosition(parent.job.maxpos+1)
       t.setLevel(level)
-      if last is None:
-        last = parent
       if not (last.level == t.level and last.type == 'loop'):
         last.exit(t)
         t.enter(last)
@@ -656,10 +642,10 @@ def addEdges(t, graph):
     anchor1 = ""
     anchor2 = ""
     additional = ""
-    if t2.position < t.position and not showback:
-      continue
     if t2.level < t.level:
       if t2.type == 'while' or t2.type == 'loop':
+        if not showback:
+          continue
         outangle = 90
         inangle = 90
         anchor2 = ".north"
@@ -674,7 +660,10 @@ def addEdges(t, graph):
         additional = r" node [scale=%f, at start, above left] {\rotatebox{%s}{true}}" % (scale*2/3, rotation)
       else:
         outangle = -90
-        inangle = -135
+        if t2.level < t.level:
+          inangle = 180
+        else:
+          inangle = -135
         anchor1 = ".south"
         additional = r" node [scale=%f, at start, below left] {\rotatebox{%s}{false}}" % (scale*2/3, rotation)
     elif t.type == 'while':
@@ -695,6 +684,10 @@ def addEdges(t, graph):
         anchor1 = ".east"
       else:
         continue
+    else:
+      if t2.level > t.level:
+        outangle = 0
+        inangle = -135
     graph = graph + edge_format(
       src=t.id,
       anchor1=anchor1,

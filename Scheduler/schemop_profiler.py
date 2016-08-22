@@ -138,6 +138,7 @@ class WhileNode:
 class IfNode:
   def __init__(self):
     self.inside = None
+    self.outside = None
     self.next = None
   
   def __str__(self):
@@ -149,6 +150,13 @@ class IfNode:
         n = n.next
         s = s + " " + str(n)
     s = s + " ]"
+    n = self.outside
+    if n is not None:
+      s = s + " [ " + str(n)
+      while n.next is not None:
+        n = n.next
+        s = s + " " + str(n)
+      s = s + " ]"
     return s
 
 class CallNode:
@@ -222,6 +230,12 @@ def profileIfInside(task):
   current_task.next = inode
   inode.inside = TaskNode(task)
   current_task = inode.inside
+  return inode
+
+def profileIfOutside(inode, task):
+  global current_task
+  inode.outside = TaskNode(task)
+  current_task = inode.outside
   return inode
 
 def profileIfNext(inode, task):
