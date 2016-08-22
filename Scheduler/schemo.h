@@ -185,8 +185,8 @@
       return; \
     }
 
-#define SCHEMO_MUTEX_END(resource) \
-  schemo::unlock_mutex(SCHEMO_MUTEX(resource));
+#define SCHEMO_MUTEX_END(resource, task) \
+  schemo::unlock_mutex(SCHEMO_MUTEX(resource), task);
 
 #define SCHEMO_SET_NUM_JOBS(nj) \
   const unsigned int schemo::NUM_JOBS = nj;
@@ -283,7 +283,7 @@ namespace schemo {
   bool run_task(TASK&);
   bool check_timeout();
   bool lock_mutex(MUTEX&, TASK&);
-  bool unlock_mutex(MUTEX&);
+  bool unlock_mutex(MUTEX&, TASK&);
   bool check_mutex(MUTEX&, TASK&);
   
   ERROR_CODE last_error();

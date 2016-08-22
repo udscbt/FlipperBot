@@ -547,7 +547,7 @@ def parseBlock(block, bw=None, fw=None):
     
     newindex = e+1
     edited = block[:newindex]
-    edited = replace(edited, e, e+1, MUTEXE_O+"(%s)" % mutex)
+    edited = replace(edited, e, e+1, MUTEXE_O+"(%s, %s)" % (mutex, task))
     if args.profiler:
       profileCritStart(mutex, task)
     edited = replace(edited, s, e, parseBlock(edited[s:e], bw=bw, fw=fw))
@@ -558,11 +558,11 @@ def parseBlock(block, bw=None, fw=None):
   return edited+parseBlock(block[newindex:], bw=bw, fw=fw)
 
 FUNCTION_PATTERN = re.compile(FUN+"\s*\((.+?)\)")
-PARAM_PATTERN    = re.compile("[^{]*?("+PAR+"\((.+?):(.+?)\))")
+PARAM_PATTERN    = re.compile("[^{]*?("+PAR+"\((.+?)\s*:\s*(.+?)\))")
 PARAM_PATTERN2   = re.compile(PAR+"\((.+?)\)")
 RETURN_PATTERN   = re.compile("[^{]*?("+RET+"\((.+?)\))")
 RETURN_PATTERN2  = re.compile(RET+"\((.+?)\);")
-CALL_PATTERN     = re.compile(CALL+"\((.+?(;.+?)*?)\):(.+?);")
+CALL_PATTERN     = re.compile(CALL+"\((.+?(;.+?)*?)\)\s*:\s*(.+?);")
 FVAR_PATTERN     = re.compile(JVAR+"\((.+?):(.+?)\)")
 
 FUNCTIONS = {}

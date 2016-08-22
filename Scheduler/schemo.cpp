@@ -198,9 +198,17 @@ bool schemo::lock_mutex(MUTEX& mutex, TASK& task)
   mutex.push(&task);
 }
 
-bool schemo::unlock_mutex(MUTEX& mutex)
+bool schemo::unlock_mutex(MUTEX& mutex, TASK& task)
 {
-  mutex.pop();
+  if (check_mutex(mutex, task))
+  {
+    mutex.pop();
+    return true;
+  }
+  else
+  {
+    return false;
+  }
 }
 
 bool schemo::check_mutex(MUTEX& mutex, TASK& task)

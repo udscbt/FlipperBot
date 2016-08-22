@@ -12,21 +12,31 @@ schemo: lib main.cpp schemop schemop_profiler.py
 	./schemop -sq $(OPTIONS) main.cpp
 	g++ __schemo_main.cpp $(FLAGS) -o schemo -I include -L lib -lschemo
 
-pdf:
+schemo.tex: main.cpp schemop schemop_profiler.py smp2tikz  tex_config/single.template tex_config/preamble.template tex_config/profile.template
 ifeq ($(EXEC),true)
 	$(MAKE) schemo PROFILER=true
+	mv main.cpp.profile schemo.profile
 	./schemo
-	cat schemo.profile >> main.cpp.profile
 else
 	./schemop -sqp main.cpp
+	mv main.cpp.profile schemo.profile
 endif
-	./smp2tikz $(TEX_OPTIONS) main.cpp.profile
-	$(TEX) main.cpp.tex
-	mv main.cpp.pdf pdf.out
+	./smp2tikz $(TEX_OPTIONS) schemo.profile
 ifneq ($(KEEP),true)
+	rename .tex .tex.save *.tex
 	$(MAKE) clean
+	rename .tex.save .tex *.tex.save
 endif
-	mv pdf.out out.pdf
+
+tex: schemo.tex
+
+pdf: schemo.tex
+	$(TEX) schemo.tex
+ifneq ($(KEEP),true)
+	mv schemo.pdf pdf.schemo
+	$(MAKE) clean
+	mv pdf.schemo schemo.pdf
+endif
 
 schemo_profiler.o: schemo_profiler.h schemo_profiler.cpp
 	g++ -c $(FLAGS) schemo_profiler.cpp

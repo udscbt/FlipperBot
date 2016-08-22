@@ -1,0 +1,21 @@
+\providecommand{\schemoBase}{}
+\renewcommand{\schemoBase}{%(base)f}
+\providecommand{\schemoScale}{}
+\renewcommand{\schemoScale}{\schemoBase*\schemoBase}
+\providecommand{\schemoRotation}{}
+\renewcommand{\schemoRotation}{%(rotation)f}
+\providecommand{\schemoUnit}{}
+\renewcommand{\schemoUnit}{10*\schemoBase mm}
+\providecommand{\schemoWidth}{}
+\renewcommand{\schemoWidth}{15mm}
+\providecommand{\schemoSmall}{}
+\renewcommand{\schemoSmall}{2/3*\schemoScale}
+\providecommand{\schemoLine}{}
+\renewcommand{\schemoLine}{0.4*\schemoScale pt}
+\providecommand{\schemoThick}{}
+\renewcommand{\schemoThick}{2*\schemoLine}
+%(colours)s
+
+\begin{tikzpicture}[x=\schemoUnit, y=\schemoUnit, transform shape, rotate=-\schemoRotation]
+%(graph)s
+\end{tikzpicture}

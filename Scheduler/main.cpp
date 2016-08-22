@@ -6,23 +6,19 @@
 @JOB (job_1)
 {
   @TBREAK
-  @TBREAK
   @CRITSEC (hello)
   {
     @TBREAK
     @TBREAK
   }
+  @TBREAK
 }
 
 @JOB (job_2)
 {
-  @CRITSEC (ciao)
+  @CRITSEC (hello)
   {
-    @CRITSEC (hello)
-    {
-      @TBREAK
-      @TBREAK
-    }
+    @TBREAK
     @TBREAK
   }
   @TBREAK
@@ -32,10 +28,8 @@
 
 @JOB (job_3)
 {
-  @CRITSEC (ciao)
-  {
-    @TBREAK
-  }
+  @TBREAK
+  @TBREAK
   @TBREAK
 }
 

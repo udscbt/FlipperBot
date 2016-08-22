@@ -13,7 +13,9 @@
     int profiler_id;
   #define SCHEMO_P_JOB_SETID(job, id) \
       job.profiler_id = id;
-  #define SCHEMO_P_PROFILE_NAME "schemo.profile"
+  #ifndef SCHEMO_P_PROFILE_NAME
+    #define SCHEMO_P_PROFILE_NAME "schemo.profile"
+  #endif
   #define SCHEMO_P_INIT \
     schemo::profiler::init();
   #define SCHEMO_P_CLOSE \

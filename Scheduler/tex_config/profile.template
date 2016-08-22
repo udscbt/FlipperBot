@@ -1,0 +1,11 @@
+\documentclass{standalone}
+\usepackage{arydshln}    %% dashed columns
+\usepackage{adjustbox}   %% vertical alignment
+\input{%(preamble)s}
+
+\begin{document}
+\begin{tabular}%(format)s
+%(content)s
+\end{tabular}
+\end{document}
+

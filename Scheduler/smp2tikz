@@ -2,6 +2,108 @@
 import sys
 import re
 import argparse
+from os.path import join, dirname, basename, abspath
+from collections import OrderedDict
+
+#READ CONFIG
+configdir = join(dirname(abspath(__file__)), "tex_config")
+
+f = open(join(configdir, "preamble.template"), "r")
+preamble = f.read()
+f.close()
+
+f = open(join(configdir, "single.template"), "r")
+single = f.read()
+f.close()
+
+f = open(join(configdir, "profile.template"), "r")
+template = f.read()
+f.close()
+
+f = open(join(configdir, "colours.conf"), "r")
+colours = f.read()
+f.close()
+colours = [c for c in colours.split("\n") if not c.startswith("#")]
+
+f = open(join(configdir, "patterns.conf"), "r")
+patterns = f.read()
+f.close()
+patterns = [p for p in patterns.split("\n") if not p.startswith("#")]
+
+job_format = lambda **kwargs: (r"\node [scale=\schemoScale, draw, line width=\schemoThick] (j{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{\textbf{{{job.name}}}}}}};"+"\n").format(**kwargs)
+fun_format = lambda **kwargs: (r"\node [scale=\schemoScale, draw, line width=\schemoLine] (j{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{\textit{{{job.name}}}}}}};"+"\n").format(**kwargs)
+
+common_format = r"\node [scale=\schemoScale, draw, %(shape)s, line width=\schemoLine{critsec}] (t{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{%(label)s}}}};"+"\n"
+
+task_format     = lambda **kwargs: (
+  common_format % {
+    'shape':'circle',
+    'label':r"%s{mutex}" % ("{node.id}" if showid else "")
+  }
+).format(**kwargs)
+while_format    = lambda **kwargs: (
+  common_format % {
+    'shape':'diamond',
+    'label':r"\texttt{{while}}"
+  }
+).format(**kwargs)
+loop_format     = lambda **kwargs: (
+  common_format % {
+    'shape':'diamond',
+    'label':r"\texttt{{loop}}"
+  }
+).format(**kwargs)
+if_format       = lambda **kwargs: (
+  common_format % {
+    'shape':'diamond',
+    'label':r"\texttt{{if}}"
+  }
+).format(**kwargs)
+call_format     = lambda **kwargs: (
+  common_format % {
+    'shape':'rectangle',
+    'label':r"\begin{{varwidth}}{{\schemoWidth}}\texttt{{call}} \textit{{{node.name}}}\end{{varwidth}}"
+  }
+).format(**kwargs)
+stop_format     = lambda **kwargs: (
+  common_format % {
+    'shape':'circle',
+    'label':r""
+  } +
+  common_format % {
+    'shape':'cross out',
+    'label':r""
+  } +
+  r"\node [scale=\schemoScale, above] at (t{id}.north) {{\rotatebox{{\schemoRotation}}{{STOP}}}};"+"\n"
+).format(**kwargs)
+return_format   = lambda **kwargs: (
+  common_format % {
+    'shape':'circle',
+    'label':r""
+  } +
+  common_format % {
+    'shape':'cross out',
+    'label':r""
+  } +
+  r"\node [scale=\schemoScale, above] at (t{id}.north) {{\rotatebox{{\schemoRotation}}{{RETURN}}}};"+"\n"
+).format(**kwargs)
+shutdown_format = lambda **kwargs: (common_format % {'shape':'star, star points=10', 'label':r"\textbf{{!}}"}).format(**kwargs)
+
+edge_format = lambda **kwargs: (
+  r"\draw [-{{Latex[scale=\schemoScale]}}, line width=\schemoThick] (t{src}{anchor1}) to [out={outangle}, in={inangle}]{additional} (t{dst}{anchor2});"+"\n"
+).format(**kwargs)
+jump_format = lambda **kwargs: (
+  r"\draw [dashed, -{{Latex[scale=\schemoScale]}}, line width=\schemoLine] (t{src}{anchor1}) to [out={outangle}, in={inangle}]{additional} (t{dst}{anchor2});"+"\n"
+).format(**kwargs)
+
+order_format = lambda **kwargs: (
+  r"\node [scale=\schemoSmall, {position}] at (t{task.id}.{anchor}) {{\rotatebox{{\schemoRotation}}{{{order}}}}};"+"\n"
+).format(
+  **kwargs,
+  position='right' if kwargs['task'].type == 'stop' else 'above right',
+  anchor='east' if kwargs['task'].type == 'stop' else 'north east'
+)
+
 
 #PARAMETERS
 showunac = False
@@ -63,6 +165,7 @@ parser.add_argument('-s', '--scale', dest='scale', metavar='FACTOR',
 parser.add_argument('-r', '--rotation', dest='rotation', metavar='ANGLE',
                     action='store', default=rotation, type=float,
                     help='Rotation angle. [Default: {}]'.format(rotation))
+
 parser.add_argument('file', metavar='FILE[.profile]', type=str,
                     help='Profile to be processed')
 
@@ -81,41 +184,10 @@ showback = mostlyTrue(showback, args.back_true, args.back_false)
 
 showcol = mostlyTrue(showcol, args.col_true, args.col_false)
 if showcol:
-  critsec_colours = [
-    'red',
-    'green',
-    'blue',
-    'cyan ',
-    'magenta',
-    'yellow',
-    'black',
-    'gray',
-    'darkgray',
-    'lightgray',
-    'brown',
-    'lime',
-    'olive',
-    'orange',
-    'pink',
-    'purple',
-    'teal',
-    'violet',
-    'white'
-  ]
+  critsec_colours = colours
   critsec_option = "fill="
 else:
-  critsec_colours = [
-    'horizontal lines',
-    'vertical lines',
-    'north east lines',
-    'north west lines',
-    'grid',
-    'crosshatch',
-    'dots',
-    'crosshatch dots',
-    'fivepointed stars',
-    'sixpointed stars'
-  ]
+  critsec_colours = patterns
   critsec_option = "pattern="
 
 critsec_command = r"\schemoColour"
@@ -132,7 +204,7 @@ for i in range(len(critsec_colours)):
     )
   )
 critsec_declarations = (
-  "\\newcommand{%(cmd)s}[1]{%%\n  %(def)s%%\n%(fi)s%%\n}" %
+  "\\providecommand{%(cmd)s}{}\n\\renewcommand{%(cmd)s}[1]{%%\n  %(def)s%%\n%(fi)s%%\n}" %
   {
     'cmd' : critsec_command,
     'def' : "%\n  \\else".join(critsec_declarations),
@@ -413,9 +485,11 @@ def parseFlow(flow, start, level, parent):
     i = i+1
 
 profile = args.file
-if not profile.endswith(".profile"):
-  profile = profile+".profile"
-f = open(profile, "r")
+basedir = dirname(abspath(profile))
+profile = basename(profile)
+if profile.endswith(".profile"):
+  profile = profile[:-len(".profile")]
+f = open(profile+".profile", "r")
 
 line = readLine(f)
 jobn = int(line)
@@ -489,47 +563,6 @@ for j in Job.all.values():
 maxlev = maxlev + 1
 maxpos = maxpos + 1
 
-#~ print("\033c")
-#~ for j in Job.all.values():
-  #~ print("\033[;{}f{}".format(j.position*maxlev*4+1, j.name))
-  #~ pass
-
-#~ for t in Task.all.values():
-  #~ print("\033[{};{}f".format(t.position+3, (t.job.position*maxlev+t.level)*4+1), end="")
-  #~ if t.type == 'task':
-    #~ print(t.id)
-  #~ elif t.type == 'while':
-    #~ print("W")
-  #~ elif t.type == 'if':
-    #~ print('I')
-#~ print("\033[{}f".format(maxpos+2))
-
-job_format = r"\node [scale=\schemoScale, draw, line width=\schemoThick] (j{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{\textbf{{{job.name}}}}}}};"+"\n"
-fun_format = r"\node [scale=\schemoScale, draw, line width=\schemoLine] (j{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{\textit{{{job.name}}}}}}};"+"\n"
-
-common_format = r"\node [scale=\schemoScale, draw, %(shape)s, line width=\schemoLine{critsec}] (t{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{%(label)s}}}};"+"\n"
-task_format   = common_format % {'shape':'circle',    'label':r"%s{mutex}" % ("{node.id}" if showid else "")}
-while_format  = common_format % {'shape':'diamond',   'label':r"\texttt{{while}}"}
-loop_format   = common_format % {'shape':'diamond',   'label':r"\texttt{{loop}}"}
-if_format     = common_format % {'shape':'diamond',   'label':r"\texttt{{if}}"}
-call_format   = common_format % {'shape':'rectangle', 'label':r"\begin{{varwidth}}{{\schemoWidth}}\texttt{{call}} \textit{{{node.name}}}\end{{varwidth}}"}
-stop_format = (
-  common_format % {'shape':'circle', 'label':r""} +
-  common_format % {'shape':'cross out', 'label':r""} +
-  r"\node [scale=\schemoScale, above] at (t{id}.north) {{\rotatebox{{\schemoRotation}}{{STOP}}}};"+"\n"
-)
-return_format = (
-  common_format % {'shape':'circle', 'label':r""} +
-  common_format % {'shape':'cross out', 'label':r""} +
-  r"\node [scale=\schemoScale, above] at (t{id}.north) {{\rotatebox{{\schemoRotation}}{{RETURN}}}};"+"\n"
-)
-shutdown_format = common_format % {'shape':'star, star points=10', 'label':r"\textbf{{!}}"}
-
-edge_format = r"\draw [-{{Latex[scale=\schemoScale]}}, line width=\schemoThick] (t{src}{anchor1}) to [out={outangle}, in={inangle}]{additional} (t{dst}{anchor2});"+"\n"
-jump_format = r"\draw [dashed, -{{Latex[scale=\schemoScale]}}, line width=\schemoLine] (t{src}{anchor1}) to [out={outangle}, in={inangle}]{additional} (t{dst}{anchor2});"+"\n"
-
-order_format = r"\node [scale=\schemoSmall, above right] at (t{task}.north east) {{\rotatebox{{\schemoRotation}}{{{order}}}}};"+"\n"
-
 def addNode(t, graph):
   if t.type == 'task':
     node_format = task_format
@@ -558,7 +591,7 @@ def addNode(t, graph):
       lock = True
     else:
       unlock = True
-  graph = graph + node_format.format(
+  graph = graph + node_format(
     id=t.id,
     x=2*(t.position+1),
     y=t.level,
@@ -575,8 +608,8 @@ def addNode(t, graph):
       order = "{}, {} ... {}".format(t.order[0], t.order[1], t.order[-1])
     else:
       order = ", ".join(map(str, t.order))
-    graph = graph + order_format.format(
-      task=t.id,
+    graph = graph + order_format(
+      task=t,
       order=order
     )
   return graph
@@ -608,7 +641,7 @@ def addEdges(t, graph):
       additional = r" node [scale=\schemoSmall, at start, above left] {\rotatebox{\schemoRotation}{continue}}"
     else:
       continue
-    graph = graph + jump_format.format(
+    graph = graph + jump_format(
       src=t.id,
       anchor1=anchor1,
       dst=t2.id,
@@ -662,7 +695,7 @@ def addEdges(t, graph):
         anchor1 = ".east"
       else:
         continue
-    graph = graph + edge_format.format(
+    graph = graph + edge_format(
       src=t.id,
       anchor1=anchor1,
       dst=t2.id,
@@ -674,19 +707,19 @@ def addEdges(t, graph):
     )
   return graph
 
-graphs = []
+graphs = OrderedDict()
 l = []
 if showfun:
   l = l + list(Function.all.values())
 if showjob:
   l = l + list(Job.all.values())
 for j in (l):
-  graph = r"\adjustbox{valign=t}{\begin{tikzpicture}[x=\schemoUnit, y=\schemoUnit, transform shape, rotate=-\schemoRotation]"+"\n"
+  graph = ""
   if isinstance(j, Job):
     node_format = job_format
   elif isinstance(j, Function):
     node_format = fun_format
-  graph = graph + node_format.format(
+  graph = graph + node_format(
     id=j.id,
     x=0,
     y=0,
@@ -719,33 +752,41 @@ for j in (l):
   for t in tasks:
     graph = addEdges(t, graph)
   
-  graph = graph + r"\end{tikzpicture}}"
-  graphs.append(graph)
+  name = profile+".{}_{}.tex".format(
+    j.__class__.__name__,
+    j.id
+  )
+  graphs[name] = graph.replace("_", r"\_")
 
-graph = ((r'\\' if vertical else '&') + "\n").join(graphs)
+outdir = basedir
+commands = {
+  'base'    : scale_,
+  'rotation' : rotation,
+  'colours'  : critsec_declarations,
+}
 
-f = open("profile.template", "r")
-template = f.read()
+f = open(join(outdir, profile+".preamble.tex"), "w")
+f.write(preamble)
 f.close()
+
+for name, graph in graphs.items():
+  f = open(join(outdir, name), "w")
+  f.write(single % {'graph' : graph, **commands})
+  f.close()
+
+graph = ((r'\\' if vertical else '&') + "\n").join([r"\adjustbox{valign=t}{\input{%s}}" % name for name in graphs.keys()])
 
 if vertical:
   tab_format = '{l}'
 else:
   tab_format = '{'+':'.join(['c']*(len(Job.all)+len(Function.all)))+'}'
 
-f = open(profile.replace(".profile", ".tex"), "w")
+f = open(join(outdir, profile+".tex"), "w")
 f.write(
   template % {
-    'scale'    : scale,
-    'rotation' : rotation,
-    'unit'     : str(scale_*10)+"mm",
-    'width'    : "15mm",
-    'small'    : scale*2/3,
-    'line'     : str(scale*0.4)+"pt",
-    'thick'    : str(scale*0.8)+"pt",
+    'preamble' : profile+".preamble.tex",
     'format'   : tab_format,
-    'content'  : graph.replace("_", r"\_"),
-    'colours'  : critsec_declarations,
+    'content'  : graph,
   }
 )
 f.close()
