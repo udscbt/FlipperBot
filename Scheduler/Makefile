@@ -7,35 +7,36 @@ else
 endif
 
 TEX=pdflatex
+NAME=schemo
 
-schemo: lib main.cpp schemop schemop_profiler.py
+$(NAME): lib main.cpp schemop schemop_profiler.py
 	./schemop -sq $(OPTIONS) main.cpp
-	g++ __schemo_main.cpp $(FLAGS) -o schemo -I include -L lib -lschemo
+	g++ __schemo_main.cpp $(FLAGS) -o $(NAME) -I include -L lib -lschemo
 
-schemo.tex: main.cpp schemop schemop_profiler.py smp2tikz  tex_config/single.template tex_config/preamble.template tex_config/profile.template
+$(NAME).tex: main.cpp schemop schemop_profiler.py smp2tikz tex_config/single.template tex_config/preamble.template tex_config/profile.template
 ifeq ($(EXEC),true)
-	$(MAKE) schemo PROFILER=true
-	mv main.cpp.profile schemo.profile
-	./schemo
+	$(MAKE) $(NAME) PROFILER=true
+	mv main.cpp.profile $(NAME).profile
+	./$(NAME)
 else
 	./schemop -sqp main.cpp
-	mv main.cpp.profile schemo.profile
+	mv main.cpp.profile $(NAME).profile
 endif
-	./smp2tikz $(TEX_OPTIONS) schemo.profile
+	./smp2tikz $(TEX_OPTIONS) $(NAME).profile
 ifneq ($(KEEP),true)
 	rename .tex .tex.save *.tex
 	$(MAKE) clean
 	rename .tex.save .tex *.tex.save
 endif
 
-tex: schemo.tex
+tex: $(NAME).tex
 
-pdf: schemo.tex
-	$(TEX) schemo.tex
+pdf: $(NAME).tex
+	$(TEX) $(NAME).tex
 ifneq ($(KEEP),true)
-	mv schemo.pdf pdf.schemo
+	mv $(NAME).pdf tmp
 	$(MAKE) clean
-	mv pdf.schemo schemo.pdf
+	mv tmp $(NAME).pdf
 endif
 
 schemo_profiler.o: schemo_profiler.h schemo_profiler.cpp
@@ -58,7 +59,7 @@ lib: lib/libschemo.a include/schemo.h include/schemo_profiler.h
 clean:
 	-rm *.o
 	-rm __schemo*
-	-rm schemo
+	-rm $(NAME)
 	-rm *.profile
 	-rm *.tex
 	-rm *.log
