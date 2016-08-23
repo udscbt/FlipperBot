@@ -4,3 +4,9 @@
 **/__pycache__
 Scheduler/out/
 RPi
+
+**/*.aux
+**/*.log
+**/*.bbl
+**/*.blg
+**/*.toc

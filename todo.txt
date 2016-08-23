@@ -1,0 +1,4 @@
+Add logs to other classes
+Remove reduntant logs from Game (e.g. display)
+Add tags
+Work on log visualization

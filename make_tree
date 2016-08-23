@@ -1,0 +1,36 @@
+#!/usr/bin/env python
+
+import os.path
+
+lines = [r"\dirtree{%", ".1 ."]
+
+def fun(d, level=0):
+  for f in os.listdir(d):
+    if f.startswith("."):
+      continue
+    full = os.path.join(d, f)
+    if os.path.isfile(full):
+      if (
+        f.endswith(".py") or
+        f.endswith(".h") or
+        f.endswith(".cpp") or
+        not "." in f
+      ):
+        print("  "*level+f)
+      else:
+        continue
+    else:
+      print("\033[1m"+"  "*level+f+"\033[0m")
+      lines.append("{}.{} {}.".format(
+        "  "*(level+1),
+        level+2, 
+        f
+      ))
+      fun(full, level+1)
+
+fun(os.path.abspath("."))
+
+lines.append("}")
+f = open("tree.tex", "w")
+f.write("\n".join(lines).replace("_", r"\_"))
+f.close()
