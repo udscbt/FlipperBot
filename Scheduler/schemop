@@ -742,7 +742,8 @@ for path in args.files:
   lines = buf.split("\n")
   buf = []
   for i in range(len(lines)):
-    buf.append("#line {}".format(i+1))
+    if i==0 or not lines[i-1].endswith('\\'):
+      buf.append("#line {}".format(i+1))
     buf.append(lines[i])
   buf[0] = buf[0] + ' "{}"'.format(name)
   buf = "\n".join(buf)
