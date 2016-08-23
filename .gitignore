@@ -13,6 +13,6 @@
 **/lib/*
 **/build/*
 FBCP/command_lists/*
-flipperbot/board/log/*
-!flipperbot/board/audio/
-flipperbot/board/log/audio/*
+flipperbot/board/logs/*
+!flipperbot/board/logs/audio/
+flipperbot/board/logs/audio/*
