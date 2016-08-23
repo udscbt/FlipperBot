@@ -17,8 +17,10 @@
 #define SCHEMO_JOIN_STRINGS(prefix, suffix) SCHEMO_JOIN_STRINGS_(prefix, suffix)
 #define SCHEMO_TASK_HANDLE(task) SCHEMO_JOIN_STRINGS(task, SCHEMO_TASK_HANDLE_SUFFIX)
 
-#define SCHEMO_JOB(name, task) \
+#define SCHEMO_TASK(task) \
   void SCHEMO_TASK_HANDLE(task)()
+
+#define SCHEMO_JOB(name, task) SCHEMO_TASK(task)
 
 #define SCHEMO_TBREAK(task) \
     schemo::run_task(task); \

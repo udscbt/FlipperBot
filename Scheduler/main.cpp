@@ -8,6 +8,7 @@
   @TBREAK
   @CRITSEC (hello)
   {
+    printf("HELLO");
     @TBREAK
     @TBREAK
   }

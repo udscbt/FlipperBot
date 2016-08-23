@@ -8,8 +8,19 @@ from collections import OrderedDict
 #READ CONFIG
 configdir = join(dirname(abspath(__file__)), "tex_config")
 
-f = open(join(configdir, "preamble.template"), "r")
+utils_name = "schemotex.utils.tex"
+f = open(join(configdir, utils_name), "r")
+utils = f.read()
+f.close()
+
+preamble_name = "schemotex.preamble.tex"
+f = open(join(configdir, preamble_name), "r")
 preamble = f.read()
+f.close()
+
+preamble_full_name = "schemotex.preamble.full.tex"
+f = open(join(configdir, preamble_full_name), "r")
+preamble_full = f.read()
 f.close()
 
 f = open(join(configdir, "single.template"), "r")
@@ -18,6 +29,11 @@ f.close()
 
 f = open(join(configdir, "profile.template"), "r")
 template = f.read()
+f.close()
+
+standalone_name = "schemotex.standalone.tex"
+f = open(join(configdir, standalone_name), "r")
+standalone = f.read()
 f.close()
 
 f = open(join(configdir, "colours.conf"), "r")
@@ -30,70 +46,61 @@ patterns = f.read()
 f.close()
 patterns = [p for p in patterns.split("\n") if not p.startswith("#")]
 
-job_format = lambda **kwargs: (r"\node [scale=\schemoScale, draw, line width=\schemoThick] (j{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{\textbf{{{job.name}}}}}}};"+"\n").format(**kwargs)
-fun_format = lambda **kwargs: (r"\node [scale=\schemoScale, draw, line width=\schemoLine] (j{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{\textit{{{job.name}}}}}}};"+"\n").format(**kwargs)
+job_format = lambda **kwargs: (r"\node [schemo {style}] (j{id}) at ({x},{y}) {{\schemoText{{{job.name}}}}};"+"\n").format(**kwargs)
 
-common_format = r"\node [scale=\schemoScale, draw, %(shape)s, line width=\schemoLine{critsec}] (t{id}) at ({x},{y}) {{\rotatebox{{\schemoRotation}}{{%(label)s}}}};"+"\n"
+common_format = r"\node [schemo %(style)s{critsec}] (t{id}) at ({x},{y}) {{\schemoText{{%(label)s}}}};"+"\n"
 
 task_format     = lambda **kwargs: (
   common_format % {
-    'shape':'circle',
+    'style':'task',
     'label':r"%s{mutex}" % ("{node.id}" if showid else "")
   }
 ).format(**kwargs)
 while_format    = lambda **kwargs: (
   common_format % {
-    'shape':'diamond',
+    'style':'while',
     'label':r"\texttt{{while}}"
   }
 ).format(**kwargs)
 loop_format     = lambda **kwargs: (
   common_format % {
-    'shape':'diamond',
+    'style':'loop',
     'label':r"\texttt{{loop}}"
   }
 ).format(**kwargs)
 if_format       = lambda **kwargs: (
   common_format % {
-    'shape':'diamond',
+    'style':'if',
     'label':r"\texttt{{if}}"
   }
 ).format(**kwargs)
 call_format     = lambda **kwargs: (
   common_format % {
-    'shape':'rectangle',
-    'label':r"\begin{{varwidth}}{{\schemoWidth}}\texttt{{call}} \textit{{{node.name}}}\end{{varwidth}}"
+    'style':'call',
+    'label':r"\begin{{varwidth}}{{\schemoWidth}}call \textrm{{\textit{{{node.name}}}}}\end{{varwidth}}"
   }
 ).format(**kwargs)
 stop_format     = lambda **kwargs: (
   common_format % {
-    'shape':'circle',
+    'style':'stop',
     'label':r""
-  } +
-  common_format % {
-    'shape':'cross out',
-    'label':r""
-  } +
-  r"\node [scale=\schemoScale, above] at (t{id}.north) {{\rotatebox{{\schemoRotation}}{{STOP}}}};"+"\n"
+  }
 ).format(**kwargs)
 return_format   = lambda **kwargs: (
   common_format % {
-    'shape':'circle',
+    'style':'return',
     'label':r""
-  } +
-  common_format % {
-    'shape':'cross out',
-    'label':r""
-  } +
-  r"\node [scale=\schemoScale, above] at (t{id}.north) {{\rotatebox{{\schemoRotation}}{{RETURN}}}};"+"\n"
+  }
 ).format(**kwargs)
-shutdown_format = lambda **kwargs: (common_format % {'shape':'star, star points=10', 'label':r"\textbf{{!}}"}).format(**kwargs)
+shutdown_format = lambda **kwargs: (
+  common_format % {
+    'style':'shutdown',
+    'label':r"!"
+  }
+).format(**kwargs)
 
 edge_format = lambda **kwargs: (
-  r"\draw [-{{Latex[scale=\schemoScale]}}, line width=\schemoThick] (t{src}{anchor1}) to [out={outangle}, in={inangle}]{additional} (t{dst}{anchor2});"+"\n"
-).format(**kwargs)
-jump_format = lambda **kwargs: (
-  r"\draw [dashed, -{{Latex[scale=\schemoScale]}}, line width=\schemoLine] (t{src}{anchor1}) to [out={outangle}, in={inangle}]{additional} (t{dst}{anchor2});"+"\n"
+  r"\draw [schemo edge {style}] (t{src}{anchor1}) to [out={outangle}, in={inangle}]{additional} (t{dst}{anchor2});"+"\n"
 ).format(**kwargs)
 
 order_format = lambda **kwargs: (
@@ -204,7 +211,7 @@ for i in range(len(critsec_colours)):
     )
   )
 critsec_declarations = (
-  "\\providecommand{%(cmd)s}{}\n\\renewcommand{%(cmd)s}[1]{%%\n  %(def)s%%\n%(fi)s%%\n}" %
+  "\\schemoSet[1]{%(cmd)s}{%%\n  %(def)s%%\n%(fi)s%%\n}" %
   {
     'cmd' : critsec_command,
     'def' : "%\n  \\else".join(critsec_declarations),
@@ -311,9 +318,9 @@ class Task:
 
 def readLine(f):
   line = f.readline()
-  while line.startswith("#"):
+  while line.startswith("#") or (line.replace(" ", "").replace("\t", "") == '\n'):
     line = f.readline()
-  return line.replace("\n", "")
+  return line.strip()
 
 mutexes = []
 def parseFlow(flow, start, level, parent):
@@ -500,6 +507,12 @@ for t in range(taskn):
   name, id = line.split("\t")
   task = Task(name, int(id))
 
+line = readLine(f)
+mutexn = int(line)
+for m in range(mutexn):
+  line = readLine(f)
+  #TODO
+
 for j in range(jobn):
   line = readLine(f)
   job, flow = line.split("\t")
@@ -616,7 +629,7 @@ def addEdges(t, graph):
           if j.stop in t._out:
             continue
           text = 'return'
-        additional = r" node [scale=\schemoSmall, at start, below right] {\rotatebox{\schemoRotation}{%s}}" % text
+        additional = r" node [scale=\schemoSmall, at start, below right] {\schemoText{%s}}" % text
       else:
         outangle = -90
         inangle = 180
@@ -624,10 +637,11 @@ def addEdges(t, graph):
     elif showback:
       outangle = 90
       inangle = 90
-      additional = r" node [scale=\schemoSmall, at start, above left] {\rotatebox{\schemoRotation}{continue}}"
+      additional = r" node [scale=\schemoSmall, at start, above left] {\schemoText{continue}}"
     else:
       continue
-    graph = graph + jump_format(
+    graph = graph + edge_format(
+      style='jump',
       src=t.id,
       anchor1=anchor1,
       dst=t2.id,
@@ -689,6 +703,7 @@ def addEdges(t, graph):
         outangle = 0
         inangle = -135
     graph = graph + edge_format(
+      style='normal',
       src=t.id,
       anchor1=anchor1,
       dst=t2.id,
@@ -709,10 +724,11 @@ if showjob:
 for j in (l):
   graph = ""
   if isinstance(j, Job):
-    node_format = job_format
+    style='job'
   elif isinstance(j, Function):
-    node_format = fun_format
-  graph = graph + node_format(
+    style='function'
+  graph = graph + job_format(
+    style=style,
     id=j.id,
     x=0,
     y=0,
@@ -745,7 +761,7 @@ for j in (l):
   for t in tasks:
     graph = addEdges(t, graph)
   
-  name = profile+".{}_{}.tex".format(
+  name = "{}_{}.tex".format(
     j.__class__.__name__,
     j.id
   )
@@ -758,16 +774,24 @@ commands = {
   'colours'  : critsec_declarations,
 }
 
-f = open(join(outdir, profile+".preamble.tex"), "w")
+f = open(join(outdir, utils_name), "w")
+f.write(utils)
+f.close()
+
+f = open(join(outdir, preamble_name), "w")
 f.write(preamble)
 f.close()
 
+f = open(join(outdir, preamble_full_name), "w")
+f.write(preamble_full)
+f.close()
+
 for name, graph in graphs.items():
-  f = open(join(outdir, name), "w")
+  f = open(join(outdir, profile+"."+name), "w")
   f.write(single % {'graph' : graph, **commands})
   f.close()
 
-graph = ((r'\\' if vertical else '&') + "\n").join([r"\adjustbox{valign=t}{\input{%s}}" % name for name in graphs.keys()])
+graph = ((r'\\' if vertical else '&') + "\n").join([r"\adjustbox{valign=t}{\input{\schemoName.%s}}" % name for name in graphs.keys()])
 
 if vertical:
   tab_format = '{l}'
@@ -777,9 +801,12 @@ else:
 f = open(join(outdir, profile+".tex"), "w")
 f.write(
   template % {
-    'preamble' : profile+".preamble.tex",
-    'format'   : tab_format,
-    'content'  : graph,
+    'format'  : tab_format,
+    'content' : graph,
   }
 )
+f.close()
+
+f = open(join(outdir, standalone_name), "w")
+f.write(standalone)
 f.close()

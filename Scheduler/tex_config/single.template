@@ -1,21 +1,93 @@
-\providecommand{\schemoBase}{}
-\renewcommand{\schemoBase}{%(base)f}
-\providecommand{\schemoScale}{}
-\renewcommand{\schemoScale}{\schemoBase*\schemoBase}
-\providecommand{\schemoRotation}{}
-\renewcommand{\schemoRotation}{%(rotation)f}
-\providecommand{\schemoUnit}{}
-\renewcommand{\schemoUnit}{10*\schemoBase mm}
-\providecommand{\schemoWidth}{}
-\renewcommand{\schemoWidth}{15mm}
-\providecommand{\schemoSmall}{}
-\renewcommand{\schemoSmall}{2/3*\schemoScale}
-\providecommand{\schemoLine}{}
-\renewcommand{\schemoLine}{0.4*\schemoScale pt}
-\providecommand{\schemoThick}{}
-\renewcommand{\schemoThick}{2*\schemoLine}
-%(colours)s
-
-\begin{tikzpicture}[x=\schemoUnit, y=\schemoUnit, transform shape, rotate=-\schemoRotation]
+\schemoSet{\schemoBase}{%(base)f}%%
+\schemoSet{\schemoRotation}{%(rotation)f}%%
+\schemoSet{\schemoScale}{\schemoBase*\schemoBase}%%
+\schemoSet{\schemoUnit}{10*\schemoBase mm}%%
+\schemoSet{\schemoWidth}{15mm}%%
+\schemoSet{\schemoSmall}{2/3*\schemoScale}%%
+\schemoSet{\schemoLine}{0.4*\schemoScale pt}%%
+\schemoSet{\schemoThick}{2*\schemoLine}%%
+\schemoSet[1]{\schemoText}{\rotatebox{\schemoRotation}{#1}}
+%(colours)s%%
+%%
+\begin{tikzpicture}
+[
+  x=\schemoUnit,
+  y=\schemoUnit,
+  transform shape,
+  rotate=-\schemoRotation,
+%%
+  schemo job/.style={
+    scale=\schemoScale,
+    draw,
+    line width=\schemoThick,
+    font=\bfseries
+  },
+  schemo function/.style={
+    scale=\schemoScale,
+    draw,
+    line width=\schemoLine,
+    font=\itseries
+  },
+  schemo node/.style={
+    scale=\schemoScale,
+    draw,
+    line width=\schemoLine
+  },
+  schemo task/.style={
+    schemo node,
+    circle
+  },
+  schemo if/.style={
+    schemo node,
+    diamond,
+    font=\ttfamily
+  },
+  schemo while/.style={
+    schemo node,
+    diamond,
+    font=\ttfamily
+  },
+  schemo loop/.style={
+    schemo node,
+    diamond,
+    font=\ttfamily
+  },
+  schemo call/.style={
+    schemo node,
+    rectangle,
+    font=\ttfamily
+  },
+  schemo retstop/.style={
+    schemo node,
+    circle,
+    path picture={
+    \draw
+      (path picture bounding box.north west) -- (path picture bounding box.south east) 
+      (path picture bounding box.south west) -- (path picture bounding box.north east);
+    },
+    label={[above] \schemoText{#1}}
+  },
+  schemo stop/.style={
+    schemo retstop=STOP
+  },
+  schemo return/.style={
+    schemo retstop=RETURN
+  },
+  schemo shutdown/.style={
+    schemo node,
+    star,
+    star points=10,
+    font=\bfseries
+  },
+  schemo edge normal/.style={
+    -{Latex[scale=\schemoScale]},
+    line width=\schemoThick
+  },
+  schemo edge jump/.style={
+    dashed,
+    -{Latex[scale=\schemoScale]},
+    line width=\schemoLine
+  }
+]
 %(graph)s
 \end{tikzpicture}

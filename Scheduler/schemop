@@ -947,6 +947,12 @@ for path in args.files:
     fout.write("#TASKS NUMBER\n{}\n#TASKS\n#NAME\tID\n".format(len(TaskNode.TASK_NODES)))
     for t in TaskNode.TASK_NODES:
       fout.write("{}\t{}\n".format(t.name, t.id))
+    fout.write("#MUTEXES NUMBER\n{}\n#MUTEXES\n#NAME\tID\n".format(len(MutexNode.MUTEX_NODES)))
+    for t in MutexNode.MUTEX_NODES:
+      fout.write("{}\t{}\n".format(t.name, t.id))
+    
+    fout.write("#CONTROL FLOWS\n")
+    
     fout.write("#JOB\tCONTROL FLOW\n")
     for j in JobNode.JOB_NODES:
       fout.write(str(j)+"\n")
