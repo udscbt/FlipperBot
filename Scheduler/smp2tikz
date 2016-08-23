@@ -547,7 +547,14 @@ line = readLine(f)
 line = readLine(f)
 i = 1
 while line != '':
-  job, task, start, end = line.split('\t')
+  try:
+    job, task, start, end = line.split('\t')
+  except:
+    for t in Task.all.values():
+      t.order = []
+    i = 1
+    line = readLine(f)
+    continue
   Task.all[int(task)].order.append(i)
   i = i+1
   line = readLine(f)
