@@ -6,6 +6,7 @@
 **/*.bbl
 **/*.blg
 **/*.toc
+**/*.dvi
 **/*.pdf
 !ELABORATO DRAFT/images/esper_silouette.pdf
 **/__schemo_*
