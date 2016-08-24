@@ -7,9 +7,11 @@
 **/*.blg
 **/*.toc
 **/*.pdf
+!ELABORATO DRAFT/images/esper_silouette.pdf
 **/__schemo_*
 **/__pycache__/
 **/include/*
+!ELABORATO\ DRAFT/include/*
 **/lib/*
 **/build/*
 FBCP/command_lists/*
