@@ -61,6 +61,7 @@ typedef enum
 class WiFi_class
 {
   public:
+    WiFi_class();
     static int scanNetworks ();
     static std::string SSID (int);
     static std::string RSSI (int);
@@ -76,5 +77,6 @@ class WiFi_class
 extern WiFi_class WiFi;
 
 void delay(int);
+long int millis();
 
 #endif
