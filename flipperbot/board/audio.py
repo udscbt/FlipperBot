@@ -33,6 +33,9 @@ class Audio:
     join(audio_root, "sounds", 'flipperbot14.ogg'),
     join(audio_root, "sounds", 'flipperbot11.ogg'),
   ]
+  SUCCESS = [
+    join(audio_root, "sounds", 'flipperbot7.ogg'),
+  ]
   RAND  = [
     join(audio_root, "sounds", 'flipperbot2.ogg'),
     join(audio_root, "sounds", 'flipperbot10.ogg'),

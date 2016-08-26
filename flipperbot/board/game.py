@@ -14,27 +14,29 @@ from random import random
 from math import ceil
 
 class Game (ThreadEx):
-  deltaT  = SharedVariable(13)   # Time before totem changes
-  minT    = SharedVariable(0.5)  # Minimum time between hits
-  blinkT  = SharedVariable(5)    # Missing time when totem starts blinking
-  blinkF  = SharedVariable(4)    # Totem blinking frequency
-  cycleT  = SharedVariable(0.01) # Time between cycles
-  updateF = SharedVariable(80)   # Update frequency of display
-  scrollF = SharedVariable(2)    # Scroll frequency of display
+  deltaTmax = SharedVariable(13)   # Time before totem changes
+  deltaTmin = SharedVariable(7)   # Time before totem changes
+  minT      = SharedVariable(0.5)  # Minimum time between hits
+  blinkT    = SharedVariable(5)    # Missing time when totem starts blinking
+  blinkF    = SharedVariable(4)    # Totem blinking frequency
+  cycleT    = SharedVariable(0.01) # Time between cycles
+  updateF   = SharedVariable(80)   # Update frequency of display
+  scrollF   = SharedVariable(2)    # Scroll frequency of display
 
-  blinkR  = SharedVariable(5)   # Blinking frequency on robot connected
-  blinkC  = SharedVariable(10)  # Blinking frequency on controller connected
+  blinkR    = SharedVariable(5)   # Blinking frequency on robot connected
+  blinkC    = SharedVariable(10)  # Blinking frequency on controller connected
 
-  hitDelay = SharedVariable(0.1) # Maximum time between totem hit and robot hit to be considered simultaneous
+  hitDelay  = SharedVariable(0.1) # Maximum time between totem hit and robot hit to be considered simultaneous
   
   # MODES
-  WAIT  = -2
-  IDLE  = -1
-  MENU  = 0
-  GAME  = 1
-  PAUSE = 2
-  LOST  = 3
-  NOSTOP = 4
+  WAIT    = -2
+  IDLE    = -1
+  MENU    = 0
+  GAME    = 1
+  PAUSE   = 2
+  LOST    = 3
+  NOSTOP  = 4
+  SUCCESS = 5
   
   def getModeName(self, mode):
     if mode == -2:
@@ -130,7 +132,13 @@ class Game (ThreadEx):
       self.debug("Mode selected: LOST")
       self.gameThread.stop()
       self.pauseThread.stop()
-      self.menuThread = MenuThread(self, lost=True)
+      self.menuThread = MenuThread(self)
+      self.menuThread.start()
+    elif mode == self.SUCCESS:
+      self.debug("Mode selected: SUCCESS")
+      self.gameThread.stop()
+      self.pauseThread.stop()
+      self.menuThread = MenuThread(self)
       self.menuThread.start()
     self.mode = mode
   
@@ -212,7 +220,7 @@ class Game (ThreadEx):
         return False
 
 class MenuThread (ThreadEx):
-  def __init__(self, game, lost=False):
+  def __init__(self, game):
     self.game = game
     self.debug = Debug(
       log=self.game.log,
@@ -221,15 +229,17 @@ class MenuThread (ThreadEx):
       parent=self,
       name="MenuThread"
     )
-    self.lost = lost
     super(self.__class__, self).__init__(name="menu")
     self.debug("Initialized")
   
   def setup(self):
     self.debug("Entering menu")
-    if self.lost:
+    if self.game.mode == self.game.LOST:
       self.game.display.show("LOSE")
       self.game.audio.start(self.game.audio.LOST)
+    elif self.game.mode == self.game.SUCCESS:
+      self.game.display.show("SUCCESS")
+      self.game.audio.start(self.game.audio.MENU)
     else:
       self.game.display.show(["F", "li"]+list("pperbot    "))
       self.game.audio.start(self.game.audio.MENU)
@@ -260,6 +270,18 @@ class GameThread (ThreadEx):
     super(self.__class__, self).__init__(name="game")
     self.debug("Initialized")
   
+  def deltaT(self):
+    if self.points == 0:
+      return self.game.deltaTmax
+    else:
+      tmp = self.game.deltaTmax-(int(self.points/15))*3
+      if tmp < self.game.deltaTmin:
+        self.debug("Winner!")
+        sound = SoundEffect(self.game.audio.SUCCESS, debug=self.debug)
+        sound.start()
+        self.game.setMode(self.game.SUCCESS)
+        return
+  
   def setup(self):
     self.debug("Game started")
     self.debug("Showing animation")
@@ -280,7 +302,7 @@ class GameThread (ThreadEx):
     self.points = 0
     self.lastHit = time()
     self.lastLoop = self.lastHit
-    self.missing = self.game.deltaT
+    self.missing = self.deltaT()
     self.game.display.setScrollSpeed(self.game.scrollF)
     self.debug("Game actually started")
   
@@ -292,7 +314,7 @@ class GameThread (ThreadEx):
     sleep(self.game.cycleT)
     
     # Update display
-    self.missing = self.game.deltaT + self.lastHit - time()
+    self.missing = self.deltaT() + self.lastHit - time()
     text = "{:02d}{:02d}".format(self.points%100, int(ceil(self.missing))%100)
     self.game.display.show(text, [False, True, False, False])
     
