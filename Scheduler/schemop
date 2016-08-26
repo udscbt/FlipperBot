@@ -506,7 +506,8 @@ def parseBlock(block, bw=None, fw=None):
   match = CALL_PATTERN.match(block)
   if match is not None:
     ret = match.group(3)
-    params = match.group(1).split(";")
+    params = match.group(1)
+    params = re.sub(IGNORE_PATTERN, "", params).split(";")
     fun = params[0]
     if fun not in FUNCTIONS.keys():
       stderr("Called function '%s' is undefined" % fun)
@@ -599,7 +600,7 @@ PARAM_PATTERN    = re.compile("[^{]*?("+PAR+"{0}\({0}(.+?){0}:{0}(.+?){0}\))".fo
 PARAM_PATTERN2   = re.compile(PAR+"{0}\({0}(.+?){0}\)".format(IGNORE_PATTERN))
 RETURN_PATTERN   = re.compile("[^{]*?("+RET+"{0}\({0}(.+?){0}\))".format(IGNORE_PATTERN))
 RETURN_PATTERN2  = re.compile(RET+"{0}\({0}(.+?){0}\){0};".format(IGNORE_PATTERN))
-CALL_PATTERN     = re.compile(CALL+"{0}\({0}(.+?(;.+?)*?){0}\){0}:{0}(.+?){0};".format(IGNORE_PATTERN))
+CALL_PATTERN     = re.compile(CALL+"{0}\({0}(.+?({0};{0}.+?)*?){0}\){0}:{0}(.+?){0};".format(IGNORE_PATTERN))
 FVAR_PATTERN     = re.compile(JVAR+"{0}\({0}(.+?){0}:{0}(.+?){0}\)".format(IGNORE_PATTERN))
 
 FUNCTIONS = {}
