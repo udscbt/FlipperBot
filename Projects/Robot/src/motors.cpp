@@ -21,10 +21,12 @@ void Motor::configure(const unsigned char config)
 {
   this->config = config;
   pinMode(this->getPin(), OUTPUT);
+  stop();
 }
 
-void Motor::forward() const
+void Motor::forward()
 {
+  this->direction = DIR_FORWARD;
   unsigned char value;
   if (this->checkAll(LEFT | OLD))
   {
@@ -45,13 +47,15 @@ void Motor::forward() const
   analogWrite(this->getPin(), value);
 }
 
-void Motor::stop() const
+void Motor::stop()
 {
+  this->direction = DIR_STOP;
   analogWrite(this->getPin(), 0);
 }
 
-void Motor::backward() const
+void Motor::backward()
 {
+  this->direction = DIR_BACKWARD;
   unsigned char value;
   if (this->checkAll(LEFT | OLD))
   {
@@ -72,8 +76,40 @@ void Motor::backward() const
   analogWrite(this->getPin(), value);
 }
 
-void Motor::value(const char dir) const
+void Motor::value(const unsigned char dir)
 {
+  Serial.print("=======");
+  Serial.print("MOTOR ");
+  if (this->checkAll(RIGHT))
+  {
+    Serial.println("R");
+  }
+  else if (this->checkAll(LEFT))
+  {
+    Serial.println("L");
+  }
+  else
+  {
+    Serial.println("?");
+  }
+
+  Serial.print("TYPE ");
+  if (this->checkAll(OLD))
+  {
+    Serial.println("O");
+  }
+  else if (this->checkAll(NEW))
+  {
+    Serial.println("N");
+  }
+  else
+  {
+    Serial.println("?");
+  }
+
+  Serial.print("DIR ");
+  Serial.println((int)dir);
+  
   switch (dir)
   {
     case 0:
@@ -82,7 +118,12 @@ void Motor::value(const char dir) const
     case 1:
       this->forward();
       break;
-    case -1:
+    case (unsigned char) -1:
       this->backward();
   }
+}
+
+Motor::Direction Motor::getDirection() const
+{
+  return this->direction;
 }

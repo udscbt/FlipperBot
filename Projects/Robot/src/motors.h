@@ -16,10 +16,18 @@ class Motor
   
   void configure(const unsigned char config);
   
-  void forward() const;
-  void stop() const;
-  void backward() const;
-  void value(const char dir) const;
+  void forward();
+  void stop();
+  void backward();
+  void value(const unsigned char dir);
+  
+  enum Direction
+  {
+    DIR_FORWARD,
+    DIR_STOP,
+    DIR_BACKWARD
+  };
+  Direction getDirection() const;
 
   protected:
   static const unsigned char STOP;
@@ -29,6 +37,7 @@ class Motor
   static const unsigned char NEW_CCW;
   
   unsigned char config;
+  Direction direction;
   inline const unsigned char getPin() const;
   inline const bool checkAny(const unsigned char flags) const;
   inline const bool checkAll(const unsigned char flags) const;

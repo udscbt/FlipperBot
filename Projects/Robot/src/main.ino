@@ -7,14 +7,14 @@
 
 typedef unsigned char byte;
 
-const unsigned char L_MOTOR = 16;
-const unsigned char R_MOTOR = 14;
+const unsigned char L_MOTOR = 14;
+const unsigned char R_MOTOR = 16;
 const unsigned char HIT     = 05;
 const unsigned char BUZ     = 04; //GREEN
 //const unsigned char LED     = 13; //RED
 const unsigned char LED     = 15; //RED
 
-Motor leftMotor(Motor::LEFT | Motor::OLD | Motor::pin(L_MOTOR));
+Motor leftMotor(Motor::RIGHT | Motor::NEW | Motor::pin(L_MOTOR));
 Motor rightMotor(Motor::RIGHT | Motor::NEW | Motor::pin(R_MOTOR));
 
 enum
@@ -543,21 +543,20 @@ typedef enum
           else if (@VAR(cmd).command->code == fbcp::Q_ROBOT_COMMAND.code)
           {
             Serial.println(F("Change direction"));
-            bool hit = digitalRead(HIT);
             if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_FORWARD_LEFT.str)
             {
-              leftMotor.value(hit?-1:0);
+              leftMotor.value(0);
               rightMotor.value(1);
             }
             else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_FORWARD.str)
             {
-              leftMotor.value(hit?0:1);
-              rightMotor.value(hit?0:1);
+              leftMotor.value(1);
+              rightMotor.value(1);
             }
             else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_FORWARD_RIGHT.str)
             {
               leftMotor.value(1);
-              rightMotor.value(hit?-1:0);
+              rightMotor.value(0);
             }
             else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_LEFT.str)
             {
@@ -652,7 +651,7 @@ typedef enum
   }
 }
 
-@JOB (job_link)
+@JOB (job_link_and_bumper)
 {
   @MEMORY
   {
@@ -665,6 +664,35 @@ typedef enum
 
   @WHILE
   {
+    if (digitalRead(HIT))
+    {
+      bool left = false;
+      bool right = false;
+      if (leftMotor.getDirection() == Motor::Direction::DIR_FORWARD)
+        left = true;
+      if (rightMotor.getDirection() == Motor::Direction::DIR_FORWARD)
+        right = true;
+      if (left)
+      {
+        if (right)
+        {
+          leftMotor.stop();
+          rightMotor.stop();
+        }
+        else
+        {
+          rightMotor.backward();
+        }
+      }
+      else
+      {
+        if (right)
+        {
+          leftMotor.backward();
+        }
+      }
+    }
+    
     ledFreq = FREQ_FAST;
     
     switch (mode)
@@ -761,11 +789,12 @@ void setup()
   //WiFi
   WiFi.persistent(false);
 
-  schemo::schedule_job(job_link);
-  schemo::schedule_job(job_network);
-  schemo::schedule_job(job_server);
-  schemo::schedule_job(job_client);
-  schemo::schedule_job(avoid_breaking);
+  //~ schemo::schedule_job(job_link);
+  //~ schemo::schedule_job(job_network);
+  //~ schemo::schedule_job(job_server);
+  //~ schemo::schedule_job(job_client);
+  //~ schemo::schedule_job(avoid_breaking);
+  @SCHEDULE_ALL
   Serial.println(F("Job scheduled"));
 
   schemo::start_cycle();
