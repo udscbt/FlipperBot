@@ -26,7 +26,7 @@
     scale=\schemoScale,
     draw,
     line width=\schemoLine,
-    font=\itseries
+    font=\itshape
   },
   schemo node/.style={
     scale=\schemoScale,

@@ -803,7 +803,7 @@ graph = ((r'\\' if vertical else '&') + "\n").join([r"\adjustbox{valign=t}{\inpu
 if vertical:
   tab_format = '{l}'
 else:
-  tab_format = '{'+':'.join(['c']*(len(Job.all)+len(Function.all)))+'}'
+  tab_format = '{'+':'.join(['c']*len(l))+'}'
 
 f = open(join(outdir, profile+".tex"), "w")
 f.write(
