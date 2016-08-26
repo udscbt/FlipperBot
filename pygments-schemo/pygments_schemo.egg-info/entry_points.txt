@@ -1,0 +1,2 @@
+[pygments.lexers]
+                    schemo=pygments_schemo:ScheMoLexer

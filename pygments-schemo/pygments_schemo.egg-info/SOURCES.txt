@@ -1,0 +1,8 @@
+setup.py
+pygments_schemo/__init__.py
+pygments_schemo.egg-info/PKG-INFO
+pygments_schemo.egg-info/SOURCES.txt
+pygments_schemo.egg-info/dependency_links.txt
+pygments_schemo.egg-info/entry_points.txt
+pygments_schemo.egg-info/requires.txt
+pygments_schemo.egg-info/top_level.txt

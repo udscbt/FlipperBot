@@ -1,0 +1,18 @@
+Metadata-Version: 1.1
+Name: pygments-schemo
+Version: 0.0.0
+Summary: Pygments lexer for ScheMo programs.
+Home-page: UNKNOWN
+Author: UNKNOWN
+Author-email: UNKNOWN
+License: UNKNOWN
+Description: UNKNOWN
+Keywords: pygments schemo cpp c++ lexer
+Platform: UNKNOWN
+Classifier: Development Status :: 1 - Alpha
+Classifier: Environment :: Plugins
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 2
+Classifier: Programming Language :: Python :: 3
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
