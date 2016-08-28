@@ -155,7 +155,6 @@ typedef enum
   {
     @VAR(i:int)
     @VAR(n:int)
-    @VAR(connected:bool)
 
     //tryConnect
     @VAR(t1:unsigned long)
@@ -173,7 +172,6 @@ typedef enum
       //WiFi.disconnect();  
       Serial.println(F("Scan start"));
       mode = MODE_SCAN;
-      @VAR(connected) = false;
 
       WiFi.scanNetworks(true);
       @WHILE ((@VAR(n) = WiFi.scanComplete()) == WIFI_SCAN_RUNNING) {}
@@ -194,8 +192,7 @@ typedef enum
         Serial.print(@VAR(n));
         Serial.println(F(" networks found"));
         @VAR(i) = -1;
-        @VAR(connected) = false;
-        @WHILE (++@VAR(i) < @VAR(n) && !@VAR(connected))
+        @WHILE (++@VAR(i) < @VAR(n))
         {
           // Print SSID and RSSI for each network found
           Serial.print(@VAR(i) + 1);
@@ -222,9 +219,6 @@ typedef enum
             @CONTINUE
           }
 
-          /*******************
-           * tryConnect START *
-           ********************/
           mode = MODE_NETCON;
           Serial.print(F("Connecting to "));
           Serial.println(ssid.c_str());
@@ -239,12 +233,10 @@ typedef enum
           }
           Serial.println(F(""));
 
-          @VAR(connected) = false;
           switch (status)
           {
             case WL_CONNECTED:
               Serial.println(F("WiFi connected"));
-              @VAR(connected) = true;
               break;
             case WL_NO_SHIELD:
               Serial.println(F("No WiFi shield is present"));
@@ -284,10 +276,8 @@ typedef enum
           Serial.print(FBNet::GATEWAY[3]);
           Serial.print(F(":"));
           Serial.println(FBNet::PORT);
-
-          @VAR(connected) = sockOut.connect(gateway, FBNet::PORT);
             
-          if (!@VAR(connected))
+          if (!sockOut.connect(gateway, FBNet::PORT))
           {
             Serial.println(F("Can't connect to server"));
             @CONTINUE
@@ -303,7 +293,6 @@ typedef enum
           sockOut.print(s.c_str());
           
           @CALL(read_command;&sockOut;&@VAR(cmd);fbcp::HARD_TIMEOUT):understood;
-          @VAR(connected) = false;
           if (understood == READ_FAIL)
           {
             Serial.println(F("Couldn't understand server response"));
@@ -315,7 +304,9 @@ typedef enum
           else if (@VAR(cmd).command->code == fbcp::A_GRANT_ACCESS.code)
           {
             Serial.println(F("Server allowed connection"));
-            @VAR(connected) = true;
+            Serial.println(F("Connection estabilished"));
+            mode = MODE_GAME;
+            @BREAK
           }
           else if (@VAR(cmd).command->code == fbcp::A_DENY_ACCESS.code)
           {
@@ -325,25 +316,14 @@ typedef enum
           {
             Serial.println(F("Server answered something strange :S"));
           }
-          /*******************
-           * tryConnect STOP  *
-           ********************/
-  
-          if (@VAR(connected))
-          {
-            Serial.println(F("Connection estabilished"));
-            mode = MODE_GAME;
-          }
-          else
-          {
-            Serial.println(F("Connection failed"));
-          }
+
+          sockOut.stop();
+          Serial.println(F("Connection failed"));
         }
       }
       Serial.println(F(""));
-      /////////////////
 
-      if (!@VAR(connected))
+      if (mode != MODE_GAME)
       {
         Serial.print("Starting AccessPoint: ");
         ssid = fbcp::serial;
@@ -386,10 +366,11 @@ typedef enum
         hit = false;
       }
       
-      @IF (sendStatus == SEND_BUSY || sendStatus == SEND_NEW)
+      @IF (sendStatus == SEND_BUSY || sendStatus == SEND_NEW || sendStatus == SEND_FAIL)
       {
         Serial.print("Sent: ");
         Serial.println(hitCmd.c_str());
+        sockOut.flush();
         sockOut.print(hitCmd.c_str());
 
         @CALL(read_command;&sockOut;&@VAR(cmd);fbcp::SOFT_TIMEOUT):understood;
@@ -425,7 +406,8 @@ typedef enum
         else if (understood == READ_TIMEOUT)
         {
           sockOut.stop();
-          sendStatus = SEND_FAIL;
+          sendStatus = SEND_INIT;
+          @BREAK
         }
       }
       
@@ -438,22 +420,83 @@ typedef enum
         if (understood == READ_SUCCESS)
         {
           @VAR(t) = millis();
+          Serial.println("Server answered to heartbeat");
         }
         else if (understood == READ_TIMEOUT)
         {
           sockOut.stop();
-          sendStatus = SEND_FAIL;
+          sendStatus = SEND_INIT;
           @BREAK
         }
       }
     }
 
-    if (mode == MODE_GAME && !sockOut.connected())
+    if (mode == MODE_GAME)
     {
       Serial.println("Disconnected");
       mode = MODE_IDLE;
     }
   }
+}
+
+bool manageDirection(fbcp::string direction)
+{
+  bool hit = digitalRead(HIT);
+  if (direction == fbcp::DIRECTION_FORWARD_LEFT.str)
+  {
+    if (hit) return manageDirection(fbcp::DIRECTION_LEFT.str);
+    leftMotor.stop();
+    rightMotor.forward();
+  }
+  else if (direction == fbcp::DIRECTION_FORWARD.str)
+  {
+    if (hit) return manageDirection(fbcp::DIRECTION_STOP.str);
+    leftMotor.forward();
+    rightMotor.forward();
+  }
+  else if (direction == fbcp::DIRECTION_FORWARD_RIGHT.str)
+  {
+    if (hit) return manageDirection(fbcp::DIRECTION_RIGHT.str);
+    leftMotor.forward();
+    rightMotor.stop();
+  }
+  else if (direction == fbcp::DIRECTION_LEFT.str)
+  {
+    leftMotor.backward();
+    rightMotor.forward();
+  }
+  else if (direction == fbcp::DIRECTION_STOP.str)
+  {
+    leftMotor.stop();
+    rightMotor.stop();
+  }
+  else if (direction == fbcp::DIRECTION_RIGHT.str)
+  {
+    leftMotor.forward();
+    rightMotor.backward();
+  }
+  else if (direction == fbcp::DIRECTION_BACKWARD_LEFT.str)
+  {
+    leftMotor.stop();
+    rightMotor.backward();
+  }
+  else if (direction == fbcp::DIRECTION_BACKWARD.str)
+  {
+    leftMotor.backward();
+    rightMotor.backward();
+  }
+  else if (direction == fbcp::DIRECTION_BACKWARD_RIGHT.str)
+  {
+    leftMotor.backward();
+    rightMotor.stop();
+  }
+  else
+  {
+    return false;
+  }
+  Serial.print(F("Set direction to: "));
+  Serial.println(direction);
+  return true;
 }
 
 @JOB (job_server)
@@ -543,50 +586,10 @@ typedef enum
           else if (@VAR(cmd).command->code == fbcp::Q_ROBOT_COMMAND.code)
           {
             Serial.println(F("Change direction"));
-            if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_FORWARD_LEFT.str)
+            if (manageDirection(@VAR(cmd).params["direction"]))
             {
-              leftMotor.value(0);
-              rightMotor.value(1);
-            }
-            else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_FORWARD.str)
-            {
-              leftMotor.value(1);
-              rightMotor.value(1);
-            }
-            else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_FORWARD_RIGHT.str)
-            {
-              leftMotor.value(1);
-              rightMotor.value(0);
-            }
-            else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_LEFT.str)
-            {
-              leftMotor.value(-1);
-              rightMotor.value(1);
-            }
-            else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_STOP.str)
-            {
-              leftMotor.value(0);
-              rightMotor.value(0);
-            }
-            else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_RIGHT.str)
-            {
-              leftMotor.value(1);
-              rightMotor.value(-1);
-            }
-            else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_BACKWARD_LEFT.str)
-            {
-              leftMotor.value(0);
-              rightMotor.value(-1);
-            }
-            else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_BACKWARD.str)
-            {
-              leftMotor.value(-1);
-              rightMotor.value(-1);
-            }
-            else if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_BACKWARD_RIGHT.str)
-            {
-              leftMotor.value(-1);
-              rightMotor.value(0);
+              cmd.command = &fbcp::A_ERROR;
+              Serial.println(F("Direction not recognized"));
             }
           }
           else if (@VAR(cmd).command->code == fbcp::Q_MOTOR_COMMAND.code)
@@ -595,8 +598,13 @@ typedef enum
             bool left = false;
             bool right = false;
             if (@VAR(cmd).params["motor"] == fbcp::MOTOR_LEFT.str) left = true;
-            if (@VAR(cmd).params["motor"] == fbcp::MOTOR_RIGHT.str) right = true;
-            if (@VAR(cmd).params["motor"] == fbcp::MOTOR_BOTH.str) {left = true; right=true;}
+            else if (@VAR(cmd).params["motor"] == fbcp::MOTOR_RIGHT.str) right = true;
+            else if (@VAR(cmd).params["motor"] == fbcp::MOTOR_BOTH.str) {left = true; right=true;}
+            else
+            {
+              cmd.command = &fbcp::A_ERROR;
+              Serial.println(F("Motor not recognized"));
+            }
             if (@VAR(cmd).params["direction"] == fbcp::DIRECTION_FORWARD.str)
             {
               if (left) leftMotor.value(1);
@@ -612,12 +620,16 @@ typedef enum
               if (left) leftMotor.value(-1);
               if (right) rightMotor.value(-1);
             }
+            else
+            {
+              cmd.command = &fbcp::A_ERROR;
+              Serial.println(F("Direction not recognized"));
+            }
           }
           else if (@VAR(cmd).command->code == fbcp::Q_CLEAN.code)
           {
             cmd.command = &fbcp::A_CLEAN;
             Serial.println(F("Client requested disconnection"));
-            @VAR(controller) = false;
           }
           else
           {
@@ -628,6 +640,7 @@ typedef enum
           if (cmd.command == NULL)
           {
             Serial.println(F("Disconnecting"));
+            @VAR(controller) = false;
             @VAR(client).stop();
             @BREAK
           }
@@ -639,7 +652,9 @@ typedef enum
             @VAR(client).print(s.c_str());
             if (cmd.command->code == fbcp::A_CLEAN.code)
             {
+              @VAR(controller) = false;
               @VAR(client).stop();
+              @BREAK
             }
           }
         }
@@ -789,11 +804,6 @@ void setup()
   //WiFi
   WiFi.persistent(false);
 
-  //~ schemo::schedule_job(job_link);
-  //~ schemo::schedule_job(job_network);
-  //~ schemo::schedule_job(job_server);
-  //~ schemo::schedule_job(job_client);
-  //~ schemo::schedule_job(avoid_breaking);
   @SCHEDULE_ALL
   Serial.println(F("Job scheduled"));
 
