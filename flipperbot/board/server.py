@@ -42,14 +42,14 @@ class ClientThread (ThreadEx):
       self.server.controllers.pop(self.serial)
   
   def cleanup(self):
-    cmd = fbcp.CommandLine()
-    cmd.command = fbcp.Command.Q_CLEAN
-    s = cmd.write()
-    try:
-      self.sockOut.send(s.encode("UTF-8"))
-      self.debug("Sent:", s)
-    except socket.error:
-      pass
+    #~ cmd = fbcp.CommandLine()
+    #~ cmd.command = fbcp.Command.Q_CLEAN
+    #~ s = cmd.write()
+    #~ try:
+      #~ self.sockOut.send(s.encode("UTF-8"))
+      #~ self.debug("Sent:", s)
+    #~ except socket.error:
+      #~ pass
     self.sockIn.close()
     self.sockOut.close()
   
@@ -290,6 +290,7 @@ class RobotThread (ThreadEx):
       self.sockOut.send(msg.encode("UTF-8"))
       self.last = time()
     elif (time() - self.last)*1000 > fbcp.HARD_TIMEOUT/2:
+      self.debug("Sending heartbeat")
       self.sockOut.send(fbcp.CommandLine(fbcp.Command.Q_HEARTBEAT).write().encode("UTF-8"))
       self.last = time()
   

@@ -1,4 +1,4 @@
-from .shared import gpio, ThreadEx, sleep, SharedVariable
+from .shared import gpio, ThreadEx, time, sleep, SharedVariable
 from .led import LED
 
 from .debug.debug import Debug, fakedebug
@@ -17,10 +17,14 @@ class Totem (LED):
   
   def _manageHit(self, channel):
     self.debug("Hit")
-    self._hit = gpio.input(self.hit)
+    if gpio.input(self.hit):
+      self._hit = time()
+  
+  def clearHit(self):
+    self._hit = None
   
   def isHit(self):
-    return self._hit
+    return self._hit is not None
   
   def setup(self):
     super(Totem, self).setup()

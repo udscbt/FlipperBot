@@ -190,6 +190,7 @@ class Game (ThreadEx):
     while old == self.totIndex:
       self.totIndex = int(random()*len(self.totemList))
     self.totem = self.totemList[self.totIndex]
+    self.totem.clearHit()
     self.debug("Totem {} selected".format(self.totem.pos))
   
   def cleanup(self):
@@ -281,6 +282,7 @@ class GameThread (ThreadEx):
         sound.start()
         self.game.setMode(self.game.SUCCESS)
         return
+      return tmp
   
   def setup(self):
     self.debug("Game started")
@@ -310,8 +312,8 @@ class GameThread (ThreadEx):
     # Correcting for pause
     self.lastHit = self.lastHit + time() - self.lastLoop
     
-    # Slow down cycle
-    sleep(self.game.cycleT)
+    #~ # Slow down cycle
+    #~ sleep(self.game.cycleT)
     
     # Update display
     self.missing = self.deltaT() + self.lastHit - time()
@@ -326,7 +328,7 @@ class GameThread (ThreadEx):
       self.game.totem.blink(self.game.blinkF)
     
     # Check for hit
-    if self.game.totem.isHit() or self.game.isHit2():
+    if self.game.totem.isHit():# or self.game.isHit2():
       self.debug("Selected totem was hit")
       hit = True
       #~ t1 = time()

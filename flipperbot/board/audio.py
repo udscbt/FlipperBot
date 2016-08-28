@@ -74,12 +74,13 @@ class Audio:
     self.debug("Playing song '{}'".format(song))
     self.log = open(join(audio_root, "logs", "audio", "{:d}.log".format(int(time()))), "w")
 #    self.proc = Popen([self.PLAYER, *self.PL_OPTIONS, song], stdout=self.log, stderr=self.log)
-    self.proc = Popen([self.PLAYER] + self.PL_OPTIONS + [song], stdout=self.log, stderr=self.log)
+    #~ self.proc = Popen([self.PLAYER] + self.PL_OPTIONS + [song], stdout=self.log, stderr=self.log)
+    self.proc = False
     self._started = True
     self._stopped = False
 
   def stop(self, async=False):
-    if self.proc is not None:
+    try:
       self.debug("Stopping last song")
       self.proc.terminate()
       if not async:
@@ -87,6 +88,8 @@ class Audio:
         self.proc.wait()
         self.debug("Last song stopped")
       self.log.close()
+    except:
+      self.debug("Last song was already stopped")
     self.proc = None
     self._stopped = True
   
@@ -116,7 +119,7 @@ class SoundEffect:
         logging=debug.logging,
         stdout=debug.stdout,
         parent=self,
-        name="Audio"
+        name="SoundEffect"
       )
     if isinstance(sound, list):
       self.sound = sound[int(random()*len(sound))]
@@ -131,14 +134,16 @@ class SoundEffect:
     self.stop()
     self.debug("Playing sound effect '{}'".format(self.sound))
 #    self.proc = Popen([self.PLAYER, *self.PL_OPTIONS, self.sound])
-    self.proc = Popen([self.PLAYER] + self.PL_OPTIONS + [self.sound], stdout=DEVNULL, stderr=DEVNULL)
+    #~ self.proc = Popen([self.PLAYER] + self.PL_OPTIONS + [self.sound], stdout=DEVNULL, stderr=DEVNULL)
+    self.proc = None
     self._started = True
     self._stopped = False
   
   def ended(self):
-    if self.proc is None:
+    try:
+      self.proc.poll()
+    except:
       return True
-    self.proc.poll()
     if self.proc.returncode is None:
       self.proc = None
       return True
@@ -146,13 +151,18 @@ class SoundEffect:
   
   def wait(self):
     self.debug("Waiting for sound effect to terminate")
-    self.proc.wait()
+    try:
+      self.proc.wait()
+    except:
+      self.debug("Sound effect was already stopped")
     self.proc = None
   
   def stop(self):
-    if self.proc is not None:
+    try:
       self.debug("Stopping sound effect")
       self.proc.terminate()
+    except:
+      self.debug("Sound effect was already stopped")
     self.proc = None
     self._stopped = True
   

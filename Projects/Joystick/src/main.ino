@@ -229,6 +229,7 @@ typedef enum
         }
         @WHILE ( (@VAR(i)=popSsid()) < @VAR(n) && !@VAR(connected) )
         {
+          @VAR(connected) = false;
           // Print SSID and RSSI for each network found
           Serial.print("- ");
           ssid = WiFi.SSID(@VAR(i)).c_str();
