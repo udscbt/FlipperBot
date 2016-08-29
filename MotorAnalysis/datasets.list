@@ -1,0 +1,9 @@
+#Columns description:
+#0: Name
+#1: Source
+#2: Start time
+#3: End time
+LeftCCW;raw/HDV_0287.MP4;2;30
+LeftCW;raw/HDV_0287.MP4;34;59
+RightCW;raw/HDV_0288.MP4;12;40
+RightCCW;raw/HDV_0288.MP4;47;82

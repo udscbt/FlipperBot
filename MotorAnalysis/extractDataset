@@ -1,0 +1,59 @@
+#!/bin/bash
+#DEFAULT VALUES
+DIM_BASE=Y
+AXIS_IN_FACTOR=50
+AXIS_OUT_FACTOR=50
+ARM_FACTOR=4
+MARKER_CHANNEL=2
+MARKER_THRESHOLD=90
+MARKER_SIZE=100
+ANGLE=0
+
+#SCRIPT START
+
+#ARGUMENTS
+NAME=$1
+SRC=$2
+SS=$3
+EE=$4
+
+
+T=$[$EE-$SS]
+
+if [ -e $NAME ]
+then
+  echo "$NAME already exists"
+  echo "Remove or rename it before proceeding"
+  exit 1
+fi
+
+echo "Creating directory $NAME"
+mkdir $NAME
+echo "Creating subdirectories:"
+for d in imgs errors keyframes pass_frames
+do
+  echo "  $NAME/$d"
+  mkdir $NAME/$d
+done
+echo "Cropping source video"
+ffmpeg -i $SRC -ss $3 -t $T $NAME/crop.mp4 &> $NAME/extraction.log
+echo "Converting video to images"
+ffmpeg -i $NAME/crop.mp4 $NAME/imgs/%d.jpg &> $NAME/conversion.log
+echo "Acquiring video informations"
+FPS=`ffprobe $NAME/crop.mp4 2>&1 | grep -Po "\d+(?= fps)"`
+echo "  FPS: $FPS"
+FN=`ls $NAME/imgs | sort -g | awk 'END {print $0}'`
+FN=${FN%.jpg}
+echo "  Frames#: $FN"
+cat dataset.info.header > $NAME/dataset.info
+DIM=`file $NAME/imgs/1.jpg | grep -Po "\d+x\d+"`
+X=`echo $DIM | grep -Po "\d+(?=x)"`
+Y=`echo $DIM | grep -Po "(?<=x)\d+"`
+echo "  Dimensions: $DIM"
+echo -n "$NAME;$FPS;$FN" >> $NAME/dataset.info
+echo -n ";0;0;$X;$Y;$[$X/2];$[$Y/2]" >> $NAME/dataset.info
+echo -n ";$[${!DIM_BASE}/$AXIS_IN_FACTOR]" >> $NAME/dataset.info
+echo -n ";$[${!DIM_BASE}/$AXIS_OUT_FACTOR]" >> $NAME/dataset.info
+echo -n ";$[${!DIM_BASE}/$ARM_FACTOR]" >> $NAME/dataset.info
+echo -n ";$MARKER_CHANNEL;$MARKER_THRESHOLD;$MARKER_SIZE;$ANGLE" >> $NAME/dataset.info
+echo "Done"

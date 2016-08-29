@@ -1,0 +1,11 @@
+#!/bin/bash
+awk '
+  BEGIN {FS=";"}
+  {
+    if ($0 !~ /^#/)
+    {
+      print "Extracting dataset "$1;
+      system("./extractDataset "$1" "$2" "$3" "$4)
+    }
+  }
+' datasets.list

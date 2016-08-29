@@ -1,0 +1,13 @@
+#1: Name
+#2: Frames per second [extracted]
+#3: Frames number [extracted]
+#4-7: Crop rectangle [ X;Y;x;y ]
+#8-9: Approximate axis coordinates [ X;Y ]
+#10: Maximum axis movement
+#11: Minimum distance of point to be considered outside of axis
+#12: Approximate distance of marker from axis
+#13: Marker predominant channel [ 0=Blue, 1=Green, 2=Red ]
+#14: Marker threshold [ channel value / greyscale value * 255 ]
+#15: Approximate marker size [ lower bound of number of pixels ]
+#16: Angle at which passes are counted
+#17...: Ignored areas

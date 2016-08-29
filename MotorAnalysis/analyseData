@@ -1,0 +1,107 @@
+#!/usr/bin/env python
+import numpy
+import matplotlib.pyplot as pyplot
+from scipy.stats import norm
+from scipy.stats import ttest_ind
+from scipy.stats.mstats import normaltest
+from scipy.stats import median_test
+import sys
+
+############
+# DATASETS #
+#   LIST   #
+############
+#  START   #
+############
+if len(sys.argv) > 1:
+  datasets = sys.argv[1:]
+else:
+  f = open("datasets.list", "r")
+  c = f.read()
+  f.close()
+  datasets = [
+    record.split(";")[0]
+    for record in c.split("\n")
+    if not record.startswith("#")
+  ]
+
+datasets = [d for d in datasets if d != ""]
+print("Datasets:")
+print("\n".join(datasets))
+############
+#   END    #
+############
+
+datasets_ = datasets
+datasets = []
+for dataset in datasets_:
+  f = open(dataset+"/annotated_keyframes.dat", "r")
+  data = f.read()
+  f.close()
+  
+  data = numpy.array([
+    numpy.array(d.strip().split(";"))
+      for d in data.split("\n") 
+      if not d.strip().startswith("#") and d.strip() != ''
+  ])
+  
+  datasets.append({
+    'name': dataset,
+    'data': data
+  })
+  
+  d = (60/data[1:,2].astype(float))
+  pyplot.figure(1)
+  pyplot.plot(data[1:,0], d, label=dataset)
+  d.sort()
+  pyplot.figure(2)
+  pyplot.plot(d, norm.pdf(d, d.mean(), d.std()), label=dataset)
+  
+  print(dataset)
+  print("Mean:",d.mean())
+  print("SD:",d.std())
+  print("p-value(Normal):", normaltest(d))
+  
+
+pyplot.figure(1)
+pyplot.legend()
+pyplot.figure(2)
+pyplot.legend()
+
+data = [60/x['data'][1:,2].astype(float) for x in datasets]
+
+data = data + [numpy.concatenate(data)]
+datasets_ = datasets_+["Total"]
+
+pyplot.figure(3)
+pyplot.boxplot(
+               data,
+               labels=datasets_,
+               showmeans=True
+              )
+
+pvalues = []
+for i in range(len(data)):
+  line = []
+  for j in range(len(data)):
+    line.append(median_test(data[i], data[j])[1])#ttest_ind(data[i], data[j], equal_var = False).pvalue)
+  line = numpy.array(line)
+  pvalues.append(line)
+pvalues = numpy.array(pvalues)
+colours = numpy.empty(pvalues.shape, dtype=str)
+colours[pvalues<0.05] = "blue"
+colours[pvalues>=0.05] = "red"
+text = numpy.vectorize(lambda x: "%1.3e"%x)(pvalues)
+t = pyplot.table(
+             cellText=text,
+             cellColours=colours,
+             rowLabels=datasets_,
+             colLabels=datasets_,
+             loc='top'
+            )
+t.auto_set_font_size(False)
+t.set_fontsize(10)
+t.scale(1, 1)
+pyplot.subplots_adjust(left=0.1, right=0.9, bottom=0.1, top=0.7)
+pyplot.show()
+

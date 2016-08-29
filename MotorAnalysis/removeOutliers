@@ -1,0 +1,83 @@
+#!/usr/bin/env python
+import numpy
+import scipy.stats
+import sys
+
+############
+# DATASETS #
+#   LIST   #
+############
+#  START   #
+############
+if len(sys.argv) > 1:
+  datasets = sys.argv[1:]
+else:
+  f = open("datasets.list", "r")
+  c = f.read()
+  f.close()
+  datasets = [
+    record.split(";")[0]
+    for record in c.split("\n")
+    if not record.startswith("#")
+  ]
+
+datasets = [d for d in datasets if d != ""]
+print("Datasets:")
+print("\n".join(datasets))
+############
+#   END    #
+############
+
+def getOutliers(data):
+  threshold = -scipy.stats.norm.ppf(1/(4*len(data)))
+  return abs(data-data.mean())>threshold*data.std()
+
+for dataset in datasets:
+  print("Starting analysis of dataset %s."%dataset)
+  f = open(dataset+"/annotated_keyframes.dat", "r")
+  data = f.read()
+  f.close()
+  
+  data = numpy.array([
+    numpy.array(d.strip().split(";"))
+      for d in data.split("\n")
+      if not d.strip().startswith("#") and d.strip() != ''
+  ])
+  
+  d = (60/data[1:,2].astype(float))
+
+  total = 0
+  outliers = getOutliers(d)
+  while any(outliers):
+    data_index = numpy.concatenate(([False], outliers))
+    num = sum(outliers)
+    total = total + num
+    print("{} outlier{} found:".format(
+      num,
+      "" if num == 1 else "s"
+    ))
+    print("\n".join(data[data_index,0]))
+    print("Removing outliers.")
+    data = data[~data_index,:]
+    d = d[~outliers]
+    print("Searching again.")
+    outliers = getOutliers(d)
+  print("{} outlier{} ha{} been removed".format(
+    total if total > 0 else "No",
+    "" if total == 1 else "s",
+    "s" if total == 1 else "ve"
+  ))
+  print("{} record{} remaining".format(
+    len(data) if len(data) > 0 else "No",
+    "" if len(data) == 1 else "s"
+  ))
+  
+  out = open(dataset+"/nooutliers_keyframes.dat", "w")
+  out.write("#Frame;Timestamp;Interval\n")
+  out.write("\n".join(
+    [
+      ";".join(d)
+      for d in data
+    ]
+  ))
+  out.close()

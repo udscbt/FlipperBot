@@ -1,0 +1,44 @@
+#!/bin/bash
+folders="errors keyframes"
+files="nooutliers_keyframes.dat annotated_keyframes.dat keyframes.dat"
+
+if [ $# -gt 0 ]
+then
+  lst=$@
+else
+  lst=`ls`
+fi
+
+for i in $lst
+do
+  if [ -e $i ]
+  then
+    if [ -d $i ]
+    then
+      for f in $folders
+      do
+        if [ -e "$i/$f" ]
+        then
+          echo "rm $i/$f/*"
+          rm $i/$f/*
+        else
+          echo "Ignoring $i/$f [not found]"
+        fi
+      done
+      for f in $files
+      do
+        if [ -e "$i/$f" ]
+        then
+          echo "rm $i/$f"
+          rm $i/$f
+        else
+          echo "Ignoring $i/$f [not found]"
+        fi
+      done
+    else
+      echo "Ignoring $i [not a directory]"
+    fi
+  else
+    echo "Ignoring $i [not found]"
+  fi
+done

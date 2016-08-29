@@ -1,0 +1,11 @@
+#!/bin/bash
+if [ $# -gt 0 ]
+then
+  for dataset in $@
+  do
+    echo "Converting $dataset"
+    ffmpeg -i $dataset/$dataset.mp4 $dataset/imgs/%d.jpg
+  done
+else
+  echo "No datasets"
+fi

@@ -1,0 +1,2 @@
+cleandataset:
+	./clean.sh 

@@ -1,0 +1,320 @@
+#!/usr/bin/env python
+import cv2
+import numpy
+import sys
+import os.path
+
+#############
+#   DEBUG   #
+# CONSTANTS #
+#    AND    #
+# UTILITIES #
+#############
+#   START   #
+#############
+DEBUG_FLAGS = [
+               'IMAGE', 'RED', 'BLOBS', 'KEYPOINTS',
+               'WAIT',
+               'KEYFRAME',
+               'NOWRITE',
+               'STDOUT', 'DATASETS', 'FRAMES', 'ERRORS', 'PASSES', 'RESULT',
+               'STOPAT'
+              ]
+
+DEBUG = {'NONE': 0}
+
+tmp = 1
+for flag in DEBUG_FLAGS:
+  DEBUG[flag] = tmp
+  tmp = tmp*2
+
+DEBUG['STDOUT_ALL'] = (DEBUG['STDOUT']|
+                      DEBUG['DATASETS']|DEBUG['FRAMES']|
+                      DEBUG['ERRORS']|DEBUG['PASSES']|
+                      DEBUG['RESULT'])
+DEBUG['ALL'] = 0
+for flag in DEBUG_FLAGS:
+  DEBUG['ALL'] = DEBUG['ALL'] | DEBUG[flag]
+
+DEBUG_DTIME  = 1
+DEBUG_DFRAME = 200
+DEBUG_START  = 0
+DEBUG_STOP   = 0
+
+
+DEBUG_LEVEL = DEBUG['NONE']
+
+def DEBUG_COMBINE(*flags):
+  return numpy.bitwise_or.reduce(numpy.array([DEBUG[flag] for flag in flags]))
+
+def DEBUG_ISSET(*flags):
+  combined = DEBUG_COMBINE(*flags)
+  return (DEBUG_LEVEL & combined) == combined
+
+def DEBUG_SET(*flags):
+  global DEBUG_LEVEL
+  DEBUG_LEVEL = DEBUG_LEVEL | DEBUG_COMBINE(*flags)
+
+def DEBUG_UNSET(*flags):
+  global DEBUG_LEVEL
+  DEBUG_LEVEL = DEBUG_LEVEL & ~DEBUG_COMBINE(*flags)
+#############
+#    END    #
+#############
+
+#~ DEBUG_SET('STDOUT', 'DATASETS', 'ERRORS', 'WAIT', 'IMAGE', 'KEYPOINTS', 'NOWRITE', 'PASSES')
+DEBUG_SET('STDOUT', 'DATASETS', 'FRAMES')
+DEBUG_START, DEBUG_STOP = (330, 350)
+DEBUG_DFRAME = 100
+
+
+############
+# DATASETS #
+#   LIST   #
+############
+#  START   #
+############
+if len(sys.argv) > 1:
+  datasets = sys.argv[1:]
+else:
+  f = open("datasets.list", "r")
+  c = f.read()
+  f.close()
+  datasets = [
+    record.split(";")[0]
+    for record in c.split("\n")
+    if not record.startswith("#")
+  ]
+
+datasets = [d for d in datasets if d != ""]
+if DEBUG_ISSET('STDOUT', 'DATASETS'):
+  print("Datasets:")
+  print("\n".join(datasets))
+############
+#   END    #
+############
+
+
+##############
+#  DATASETS  #
+# PARAMETERS #
+##############
+#   START    #
+##############
+dataset_fields = [
+  ('name', str),
+  ('fps', int),
+  ('nframes', int),
+  ('rectX', int),
+  ('rectY', int),
+  ('rectx', int),
+  ('recty', int),
+  ('axisX', int),
+  ('axisY', int),
+  ('axis_in', int),
+  ('axis_out', int),
+  ('arm_length', int),
+  ('marker_channel', int),
+  ('marker_threshold', int),
+  ('marker_size', int),
+  ('angle', int)
+]
+
+datasets_ = datasets
+datasets = []
+for d in datasets_:
+  f = open(os.path.join(d, "dataset.info"))
+  c = f.read()
+  f.close()
+  c = [
+    line
+    for line in c.split("\n")
+    if not (
+      line.startswith("#") or
+      line == ""
+    )
+  ][-1]
+  fields = c.split(";")
+  dataset = dict(
+    map(
+      lambda x: (x[0][0], x[0][1](x[1])),
+      zip(
+        dataset_fields,
+        fields[:len(dataset_fields)]
+      )
+    )
+  )
+  dataset['angle'] = numpy.deg2rad(dataset['angle'])
+  datasets.append(dataset)
+
+##############
+#    END     #
+##############
+
+##########
+# SCRIPT #
+##########
+for dataset in datasets:  
+  axis = numpy.array([
+    dataset['axisX']-dataset['rectX'],
+    dataset['axisY']-dataset['rectY']
+  ])
+  
+  if DEBUG_ISSET('STDOUT', 'DATASETS'):
+    print("")
+    print("##########################################")
+    print("Analysing dataset", dataset['name'])
+    print("")
+  old_angle = None
+  keyframes = []
+  combined = None
+  combined2 = None
+  for i in range(1,dataset['nframes']+1):
+    if DEBUG_ISSET('STDOUT', 'FRAMES'):
+      if not i%DEBUG_DFRAME:
+        print("...")
+        print("Frame:", i)
+    
+################################################################################
+    if DEBUG_ISSET('STOPAT'):
+      if i > DEBUG_START and i < DEBUG_STOP:
+        DEBUG_OLD = DEBUG_LEVEL
+        DEBUG_SET('WAIT', 'IMAGE', 'KEYPOINTS', 'STDOUT', 'PASSES', 'ERRORS')
+      if i == DEBUG_STOP:
+        DEBUG_LEVEL = DEBUG_OLD
+################################################################################
+    
+    img = cv2.imread(os.path.join(dataset['name'],"imgs",str(i)+".jpg"))
+    img = img[dataset['rectY']:dataset['recty'],dataset['rectX']:dataset['rectx']]
+    img = cv2.copyMakeBorder(img,10,10,10,10,cv2.BORDER_CONSTANT,value=[0,0,0])
+
+    gray = img[:,:,0].astype(int)+img[:,:,1]+img[:,:,2]
+    gray[gray==0] = 1
+    red_value = (img[:,:,dataset['marker_channel']]/gray)*255
+    red_value = red_value.astype(numpy.uint8)
+    ret, blobs = cv2.threshold(red_value,dataset['marker_threshold'],255,cv2.THRESH_BINARY_INV)
+    
+    params = cv2.SimpleBlobDetector_Params()
+    
+    params.filterByArea = True
+    params.minArea = dataset['marker_size']
+    params.filterByCircularity = False
+    params.filterByConvexity = False
+    params.filterByInertia = False
+    
+    detector = cv2.SimpleBlobDetector_create(params)
+
+    # Detect blobs.
+    keypoints = detector.detect(blobs)
+
+    im_with_keypoints = cv2.drawKeypoints(
+      blobs,
+      keypoints,
+      numpy.array([]),
+      (0,0,255),
+      cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
+    )
+    
+    if DEBUG_ISSET('IMAGE'):
+      cv2.imshow("", img)
+      cv2.waitKey(0 if DEBUG_ISSET('WAIT') else DEBUG_DTIME)
+    if DEBUG_ISSET('RED'):
+      cv2.imshow("", red_value)
+      cv2.waitKey(0 if DEBUG_ISSET('WAIT') else DEBUG_DTIME)
+    if DEBUG_ISSET('BLOBS'):
+      cv2.imshow("", blobs)
+      cv2.waitKey(0 if DEBUG_ISSET('WAIT') else DEBUG_DTIME)
+    if DEBUG_ISSET('KEYPOINTS'):
+      cv2.imshow("", im_with_keypoints)
+      cv2.waitKey(0 if DEBUG_ISSET('WAIT') else DEBUG_DTIME)
+    
+    #~ # Cable correction:
+    #~ if cable is not None and len(keypoints) == 3:
+      #~ tmp = keypoints
+      #~ keypoints = []
+      #~ for keypoint in tmp:
+        #~ pnt = numpy.array([keypoint.pt[0]+rect[2], keypoint.pt[1]+rect[0]])
+        #~ if not numpy.all(numpy.array([pnt, -pnt])>cable):
+          #~ keypoints.append(keypoint)
+    
+    if len(keypoints) < 2:
+      old_angle = None
+      if DEBUG_ISSET('STDOUT', 'ERRORS'):
+        print("===")
+        print("Wrong keypoints number:", len(keypoints))
+        print("Frame:", i)
+      if not DEBUG_ISSET('NOWRITE'):
+        cv2.imwrite(dataset['name']+"/errors/"+str(i)+".jpg", im_with_keypoints)
+      continue
+    
+    keypoints = numpy.array([numpy.array([k.pt[0], k.pt[1]]) for k in keypoints])
+    # Find axis
+    errors = numpy.linalg.norm(keypoints-axis, axis=1)
+    if not numpy.any(errors<dataset['axis_in']):
+      old_angle = None
+      if DEBUG_ISSET('STDOUT', 'ERRORS'):
+        print("===")
+        print("Can't find axis")
+        print("Axis:", axis)
+        print("Points:", "\n\t".join([str((k[0], k[1])) for k in keypoints]))
+        print("Frame:", i)
+      if not DEBUG_ISSET('NOWRITE'):
+        cv2.imwrite(dataset['name']+"/errors/"+str(i)+".jpg", im_with_keypoints)
+      continue
+    axis = keypoints[errors == errors.min()][0]
+    
+    # Find point
+    if not numpy.any(errors>dataset['axis_out']):
+      old_angle = None
+      if DEBUG_ISSET('STDOUT', 'ERRORS'):
+        print("===")
+        print("Only axis visible")
+        print("Axis:", axis)
+        print("Points:\n\t", "\n\t".join([str(k) for k in keypoints]))
+        print("Frame:", i)
+      if not DEBUG_ISSET('NOWRITE'):
+        cv2.imwrite(dataset['name']+"/errors/"+str(i)+".jpg", im_with_keypoints)
+      continue
+    errors = abs(errors-dataset['arm_length'])
+    point = keypoints[errors == errors.min()][0]
+    
+    angle = numpy.arctan2((axis[1]-point[1]),(axis[0]-point[0]))-dataset['angle']
+    if angle > numpy.pi:
+      print("A", angle)
+      angle = angle - 2*numpy.pi
+    elif angle < -numpy.pi:
+      angle = angle + 2*numpy.pi
+    if old_angle is not None:
+      if angle*old_angle < 0:
+        omega = (angle-old_angle)*dataset['fps']
+        dt = angle/omega
+        t = i/dataset['fps']-dt
+        keyframes.append([i, t])
+        if combined is None:
+          combined = img
+          combined2 = red_value
+        else:
+          alpha = 1.0/len(keyframes)
+          combined = cv2.addWeighted(img, alpha, combined, 1-alpha, 0)
+          combined2 = cv2.addWeighted(blobs, alpha, combined2, 1-alpha, 0)
+        if DEBUG_ISSET('STDOUT', 'PASSES'):
+          print("***")
+          print("Passed")
+          print("Frame:", i)
+        if not DEBUG_ISSET('NOWRITE'):
+          cv2.imwrite(dataset['name']+"/keyframes/"+str(i)+".jpg", im_with_keypoints)
+        if DEBUG_ISSET('KEYFRAME'):
+          cv2.waitKey(0)
+    old_angle = angle
+  
+  if DEBUG_ISSET('STDOUT', 'RESULT'):
+    print("Frames:", keyframes)
+    print("RPM:", len(keyframes)*dataset['fps']/dataset['nframes'])
+  if not DEBUG_ISSET('NOWRITE'):
+    out = open(dataset['name']+"/keyframes.dat", "w")
+    for frame in keyframes:
+      out.write(";".join([str(i) for i in frame])+"\n")
+    out.close()
+    if combined is not None:
+      cv2.imwrite(dataset['name']+"/keyframes/combined.jpg", combined)
+      cv2.imwrite(dataset['name']+"/keyframes/combined2.jpg", combined2)
