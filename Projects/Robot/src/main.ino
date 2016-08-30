@@ -290,6 +290,7 @@ typedef enum
           fbcp::string s = fbcp::writeCommand(@VAR(cmd));
           Serial.print(F("Sent: "));
           Serial.println(s.c_str());
+          sockOut.flush();
           sockOut.print(s.c_str());
           
           @CALL(read_command;&sockOut;&@VAR(cmd);fbcp::HARD_TIMEOUT):understood;
@@ -415,6 +416,7 @@ typedef enum
       {
         Serial.print("Sent: ");
         Serial.println(kalCmd.c_str());
+        sockOut.flush();
         sockOut.print(kalCmd.c_str());
         @CALL(read_command;&sockOut;&@VAR(cmd);fbcp::SOFT_TIMEOUT):understood;
         if (understood == READ_SUCCESS)
