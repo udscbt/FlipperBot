@@ -599,7 +599,7 @@ def addNode(t, graph):
       unlock = True
   graph = graph + node_format(
     id=t.id,
-    x=2*(t.position+1),
+    x=2*(t.position+(1 if vertical else 0.5)),
     y=t.level,
     node=t,
     mutex="{}{}{}".format(
