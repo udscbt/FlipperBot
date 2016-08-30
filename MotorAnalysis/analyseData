@@ -32,6 +32,8 @@ print("\n".join(datasets))
 #   END    #
 ############
 
+nSamples = None
+
 datasets_ = datasets
 datasets = []
 for dataset in datasets_:
@@ -50,9 +52,9 @@ for dataset in datasets_:
     'data': data
   })
   
-  d = (60/data[1:,2].astype(float))
+  d = (60/data[1:nSamples,2].astype(float))
   pyplot.figure(1)
-  pyplot.plot(data[1:,0], d, label=dataset)
+  pyplot.plot(data[1:nSamples,1], d, label=dataset)
   d.sort()
   pyplot.figure(2)
   pyplot.plot(d, norm.pdf(d, d.mean(), d.std()), label=dataset)
@@ -68,7 +70,7 @@ pyplot.legend()
 pyplot.figure(2)
 pyplot.legend()
 
-data = [60/x['data'][1:,2].astype(float) for x in datasets]
+data = [60/x['data'][1:nSamples,2].astype(float) for x in datasets]
 
 data = data + [numpy.concatenate(data)]
 datasets_ = datasets_+["Total"]
