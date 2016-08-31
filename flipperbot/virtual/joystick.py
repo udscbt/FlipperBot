@@ -271,6 +271,7 @@ class Joystick (tk.Canvas):
       self.socket.send(cmd.write().encode('utf-8'))
       if self.ka_after is not None:
         self.after_cancel(self.ka_after)
+      self.ka_after = self.after(int(fbcp.HARD_TIMEOUT/2), self.keepAlive)
   
   def sendDirection(self):
     if self.connected:
@@ -299,6 +300,7 @@ class Joystick (tk.Canvas):
       self.socket.send(cmd.write().encode('utf-8'))
       if self.ka_after is not None:
         self.after_cancel(self.ka_after)
+      self.ka_after = self.after(int(fbcp.HARD_TIMEOUT/2), self.keepAlive)
   
   def connect(self):    
     try:
@@ -325,6 +327,9 @@ class Joystick (tk.Canvas):
   
   def disconnect(self):
     self.connected = False
+    cmd = fbcp.CommandLine()
+    cmd.command = fbcp.Command.Q_CLEAN
+    self.socket.send(cmd.write().encode('utf-8'))
     self.socket.close()
 
   def keepAlive(self):
@@ -455,15 +460,19 @@ class JoystickContainer (tk.Frame):
   def connect(self, e=None):
     self.btnConnect.unbind('<Button>')
     self.btnConnect['text'] = "Connecting"
+    self.btnConnect.update_idletasks()
     if self.joystick.connect():
       self.btnConnect['text'] = 'Disconnect'
+      self.btnConnect.update_idletasks()
       self.btnConnect.bind('<Button>', self.disconnect)
     else:
       self.btnConnect['text'] = "Failed: Retry"
+      self.btnConnect.update_idletasks()
       self.btnConnect.bind('<Button>', self.connect)
   
   def disconnect(self, e=None):
     self.btnConnect.unbind('<Button>')
     self.btnConnect['text'] = "Connect"
+    self.btnConnect.update_idletasks()
     self.joystick.disconnect()
     self.btnConnect.bind('<Button>', self.connect)
