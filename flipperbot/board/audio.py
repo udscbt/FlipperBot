@@ -74,8 +74,8 @@ class Audio:
     self.debug("Playing song '{}'".format(song))
     self.log = open(join(audio_root, "logs", "audio", "{:d}.log".format(int(time()))), "w")
 #    self.proc = Popen([self.PLAYER, *self.PL_OPTIONS, song], stdout=self.log, stderr=self.log)
-    #~ self.proc = Popen([self.PLAYER] + self.PL_OPTIONS + [song], stdout=self.log, stderr=self.log)
-    self.proc = False
+    self.proc = Popen([self.PLAYER] + self.PL_OPTIONS + [song], stdout=self.log, stderr=self.log)
+    #~ self.proc = None
     self._started = True
     self._stopped = False
 
@@ -134,8 +134,8 @@ class SoundEffect:
     self.stop()
     self.debug("Playing sound effect '{}'".format(self.sound))
 #    self.proc = Popen([self.PLAYER, *self.PL_OPTIONS, self.sound])
-    #~ self.proc = Popen([self.PLAYER] + self.PL_OPTIONS + [self.sound], stdout=DEVNULL, stderr=DEVNULL)
-    self.proc = None
+    self.proc = Popen([self.PLAYER] + self.PL_OPTIONS + [self.sound], stdout=DEVNULL, stderr=DEVNULL)
+    #~ self.proc = None
     self._started = True
     self._stopped = False
   
