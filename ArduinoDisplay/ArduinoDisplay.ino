@@ -15,13 +15,16 @@
 
 unsigned long interDigitDelay = 1000ULL;
 unsigned long interCharacterDelay = 500;
+unsigned long interBlinkDelay = 0;
 const unsigned int max_length = 20;
 
 String text[max_length]; 
 int text_length = 0;
 int index = 0;
 
-unsigned long int t;
+unsigned long int tScroll;
+unsigned long int tBlink;
+bool shown = true;
 
 int pins(char c)
 {
@@ -294,12 +297,17 @@ void setText(String t[], int len)
 
 void setRefreshRate(unsigned long freq)
 {
-  interDigitDelay = 250000/freq;
+  interDigitDelay = freq?250000/freq:0;
 }
 
 void setScrollSpeed(unsigned long speed)
 {
-  interCharacterDelay = 1000/speed;
+  interCharacterDelay = speed?1000/speed:0;
+}
+
+void setBlinkFreq(unsigned long freq)
+{
+  interBlinkDelay = freq?1000/freq:0;
 }
 
 void setup()
@@ -324,8 +332,9 @@ int base;
 
 bool option = false;
 int optIndex;
-const int optNum = 2;
-unsigned long optVal[optNum];
+const int optNum = 3;
+long optVal[optNum];
+const long NOT_SET = -1;
 
 void loop()
 {
@@ -344,7 +353,7 @@ void loop()
         optIndex = 0;
         for (int j = 0; j < optNum; j++)
         {
-          optVal[j] = 0;
+          optVal[j] = NOT_SET;
         }
         base = 10;
       }
@@ -358,20 +367,29 @@ void loop()
         else if (c == ')')
         {
           option = false;
-          if (optVal[0]) setRefreshRate(optVal[0]);
-          if (optVal[1]) setScrollSpeed(optVal[1]);
+          if (optVal[0] != NOT_SET) setRefreshRate(optVal[0]);
+          if (optVal[1] != NOT_SET) setScrollSpeed(optVal[1]);
+          if (optVal[2] != NOT_SET) setScrollSpeed(optVal[2]);
         }
-        else if (!optVal[optIndex] && c == 'b')
+        else if (optVal[optIndex]==NOT_SET && c == 'b')
         {
           base = 2;
+          optVal[optIndex] = 0;
         }
-        else if (!optVal[optIndex] && c == 'b')
+        else if (optVal[optIndex]==NOT_SET && c == 'o')
         {
           base = 8;
+          optVal[optIndex] = 0;
         }
-        else if (!optVal[optIndex] && c == 'b')
+        else if (optVal[optIndex]==NOT_SET && c == 'd')
+        {
+          base = 10;
+          optVal[optIndex] = 0;
+        }
+        else if (optVal[optIndex]==NOT_SET && c == 'x')
         {
           base = 16;
+          optVal[optIndex] = 0;
         }
         else if (optIndex < optNum)
         {
@@ -380,6 +398,7 @@ void loop()
           else if (c >= 'A' && c <= 'F') val = c-'A'+11;
           else if (c >= 'a' && c <= 'f') val = c-'A'+11;
           else continue;
+          if (optVal[optIndex] == NOT_SET) optVal[optIndex] = 0;
           optVal[optIndex] *= base;
           optVal[optIndex] += val;
         }
@@ -409,12 +428,25 @@ void loop()
     }
     DEBUG_NEWLINE
   }
-  
-  showString(text, text_length, index, text_length > 4);
-  if (text_length > 4 && millis() - t > interCharacterDelay)
+
+  if (shown && interDigitDelay)
+  {
+    showString(text, text_length, index, text_length > 4);
+  }
+  else
+  {
+    clearDigits();
+  }
+  // Scroll
+  if (interCharacterDelay && text_length > 4 && millis() - tScroll > interCharacterDelay)
   {
     ++index;
     if (index >= text_length) index = 0;
-    t = millis();
+    tScroll = millis();
+  }
+  // Blink
+  if (interBlinkDelay && millis() - tBlink > interBlinkDelay)
+  {
+    shown = !shown;
   }
 }
