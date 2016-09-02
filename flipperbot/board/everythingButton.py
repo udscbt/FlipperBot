@@ -79,17 +79,20 @@ class RemoteEverythingButton:
       name="RemoteEverythingButton"
     )
     self._lastPress = None
+    self.pressed = False
   
   def press(self):
     self.debug("Button pressed")
     self.rising = True
     self.falling = False
+    self.pressed = True
     self._managePress()
   
   def release(self):
     self.debug("Button released")
     self.rising = False
     self.falling = True
+    self.pressed = False
     self._managePress()
   
   def _managePress(self):

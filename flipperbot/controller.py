@@ -20,6 +20,7 @@ class Controller:
   
   direction = SharedVariable(Direction.STOP)
   active    = SharedVariable(False)
+  eb        = SharedVariable(False)
   
   def __init__(self):
     pass

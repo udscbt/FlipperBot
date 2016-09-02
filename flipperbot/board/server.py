@@ -242,8 +242,10 @@ class ClientThread (ThreadEx):
         self.server.game.controllers[self.index].direction = Controller.Direction.STOP
     elif self.cmdIn.command == fbcp.Command.Q_EVERYTHING_ON:
       self.EButton.press()
+      self.server.game.controllers[self.index].eb = True
     elif self.cmdIn.command == fbcp.Command.Q_EVERYTHING_OFF:
       self.EButton.release()
+      self.server.game.controllers[self.index].eb = False
   
 class RobotThread (ThreadEx):
   def __init__(self, server, sock, index, name):

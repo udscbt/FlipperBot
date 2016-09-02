@@ -75,7 +75,11 @@ class Monitor:
           Controller.Direction.getName(
             self.game.controllers[i].direction
           ).replace("_", " "))
-        d['j{}_eb'.format(i)] = 'N/A'
+        d['j{}_eb'.format(i)] = (
+          self.config['pressed']
+          if self.game.controllers[i].eb
+          else self.config['released']
+        )
       else:
         d['j{}_connected'.format(i)] = self.config['disconnected']
         d['j{}_direction'.format(i)] = self.config['none']
