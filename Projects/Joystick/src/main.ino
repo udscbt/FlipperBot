@@ -379,6 +379,7 @@ typedef enum
   }
   @WHILE
   {
+    pressed = digitalRead(btnPin);
     @VAR(last) = millis();
     @VAR(t) = 0;
     @WHILE ((mode == MODE_GAME || mode == MODE_STANDALONE) && sockOut.connected())
