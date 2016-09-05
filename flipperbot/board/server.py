@@ -66,14 +66,8 @@ class ClientThread (ThreadEx):
       else:
         buf = ""
         while not self._stopped:
-          self.sockIn.settimeout(fbcp.HARD_TIMEOUT)
-          try:
-            c = self.sockIn.recv(1).decode("UTF-8")
-          except socket.timeout:
-            self.debug("Disconnected")
-            self.remove()
-            self.stop()
-            return
+          self.sockIn.settimeout(fbcp.HARD_TIMEOUT/1000)
+          c = self.sockIn.recv(1).decode("UTF-8")            
           buf = buf + c
           if c == '\n':
             break
@@ -100,8 +94,12 @@ class ClientThread (ThreadEx):
           self.manageRobot(buf)
         else:
           self.manageController(buf)
-    except socket.timeout:
+    except:
+      self.debug("Disconnected")
+      self.remove()
+      self.stop()
       return
+      
   
   def manageConnection(self):
     buf = self.sockIn.recv(256).decode("UTF-8")

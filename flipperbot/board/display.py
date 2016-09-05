@@ -252,14 +252,18 @@ class DisplayEx (Display):
     self._raw_digits = {}
     super(Display, self).__init__(name="display")
     self.debug("Initialized")
+    self.ready = False
   
   def _raw(self, digits, on):    
     raise NotImplementedError()
   
   def _show(self, digit, value, dot=False):
     NotImplementedError
-  
+
+  @ThreadEx.running
   def _set_text(self, text, dots=None):
+    while not self.ready:
+      pass
     if dots is None:
       dots = [False]*len(text)
     self.text = text
@@ -305,10 +309,19 @@ class DisplayEx (Display):
       else:
         sleep(1.0/self.updateF)
   
+  def run(self):
+    self.setup()
+  
+  def stop(self):
+    self.cleanup()
+    super(Display, self).stop()
+    self._actually_stopped = True
+  
   def setup(self):
     # ssty -F <device> <baud> -hup
     self.serial = Serial(self.PORT, self.BAUDRATE)
     self.setOptions(self.updateF, self.scrollF)
+    self.ready = True
   
   def cleanup(self):
     self.show("")
