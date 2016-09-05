@@ -21,6 +21,15 @@ termColors = {
 def stderr(*args, **kwargs):
   print(*args, file=sys.stderr, **kwargs)
 
+def schemoError(*args, **kwargs):
+  stderr(termColors['RED']+termColors['BOLD']+"[Error]:", *args, termColors['END'], **kwargs)
+
+def schemoWarning(*args, **kwargs):
+  stderr(termColors['YELLOW']+termColors['BOLD']+"[Warning]:", *args, termColors['END'], **kwargs)
+
+def schemoInfo(*args, **kwargs):
+  stderr(termColors['BLUE']+termColors['BOLD']+"[Info]:", *args, termColors['END'], **kwargs)
+
 CMD_PREFIX_D  = '@SCHEMO_'
 CMD_PREFIX_O  = 'SCHEMO_'
 CMD_PREFIX_P  = 'SCHEMO_P_'
@@ -260,11 +269,11 @@ def parseJob(buf, start, job):
   subbuf = buf[start:]
   # Code block
   if not checkBlockStart(subbuf):
-    stderr("Job '%s' has no attached block of code" % job)
+    schemoError("Job '%s' has no attached block of code" % job)
     exit(1)
   ret = getBlock(subbuf)
   if ret is None:
-    stderr("Missing '}' in job '%s'" % job)
+    schemoError("Missing '}' in job '%s'" % job)
     sys.exit(1)
   s, e = ret
   block = subbuf[s:e]  
@@ -274,12 +283,11 @@ def parseJob(buf, start, job):
     if match is None:
       break
     if not checkBlockStart(block[match.end():]):
-      stderr("Missing memory block in job '%s'" % job)
-      stderr("Continuing...")
+      schemoWarning("Missing memory block in job '%s'\nContinuing..." % job)
       continue
     ret = getBlock(block[match.end():])
     if ret is None:
-      stderr("Missing '}' in memory block of job '%s'" % job)
+      schemoError("Missing '}' in memory block of job '%s'" % job)
       sys.exit(1)
     ss, ee = ret
     ss = ss+match.end()
@@ -290,12 +298,13 @@ def parseJob(buf, start, job):
       m = FVAR_PATTERN.search(memblock)
       if m is None:
         break
-      var = m.group(1)
-      t = m.group(2)
+      var = m.group(1).strip()
+      t = m.group(2).strip()
       if var in JOBS[job]['mem']:
-        stderr("Multiple definitions of variable '%s' in memory block of job %s" % (var, job))
+        schemoError("Multiple definitions of variable '%s' in memory block of job %s" % (var, job))
         sys.exit(1)
-      JOBS[job]['mem'][m.group(1)] = m.group(2)
+      JOBS[job]['mem'][var] = t
+      JOBS[job]['used'][var] = False
       memblock = replace(memblock, m.start(), m.end(), "")
     block = replace(block, match.start(), ee+1, "")
   # Delay
@@ -307,16 +316,31 @@ def parseJob(buf, start, job):
     
     match = JDELAY_PATTERN.search(block)
     if match is not None:
-      stderr("Multiple definitions of %s in job '%s'" % (JDELAY,job))
-      stderr("Ignoring all after %d..." % JOBS[job]['delay'])
+      schemoWarning(
+        "Multiple definitions of %s in job '%s'\n" % (JDELAY,job) +
+        "Ignoring all after %d..." % JOBS[job]['delay']
+      )
   block = JDELAY_PATTERN.sub("", block)
   
   blockstart = s
   blockend = e
 
   block = parseBlock(block)
-  
-  block = JVAR_PATTERN.sub(JVAR_O + "(\\1, %s)" % job, block)
+
+  while True:
+    match = JVAR_PATTERN.search(block)
+    if match is None:
+      break
+    var = match.group(1).strip()
+    if var not in JOBS[job]['mem'].keys():
+      schemoError("Variable %s of job %s not defined." % (var, job))
+      exit(0)
+    JOBS[job]['used'][var] = True
+    block = replace(block, match.start(), match.end(), JVAR_O + "(%s, %s)" % (var, job))
+
+  for var, used in JOBS[job]['used'].items():
+    if not used:
+      schemoWarning("Variable %s of job %s is declared but never used" % (var, job))
 
   return replace(buf, start+blockstart, start+blockend, block)
 
@@ -340,7 +364,7 @@ def parseBlock(block, bw=None, fw=None):
     if checkBlockStart(block[match.end():], "\("):
       ret = getBlock(block[match.end():], "(", ")")
       if ret is None:
-        stderr("Missing ) in %s statement" % WHILE)
+        schemoError("Missing ) in %s statement" % WHILE)
         sys.exit(1)
       s, e = ret
       s = match.end()+s
@@ -349,17 +373,19 @@ def parseBlock(block, bw=None, fw=None):
       e = e+1
     else:
       condition = "(true)"
-      stderr("Missing condition in %s statement" % WHILE)
-      stderr("Assuming '%s'" % condition)
-      stderr("Continuing...")
+      schemoWarning(
+        "Missing condition in %s statement\n" % WHILE +
+        "Assuming '%s'\n" % condition +
+        "Continuing..."
+      )
       s = match.start()
       e = match.end()
     if not checkBlockStart(block[e:]):
-      stderr("%s statement without attached block of code exists" % WHILE)
+      schemoError("%s statement without attached block of code exists" % WHILE)
       sys.exit(1)
     ret = getBlock(block[e:])
     if ret is None:
-      stderr("Missing } in %s statement" % WHILE)
+      schemoError("Missing } in %s statement" % WHILE)
       sys.exit(1)
     task_bk = TASK_NAME()
     UNNAMED_TASKS = UNNAMED_TASKS + 1
@@ -385,7 +411,7 @@ def parseBlock(block, bw=None, fw=None):
   match = re.match(CONT, block)
   if match is not None:
     if bw is None or fw is None:
-      stderr("%s statement must only be used inside %s statements" % (CONT, WHILE))
+      schemoError("%s statement must only be used inside %s statements" % (CONT, WHILE))
       sys.exit(1)
     
     newindex = match.end()
@@ -398,7 +424,7 @@ def parseBlock(block, bw=None, fw=None):
   match = re.match(BREAK, block)
   if match is not None:
     if bw is None or fw is None:
-      stderr("%s statement must only be used inside %s statements" % (BREAK, WHILE))
+      schemoError("%s statement must only be used inside %s statements" % (BREAK, WHILE))
       sys.exit(1)
     
     newindex = match.end()
@@ -413,7 +439,7 @@ def parseBlock(block, bw=None, fw=None):
     if checkBlockStart(block[match.end():], "\("):
       ret = getBlock(block[match.end():], "(", ")")
       if ret is None:
-        stderr("Missing ) in IF statement")
+        schemoError("Missing ) in IF statement")
         sys.exit(1)
       s, e = ret
       s = match.end()+s
@@ -422,17 +448,19 @@ def parseBlock(block, bw=None, fw=None):
       e = e+1
     else:
       condition = "(true)"
-      stderr("Missing condition in %s statement" % IF)
-      stderr("Assuming '%s'" % condition)
-      stderr("Continuing...")
+      schemoWarning(
+        "Missing condition in %s statement\n" % IF +
+        "Assuming '%s'\n" % condition +
+        "Continuing..."
+      )
       s = match.start()
       e = match.end()
     if not checkBlockStart(block[e:]):
-      stderr("%s statement without attached block of code exists" % IF)
+      schemoError("%s statement without attached block of code exists" % IF)
       sys.exit(1)
     ret = getBlock(block[e:])
     if ret is None:
-      stderr("Missing } in %s statement" % IF)
+      schemoError("Missing } in %s statement" % IF)
       sys.exit(1)
     task_after = TASK_NAME()
     UNNAMED_TASKS = UNNAMED_TASKS + 1
@@ -460,11 +488,11 @@ def parseBlock(block, bw=None, fw=None):
       blnElse = True
       e = match2.end()+newindex
       if not checkBlockStart(block[e:]):
-        stderr("%s statement without attached block of code exists" % ELSE)
+        schemoError("%s statement without attached block of code exists" % ELSE)
         sys.exit(1)
       ret = getBlock(block[e:])
       if ret is None:
-        stderr("Missing } in %s statement" % ELSE)
+        schemoError("Missing } in %s statement" % ELSE)
         sys.exit(1)
       task_else = TASK_NAME()
       UNNAMED_TASKS = UNNAMED_TASKS + 1
@@ -510,14 +538,16 @@ def parseBlock(block, bw=None, fw=None):
     params = re.sub(IGNORE_PATTERN, "", params).split(";")
     fun = params[0]
     if fun not in FUNCTIONS.keys():
-      stderr("Called function '%s' is undefined" % fun)
+      schemoError("Called function '%s' is undefined" % fun)
       sys.exit(1)
     params = params[1:]
     rightn = len(FUNCTIONS[fun]['params'])
     gotn   = len(params)
     if gotn != rightn:
-      stderr("Wrong number of parameters for function '%s'" % fun)
-      stderr("Expected %d, got %d" % (rightn, gotn))
+      schemoError(
+        "Wrong number of parameters for function '%s'\n" % fun +
+        "Expected %d, got %d" % (rightn, gotn)
+      )
       sys.exit(1)
     newtask = TASK_NAME()
     UNNAMED_TASKS = UNNAMED_TASKS + 1
@@ -567,8 +597,10 @@ def parseBlock(block, bw=None, fw=None):
     mutex = match.group(1)
     task = TASK_NAME()
     if not checkBlockStart(block[match.end():]):
-      stderr("Void critical section exists")
-      stderr("Ignoring...")
+      schemoWarning(
+        "Void critical section exists\n"+
+        "Ignoring..."
+      )
       block = replace(block, match.start(), match.end(), "")
       return block
     if mutex not in MUTEXES:
@@ -577,7 +609,7 @@ def parseBlock(block, bw=None, fw=None):
     UNNAMED_TASKS = UNNAMED_TASKS + 1
     ret = getBlock(block[match.end():])
     if ret is None:
-      stderr("Missing '}' in critical section")
+      schemoError("Missing '}' in critical section")
       sys.exit(1)
     s, e = ret
     s = s+match.end()
@@ -629,38 +661,43 @@ def popAll(fun):
 def parseFunction(buf, start, fun):
   global UNNAMED_TASKS
   
-  FUNCTIONS[fun] = {'params': OrderedDict({}), 'mem': {}}
+  FUNCTIONS[fun] = {'params': OrderedDict({}), 'mem': {}, 'usedvars': {}, 'usedparams': {}}
   subbuf = buf[start:]
   while True:
     match = PARAM_PATTERN.match(subbuf)
     if match is None:
       break
-    param = match.group(2)
-    t = match.group(3)
+    param = match.group(2).strip()
+    t = match.group(3).strip()
     if param in FUNCTIONS[fun]['params']:
-      stderr("Multiple definitions of parameter '%s' in function '%s'" % (param,fun))
-      stderr("Ignoring all after %s..." % FUNCTIONS[fun]['params'][param])
+      schemoWarning(
+        "Multiple definitions of parameter '%s' in function '%s'\n" % (param,fun) +
+        "Ignoring all after %s..." % FUNCTIONS[fun]['params'][param]
+      )
     else:
       FUNCTIONS[fun]['params'][param] = t
+      FUNCTIONS[fun]['usedparams'][param] = False
     subbuf = replace(subbuf, match.regs[1][0], match.regs[1][1], "")
   match = RETURN_PATTERN.match(subbuf)
   if match is None:
     #FUNCTIONS[fun]['return'] = 'void'
-    stderr("Undefined return type for function '%s'" % fun)
+    schemoError("Undefined return type for function '%s'" % fun)
     sys.exit(1)
   else:
     FUNCTIONS[fun]['return'] = match.group(2)
     subbuf = replace(subbuf, match.regs[1][0], match.regs[1][1], "")
   if RETURN_PATTERN.match(subbuf) is not None:
-    stderr("Multiple definitions of return value in function '%s'" % fun)
-    stderr("Ignoring all after %s..." % FUNCTIONS[fun]['return'])
+    schemoWarning(
+      "Multiple definitions of return value in function '%s'\n" % fun +
+      "Ignoring all after %s..." % FUNCTIONS[fun]['return']
+    )
     RETURN_PATTERN.sub("", subbuf)
   if not checkBlockStart(subbuf):
-    stderr("Function '%s' has no attached block of code" % fun)
+    schemoError("Function '%s' has no attached block of code" % fun)
     exit(1)
   ret = getBlock(subbuf)
   if ret is None:
-    stderr("Missing '}' in function '%s'" % fun)
+    schemoError("Missing '}' in function '%s'" % fun)
     sys.exit(1)
   s, e = ret
   block = subbuf[s:e]
@@ -671,12 +708,14 @@ def parseFunction(buf, start, fun):
     if match is None:
       break
     if not checkBlockStart(block[match.end():]):
-      stderr("Missing memory block in function '%s'" % fun)
-      stderr("Continuing...")
+      schemoWarning(
+        "Missing memory block in function '%s'\n" % fun +
+        "Continuing..."
+      )
       continue
     ret = getBlock(block[match.end():])
     if ret is None:
-      stderr("Missing '}' in memory block of fun '%s'" % fun)
+      schemoError("Missing '}' in memory block of fun '%s'" % fun)
       sys.exit(1)
     ss, ee = ret
     ss = ss+match.end()
@@ -687,16 +726,15 @@ def parseFunction(buf, start, fun):
       m = FVAR_PATTERN.search(memblock)
       if m is None:
         break
-      var = m.group(1)
-      t = m.group(2)
+      var = m.group(1).strip()
+      t = m.group(2).strip()
       if var in FUNCTIONS[fun]['mem']:
-        stderr("Multiple definitions of variable '%s' in memory block of function %s" % (var, fun))
+        schemoError("Multiple definitions of variable '%s' in memory block of function %s" % (var, fun))
         sys.exit(1)
-      FUNCTIONS[fun]['mem'][m.group(1)] = m.group(2)
-      meminit = ""
-      for var, t in FUNCTIONS[fun]['mem'].items():
-        meminit = meminit + INTFVAR_O+"(%s, %s, %s)\n" % (var, fun, t)
-      memblock = replace(memblock, m.start(), m.end(), meminit)
+      FUNCTIONS[fun]['mem'][var] = t
+      FUNCTIONS[fun]['usedvars'][var] = False
+      meminit = meminit + INTFVAR_O+"(%s, %s, %s)\n" % (var, fun, t)
+      memblock = replace(memblock, m.start(), m.end(), "")
     block = replace(block, match.start(), ee+1, meminit)
   
   GBstr = GETBACK_O+"(\\1, %s)\n" % fun + popAll(fun) + RET_O
@@ -712,9 +750,36 @@ def parseFunction(buf, start, fun):
   block = subbuf[s:e]
 
   block = parseBlock(block)
-  
-  block = JVAR_PATTERN.sub(FVAR_O + "(\\1, %s)" % fun, block)
-  block = PARAM_PATTERN2.sub(PAR_O + "(\\1, %s)" % fun, block)
+
+  while True:
+    match = JVAR_PATTERN.search(block)
+    if match is None:
+      break
+    var = match.group(1).strip()
+    if var not in FUNCTIONS[fun]['mem'].keys():
+      schemoError("Variable %s of function %s not defined." % (var, fun))
+      exit(0)
+    FUNCTIONS[fun]['usedvars'][var] = True
+    block = replace(block, match.start(), match.end(), FVAR_O + "(%s, %s)" % (var, fun))
+
+  for var, used in FUNCTIONS[fun]['usedvars'].items():
+    if not used:
+      schemoWarning("Variable %s of function %s is declared but never used" % (var, fun))
+
+  while True:
+    match = PARAM_PATTERN2.search(block)
+    if match is None:
+      break
+    param = match.group(1).strip()
+    if param not in FUNCTIONS[fun]['params'].keys():
+      schemoError("Parameter %s of function %s not defined." % (param, fun))
+      exit(0)
+    FUNCTIONS[fun]['usedparams'][param] = True
+    block = replace(block, match.start(), match.end(), PAR_O + "(%s, %s)" % (param, fun))
+
+  for param, used in FUNCTIONS[fun]['usedparams'].items():
+    if not used:
+      schemoWarning("Parameter %s of function %s is declared but never used" % (param, fun))
   
   subbuf = replace(subbuf, blockstart, blockend, block)
   
@@ -771,7 +836,7 @@ for path in args.files:
       break
     task  = match.group(1).replace(" ", "")
     if task in TASKS:
-      stderr("Error: multiple uses of task name '%s'" % task)
+      schemoError("Error: multiple uses of task name '%s'" % task)
       sys.exit(1)
     TASKS.append(task)
     lastmatch = match.end()
@@ -787,16 +852,7 @@ for path in args.files:
     ms = lastfun + match.start()
     me = lastfun + match.end()
     if fun in TASKS:
-      stderr("Error: multiple uses of task name '%s' (note: %ss are tasks)" % (fun, FUN))
-      stderr(
-        buf[min(0, ms-100):ms]+
-        termColors['RED']+
-        termColors['BOLD']+
-          buf[ms:me]+
-        termColors['END']+
-        buf[me:max(len(buf), me+100)]
-      )
-      
+      schemoError("Multiple uses of task name '%s' (note: %ss are tasks)" % (fun, FUN))
       sys.exit(1)
     TASKS.append(fun)
     lastfun = me
@@ -832,11 +888,11 @@ for path in args.files:
       break
     job  = match.group(1).replace(" ", "")
     if job in JOBS:
-      stderr("Error: multiple uses of job name '%s'" % job)
+      schemoError("Multiple uses of job name '%s'" % job)
       sys.exit(1)
     task = TASK_NAME()
     UNNAMED_TASKS = UNNAMED_TASKS + 1
-    JOBS.update({job:{'task': task, 'mem': {}}})
+    JOBS.update({job:{'task': task, 'mem': {}, 'used': {}}})
     TASKS.append(task)
     if args.profiler:
       profileJob(job, task)
@@ -852,7 +908,7 @@ for path in args.files:
     task = TASK_NAME()
     UNNAMED_JOBS = UNNAMED_JOBS + 1
     UNNAMED_TASKS = UNNAMED_TASKS + 1
-    JOBS.update({job:{'task': task, 'mem': {}}})
+    JOBS.update({job:{'task': task, 'mem': {}, 'used': {}}})
     TASKS.append(task)
     if args.profiler:
       profileJob(job, task)
