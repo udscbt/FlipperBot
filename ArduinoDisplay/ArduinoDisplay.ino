@@ -1,3 +1,4 @@
+#define DEBUG
 #ifdef DEBUG
 #define DEBUG_PRINT(str) \
   Serial.print(str);
@@ -280,13 +281,12 @@ void showString(String syms[], int len, int start, bool wrap)
 
 void setText(String t[], int len)
 {
-  DEBUG_PRINT("....")
+  DEBUG_PRINT("Text set to: \"")
   for (int i = 0; i < len; ++i)
   {
     DEBUG_PRINT(t[i])
   }
-  DEBUG_PRINT(";;;;;")
-  DEBUG_NEWLINE
+  DEBUG_PRINTLN("\"")
   text_length = len;
   for (int i = 0; i < text_length; ++i)
   {
@@ -307,6 +307,7 @@ void setScrollSpeed(unsigned long speed)
 
 void setBlinkFreq(unsigned long freq)
 {
+  shown = true;
   interBlinkDelay = freq?1000/freq:0;
 }
 
@@ -316,14 +317,15 @@ void setup()
     pinMode(i, OUTPUT);
   
   Serial.begin(9600);
+
+  tScroll = millis();
+  tBlink = millis();
   
   clearDigits();
   
   String msg[] = {};
   setText(msg, sizeof(msg)/sizeof(String));
-  t = millis();
 }
-
 
 String msg[max_length];
 String symbol = "";
@@ -340,11 +342,11 @@ void loop()
 {
   int nc = Serial.available();
   if (nc > 0) {
-    DEBUG_PRINTLN("Received:")
     for (int i = 0; i < nc; ++i)
     {
       char c = Serial.read();
-      DEBUG_PRINT(c)
+      DEBUG_PRINT("Received: ")
+      DEBUG_PRINTLN(c)
 
       // Options
       if (c == '(')
@@ -367,9 +369,24 @@ void loop()
         else if (c == ')')
         {
           option = false;
-          if (optVal[0] != NOT_SET) setRefreshRate(optVal[0]);
-          if (optVal[1] != NOT_SET) setScrollSpeed(optVal[1]);
-          if (optVal[2] != NOT_SET) setScrollSpeed(optVal[2]);
+          if (optVal[0] != NOT_SET)
+          {
+            setRefreshRate(optVal[0]);
+            DEBUG_PRINT("Refresh rate set to ")
+            DEBUG_PRINTLN(optVal[0])
+          }
+          if (optVal[1] != NOT_SET)
+          {
+            setScrollSpeed(optVal[1]);
+            DEBUG_PRINT("Scroll speed set to ")
+            DEBUG_PRINTLN(optVal[1])
+          }
+          if (optVal[2] != NOT_SET)
+          {
+            setBlinkFreq(optVal[2]);
+            DEBUG_PRINT("Blink frequency set to ")
+            DEBUG_PRINTLN(optVal[2])
+          }
         }
         else if (optVal[optIndex]==NOT_SET && c == 'b')
         {
@@ -448,5 +465,6 @@ void loop()
   if (interBlinkDelay && millis() - tBlink > interBlinkDelay)
   {
     shown = !shown;
+    tBlink = millis();
   }
 }
