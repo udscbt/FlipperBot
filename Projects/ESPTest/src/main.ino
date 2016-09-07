@@ -31,12 +31,19 @@ void setup()
 int i = 0;
 void loop()
 {
-  long n = Serial.parseInt();
-  if (n)
+  long n1 = Serial.parseInt();
+  long n2 = Serial.parseInt();
+  if (n1)
   {
-	analogWrite(R_MOTOR, n);
+	analogWrite(R_MOTOR, n1);
 	Serial.print("R_MOTOR: ");
-	Serial.println(n);
+	Serial.println(n1);
+  }
+  if (n2)
+  {
+	analogWrite(L_MOTOR, n2);
+	Serial.print("L_MOTOR: ");
+	Serial.println(n2);
   }
   Serial.println(i++);
   

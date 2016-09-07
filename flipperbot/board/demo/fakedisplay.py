@@ -121,7 +121,11 @@ class FakeDisplay (tk.Canvas):
     oldt = self.text
     oldd = self.dots
     oldi = self.tIndex
-    self.text, self.dots = self.game.display._get_text()
+    if self.game.display._shown:
+      self.text, self.dots = self.game.display._get_text()
+    else:
+      self.text = " "*4
+      self.dots = [False]*4
     self.tIndex = self.game.display.tIndex
     if self.tIndex != oldi or self.dots != oldd or self.text != oldt:
       self.redraw()

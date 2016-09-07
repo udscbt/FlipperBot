@@ -81,6 +81,7 @@ class Game (ThreadEx):
     self.everythingButton = EverythingButton(self)
     self.audio = Audio(debug=self.debug)
     self.menuThread  = MenuThread(self)
+    self.msg = None
     self.gameThread  = GameThread(self)
     self.pauseThread = PauseThread(self)
     self.randomThread = RandomThread(self)
@@ -99,6 +100,7 @@ class Game (ThreadEx):
   
   def setMode(self, mode):
     self.debug("Changing mode")
+    self.mode = mode
     if mode == self.IDLE:
       self.debug("Mode selected: IDLE")
       self.display.show("OoOoOo")
@@ -140,7 +142,6 @@ class Game (ThreadEx):
       self.pauseThread.stop()
       self.menuThread = MenuThread(self)
       self.menuThread.start()
-    self.mode = mode
   
   def setup(self):
     self.display.start()
@@ -236,7 +237,10 @@ class MenuThread (ThreadEx):
   def setup(self):
     self.debug("Entering menu")
     if self.game.mode == self.game.LOST:
-      self.game.display.show("LOSE")
+      if self.game.msg is None:
+        self.game.display.show("LOSE")
+      else:
+        self.game.display.show("LOSE - "+self.game.msg+"    ")
       self.game.audio.start(self.game.audio.LOST)
     elif self.game.mode == self.game.SUCCESS:
       self.game.display.show("SUCCESS")
@@ -357,6 +361,7 @@ class GameThread (ThreadEx):
       self.debug("Time is up")
       sound = SoundEffect(self.game.audio.LOSE, debug=self.debug)
       sound.start()
+      self.game.msg = "{} points".format(self.points)
       self.game.setMode(self.game.LOST)
       return
     
@@ -384,10 +389,12 @@ class PauseThread (ThreadEx):
   
   def setup(self):
     self.debug("Entering pause")
+    self.game.display.setBlinkFreq(3)
     self.game.audio.start(self.game.audio.PAUSE)
   
   def cleanup(self):
     self.game.audio.stop()
+    self.game.display.setBlinkFreq(0)
     self.debug("Stopped")
 
 class RandomThread (ThreadEx):
