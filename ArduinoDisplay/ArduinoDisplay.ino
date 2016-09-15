@@ -1,13 +1,15 @@
 #define DEBUG
 #ifdef DEBUG
+bool debug = false;
+#define DEBUG_SYM '&'
 #define DEBUG_PRINT(str) \
-  Serial.print(str);
+  if (debug) Serial.print(str);
 
 #define DEBUG_PRINTLN(str) \
-  Serial.println(str);
+  if (debug) Serial.println(str);
 
 #define DEBUG_NEWLINE \
-  Serial.println();
+  if (debug) Serial.println();
 #else
 #define DEBUG_PRINT(str)
 #define DEBUG_PRINTLN(str)
@@ -341,12 +343,24 @@ const long NOT_SET = -1;
 void loop()
 {
   int nc = Serial.available();
-  if (nc > 0) {
+  if (nc > 0)
+  {
     for (int i = 0; i < nc; ++i)
     {
       char c = Serial.read();
       DEBUG_PRINT("Received: ")
       DEBUG_PRINTLN(c)
+
+      #ifdef DEBUG
+      // Debug
+      if (c == DEBUG_SYM)
+      {
+        DEBUG_PRINTLN("Debug disabled")
+        debug = !debug;
+        DEBUG_PRINTLN("Debug enabled")
+        continue;
+      }
+      #endif
 
       // Options
       if (c == '(')

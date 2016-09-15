@@ -14,7 +14,7 @@ const unsigned char BUZ     = 04; //GREEN
 //const unsigned char LED     = 13; //RED
 const unsigned char LED     = 15; //RED
 
-Motor leftMotor(Motor::RIGHT | Motor::NEW | Motor::pin(L_MOTOR));
+Motor leftMotor(Motor::RIGHT | Motor::OLD | Motor::pin(L_MOTOR));
 Motor rightMotor(Motor::RIGHT | Motor::NEW | Motor::pin(R_MOTOR));
 
 enum
@@ -225,7 +225,7 @@ typedef enum
           
           @VAR(t1) = millis();
 
-          @WHILE (status != WL_CONNECTED && millis() - @VAR(t1) < fbcp::HARD_TIMEOUT)
+          @WHILE (status != WL_CONNECTED && millis() - @VAR(t1) < 10*fbcp::HARD_TIMEOUT)
           {
             status = WiFi.begin(ssid.c_str());
             @CALL(wait;500):null;
@@ -588,7 +588,7 @@ bool manageDirection(fbcp::string direction)
           else if (@VAR(cmd).command->code == fbcp::Q_ROBOT_COMMAND.code)
           {
             Serial.println(F("Change direction"));
-            if (manageDirection(@VAR(cmd).params["direction"]))
+            if (!manageDirection(@VAR(cmd).params["direction"]))
             {
               cmd.command = &fbcp::A_ERROR;
               Serial.println(F("Direction not recognized"));
@@ -664,6 +664,9 @@ bool manageDirection(fbcp::string direction)
 
         mode = MODE_IDLE;
       }
+      
+      //Stop when disconnected
+      manageDirection(fbcp::DIRECTION_STOP.str);
     }
   }
 }

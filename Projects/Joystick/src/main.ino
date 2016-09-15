@@ -250,7 +250,7 @@ typedef enum
           
           @VAR(t1) = millis();
 
-          @WHILE (status != WL_CONNECTED && millis() - @VAR(t1) < 100000)
+          @WHILE (status != WL_CONNECTED && millis() - @VAR(t1) < fbcp::HARD_TIMEOUT)
           {
             status = WiFi.begin(ssid.c_str());
             @CALL(wait;500):null;

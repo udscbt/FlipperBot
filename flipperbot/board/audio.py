@@ -110,6 +110,8 @@ class SoundEffect:
   PLAYER = "cvlc"
   PL_OPTIONS = ["--play-and-exit"]
   
+  running=[]
+  
   def __init__(self, sound, debug=None):
     if debug is None:
       self.debug = fakedebug
@@ -138,13 +140,14 @@ class SoundEffect:
     #~ self.proc = None
     self._started = True
     self._stopped = False
+    self.running.append(self)
   
   def ended(self):
     try:
       self.proc.poll()
     except:
       return True
-    if self.proc.returncode is None:
+    if self.proc.returncode is not None:
       self.proc = None
       return True
     return False
@@ -165,6 +168,9 @@ class SoundEffect:
       self.debug("Sound effect was already stopped")
     self.proc = None
     self._stopped = True
+    for s in self.running:
+      if s.ended():
+        self.running.remove(s)
   
   def started(self):
     return self._started
