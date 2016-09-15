@@ -58,12 +58,12 @@ class Monitor:
     d = format_dict(replace=" ")
     for t in self.game.totemList:
       if t._on:
-        if t._hit:
+        if t.isCurrentlyHit():
           val = self.config['totem_ha']
         else:
           val = self.config['totem_ta']
       else:
-        if t._hit:
+        if t.isCurrentlyHit():
           val = self.config['totem_hp']
         else:
           val = self.config['totem_tp']

@@ -95,6 +95,9 @@ class LED (ThreadEx):
       self._blink = True
       self._bfreq = freq
   
+  def setup(self):
+    pass
+  
   def cleanup(self):
     self.off()
     self.debug("Stopping")
@@ -106,6 +109,7 @@ class LED (ThreadEx):
     self._stopped = False
     self._actually_stopped = False
     self.root.add(self)
+    self.setup()
   
   def stop(self):
     self.root.remove(self)

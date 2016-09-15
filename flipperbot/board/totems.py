@@ -26,6 +26,9 @@ class Totem (LED):
   def isHit(self):
     return self._hit is not None
   
+  def isCurrentlyHit(self):
+    return gpio.input(self.hit)
+  
   def setup(self):
     super(Totem, self).setup()
     gpio.add_event_detect(self.hit, gpio.BOTH, callback=self._manageHit, bouncetime=50)
