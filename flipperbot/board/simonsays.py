@@ -47,13 +47,6 @@ class GameThread (ThreadEx):
     self.lasthit = -1
     
     print("Game started")
-    self.game.mode = self.game.NOSTOP
-    self.game.display.show("_-^-"*2)
-    self.game.display.setScrollSpeed(10);
-    sound = SoundEffect(self.game.audio.READY)
-    self.game.audio.stop()
-    sound.start()
-    sound.wait()
     self.game.mode = self.game.GAME
     
     self.lifes = 10
