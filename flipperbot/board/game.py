@@ -22,10 +22,10 @@ class Game (ThreadEx):
   cycleT    = SharedVariable(0.01) # Time between cycles
   updateF   = SharedVariable(80)   # Update frequency of display
   scrollF   = SharedVariable(2)    # Scroll frequency of display
-
+  
   blinkR    = SharedVariable(5)   # Blinking frequency on robot connected
   blinkC    = SharedVariable(10)  # Blinking frequency on controller connected
-
+  
   hitDelay  = SharedVariable(0.1) # Maximum time between totem hit and robot hit to be considered simultaneous
   
   # MODES
@@ -124,6 +124,7 @@ class Game (ThreadEx):
         self.gameThread.resume()
         sound = SoundEffect(self.audio.RSME, debug=self.debug)
         sound.start()
+        self.audio.start(self.audio.GAME)
     elif mode == self.PAUSE:
       self.debug("Mode selected: PAUSE")
       self.gameThread.pause()
@@ -195,11 +196,14 @@ class Game (ThreadEx):
     self.debug("Totem {} selected".format(self.totem.pos))
   
   def cleanup(self):
+    self.debug("Stopping all sound effects")
+    SoundEffect.stopAll()
+    self.debug("Sound effects stopped")
     self.menuThread.stop()
-    self.menuThread.wait()
     self.gameThread.stop()
-    self.gameThread.wait()
     self.pauseThread.stop()
+    self.menuThread.wait()
+    self.gameThread.wait()
     self.pauseThread.wait()
     gpio.cleanup()
     self.debug("Thread stopped")

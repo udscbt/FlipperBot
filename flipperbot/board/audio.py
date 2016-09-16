@@ -141,6 +141,7 @@ class SoundEffect:
     self._started = True
     self._stopped = False
     self.running.append(self)
+    SoundEffect.clean()
   
   def ended(self):
     try:
@@ -159,18 +160,30 @@ class SoundEffect:
     except:
       self.debug("Sound effect was already stopped")
     self.proc = None
+    SoundEffect.clean()
   
   def stop(self):
     try:
       self.debug("Stopping sound effect")
       self.proc.terminate()
+      self.proc.wait()
     except:
       self.debug("Sound effect was already stopped")
     self.proc = None
     self._stopped = True
-    for s in self.running:
+    SoundEffect.clean()
+  
+  @staticmethod
+  def clean():
+    for s in SoundEffect.running:
       if s.ended():
-        self.running.remove(s)
+        SoundEffect.running.remove(s)
+  
+  @staticmethod
+  def stopAll():
+    running = [s for s in SoundEffect.running]
+    for s in running:
+      s.stop()
   
   def started(self):
     return self._started
