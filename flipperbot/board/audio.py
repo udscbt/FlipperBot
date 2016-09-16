@@ -82,7 +82,7 @@ class Audio:
   def stop(self, async=False):
     try:
       self.debug("Stopping last song")
-      self.proc.terminate()
+      self.proc.kill()
       if not async:
         self.debug("Waiting for last song to stop")
         self.proc.wait()
@@ -165,7 +165,7 @@ class SoundEffect:
   def stop(self):
     try:
       self.debug("Stopping sound effect")
-      self.proc.terminate()
+      self.proc.kill()
       self.proc.wait()
     except:
       self.debug("Sound effect was already stopped")
