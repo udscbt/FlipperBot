@@ -50,7 +50,7 @@ class Audio:
   #PLAYER = "ogg123"
   #PL_OPTIONS = ["-r"]
   PLAYER = "cvlc"
-  PL_OPTIONS = ["-R"]
+  PL_OPTIONS = ["-R", "-Vdummy"]
   
   def __init__(self, logging=True, debug=None):
     #call(["amixer", "set", "PCM", "100%"])
@@ -108,7 +108,7 @@ class SoundEffect:
   #PLAYER = "ogg123"
   #PL_OPTIONS = []
   PLAYER = "cvlc"
-  PL_OPTIONS = ["--play-and-exit"]
+  PL_OPTIONS = ["--play-and-exit", "-Vdummy"]
   
   running=[]
 

@@ -6,7 +6,7 @@ class BlinkThread (ThreadEx):
   def __init__(self):
     self.leds = []
     self.blink = {}
-    super(BlinkThread, self).__init__()
+    super(BlinkThread, self).__init__(name="blink")
 
   def setBlink(self, led, freq):
     self.blink[led] = (freq, time())
