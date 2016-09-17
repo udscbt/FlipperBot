@@ -64,90 +64,90 @@ class SharedVariable:
 
 
 class ThreadEx (Thread):
-    _paused  = SharedVariable(False)
-    _stopped = SharedVariable(False)
-    _actually_stopped = SharedVariable(False)
-    _children = SharedVariable()
-    
-    def running(f):
-      def wrapped(self, *args, **kwargs):
-        if self._stopped:
-          raise RuntimeError("Thread has already been stopped")
-        else:
-          f(self, *args, **kwargs)
-      return wrapped
-    
-    def __init__(self, *args, **kwargs):
-      if kwargs.get('setup', None) is not None:
-        self.loop = lambda: kwargs['setup'](self)
-        kwargs.pop('setup')
-      if kwargs.get('loop', None) is not None:
-        self.loop = lambda: kwargs['loop'](self)
-        kwargs.pop('loop')
-      if kwargs.get('cleanup', None) is not None:
-        self.loop = lambda: kwargs['cleanup'](self)
-        kwargs.pop('cleanup')
-      if kwargs.get('parent', None) is not None:
-        self.parent = kwargs['parent']
-        self.parent.addChild(self)
-        kwargs.pop('parent')
-      self._children = []
-      super(ThreadEx, self).__init__(*args, **kwargs)
-    
-    @running
-    def start(self):
-      self._paused = False
-      self._stopped = False
-      self._actually_stopped = False
-      super(ThreadEx, self).start()
-    
-    @running
-    def pause(self):
-      self._paused = True
-    
-    @running
-    def resume(self):
-      self._paused = False
-    
-    def stop(self):
-      self._stopped = True
-      if not self.started():
-        self._actually_stopped = True
-    
-    def started(self):
-      return self._started.isSet()
-    
-    def stopped(self):
-      return self._actually_stopped
-    
-    def paused(self):
-      return self._paused
-    
-    def setup(self):
-      pass
-    
-    def loop(self):
-      pass
-    
-    def cleanup(self):
-      pass
-    
-    def run(self):
-      self.setup()
-      while not self._stopped:
-        if not self._paused:
-          self.loop()
-      for child in self._children:
-        child.stop()
-      for child in self._children:
-        child.wait()
-      self.cleanup()
+  _paused  = SharedVariable(False)
+  _stopped = SharedVariable(False)
+  _actually_stopped = SharedVariable(False)
+  _children = SharedVariable()
+  
+  def running(f):
+    def wrapped(self, *args, **kwargs):
+      if self._stopped:
+        raise RuntimeError("Thread has already been stopped")
+      else:
+        f(self, *args, **kwargs)
+    return wrapped
+  
+  def __init__(self, *args, **kwargs):
+    if kwargs.get('setup', None) is not None:
+      self.loop = lambda: kwargs['setup'](self)
+      kwargs.pop('setup')
+    if kwargs.get('loop', None) is not None:
+      self.loop = lambda: kwargs['loop'](self)
+      kwargs.pop('loop')
+    if kwargs.get('cleanup', None) is not None:
+      self.loop = lambda: kwargs['cleanup'](self)
+      kwargs.pop('cleanup')
+    if kwargs.get('parent', None) is not None:
+      self.parent = kwargs['parent']
+      self.parent.addChild(self)
+      kwargs.pop('parent')
+    self._children = []
+    super(ThreadEx, self).__init__(*args, **kwargs)
+  
+  @running
+  def start(self):
+    self._paused = False
+    self._stopped = False
+    self._actually_stopped = False
+    super(ThreadEx, self).start()
+  
+  @running
+  def pause(self):
+    self._paused = True
+  
+  @running
+  def resume(self):
+    self._paused = False
+  
+  def stop(self):
+    self._stopped = True
+    if not self.started():
       self._actually_stopped = True
-    
-    def wait(self):
-      while not self.stopped():
-        pass
-    
-    @running
-    def addChild(self, child):
-      self._children.append(child)
+  
+  def started(self):
+    return self._started.isSet()
+  
+  def stopped(self):
+    return self._actually_stopped
+  
+  def paused(self):
+    return self._paused
+  
+  def setup(self):
+    pass
+  
+  def loop(self):
+    pass
+  
+  def cleanup(self):
+    pass
+  
+  def run(self):
+    self.setup()
+    while not self._stopped:
+      if not self._paused:
+        self.loop()
+    for child in self._children:
+      child.stop()
+    for child in self._children:
+      child.wait()
+    self.cleanup()
+    self._actually_stopped = True
+  
+  def wait(self):
+    while not self.stopped():
+      pass
+  
+  @running
+  def addChild(self, child):
+    self._children.append(child)
