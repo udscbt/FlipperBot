@@ -37,13 +37,14 @@ class Demo:
     #~ self.g.stop()
     #~ if self.remote:
       #~ self.s.stop()
-  def __init__(self, remote=False, displayex=True, logging=True, debug=False):
+  def __init__(self, remote=False, displayex=True, audioex=False, logging=True, debug=False):
     try:
       self.remote = remote
       self.front = Tk()
       self.g = Game(
         totems.values(),
         displayex=displayex,
+        audioex=audioex,
         logging=logging,
         debug=debug
       )

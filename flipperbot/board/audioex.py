@@ -3,7 +3,6 @@ from threading import Thread
 import socket
 from . import audio
 
-
 class Audio (audio.Audio):
   address = '0.0.0.0'
   port = 12345
@@ -12,6 +11,7 @@ class Audio (audio.Audio):
     self.thread = Thread(target=self.server)
     self.connected = False
     self._hard_stop = False
+    self.song = None
     super(Audio, self).__init__(logging, debug)
     self.thread.start()
   
@@ -29,6 +29,8 @@ class Audio (audio.Audio):
           continue
       self.debug("Player connected: {}".format(address))
       self.connected = True
+      if self.song is not None:
+        self.start(self.song)
       while not self._hard_stop and self.connected:
         pass
       if self._hard_stop:
@@ -51,13 +53,13 @@ class Audio (audio.Audio):
     self._hard_stop = True
   
   def start(self, song):
-    song = join(basename(dirname(song)), basename(song))
     self.stop()
-    self.debug("Playing song '{}'".format(song))
+    self.song = join(basename(dirname(song)), basename(song))
+    self.debug("Playing song '{}'".format(self.song))
     if self.connected:
       try:
-        self.sock.send(("SONG"+song).encode('utf-8'))
-        self.proc = self.sock.recv(10).decode('utf-8')
+        self.sock.send(("SONG"+self.song+";").encode('utf-8'))
+        self.proc = self.sock.recv(10).decode('utf-8')[:-1]
       except Exception as e:
         self.debug(type(e), tags=["Exception"])
         self.debug(e.args, tags=["Exception"])
@@ -70,13 +72,14 @@ class Audio (audio.Audio):
     self._stopped = False
 
   def stop(self):
+    self.song = None
     self.debug("Stopping last song")
     if self.proc is None:
       self.debug("Last song was already stopped")
     else:
       if self.connected:
         try:
-          self.sock.send(("STOP"+self.proc).encode('utf-8'))
+          self.sock.send(("STOP"+self.proc+";").encode('utf-8'))
         except Exception as e:
           self.debug(type(e), tags=["Exception"])
           self.debug(e.args, tags=["Exception"])
@@ -96,8 +99,8 @@ class SoundEffect (audio.SoundEffect):
     self.debug("Playing sound effect '{}'".format(self.sound))
     if self.root is not None and self.root.connected:
       try:
-        self.root.sock.send(("SOUND"+self.sound).encode('utf-8'))
-        self.proc = self.root.sock.recv(10).decode('utf-8')
+        self.root.sock.send(("SOUND"+self.sound+";").encode('utf-8'))
+        self.proc = self.root.sock.recv(10).decode('utf-8')[:-1]
       except Exception as e:
         self.debug(type(e), tags=["Exception"])
         self.debug(e.args, tags=["Exception"])
@@ -119,8 +122,8 @@ class SoundEffect (audio.SoundEffect):
       return True
     if self.root is not None and self.root.connected:
       try:
-        self.root.sock.send(("POLL"+self.proc).encode('utf-8'))
-        return bool(int(self.root.sock.recv(10).decode('utf-8')))
+        self.root.sock.send(("POLL"+self.proc+";").encode('utf-8'))
+        return bool(int(self.root.sock.recv(10).decode('utf-8')[:-1]))
       except Exception as e:
         self.debug(type(e), tags=["Exception"])
         self.debug(e.args, tags=["Exception"])
@@ -149,7 +152,7 @@ class SoundEffect (audio.SoundEffect):
       self.debug("Sound effect was already stopped")
     elif self.root is not None and self.root.connected:
       try:
-        self.root.sock.send(("STOP"+self.proc).encode('utf-8'))
+        self.root.sock.send(("STOP"+self.proc+";").encode('utf-8'))
       except Exception as e:
         self.debug(type(e), tags=["Exception"])
         self.debug(e.args, tags=["Exception"])

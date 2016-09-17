@@ -80,21 +80,24 @@ class AudioPlayer:
   def server(self):
     while self.connected:
       try:
-        cmd = self.socket.recv(256).decode('utf-8')
+        cmd = self.socket.recv(1).decode('utf-8')
+        while cmd[-1] != ';':
+          cmd = cmd + self.socket.recv(1).decode('utf-8')
         print("Received '{}'".format(cmd))
+        cmd = cmd[:-1]
         if cmd.startswith('SONG'):
           pid = self.playSong(cmd[4:])
-          self.socket.send(str(pid).encode('utf-8'))
+          self.socket.send((str(pid)+";").encode('utf-8'))
           print("Sent '{}'".format(str(pid)))
         elif cmd.startswith('SOUND'):
           pid = self.playSound(cmd[5:])
-          self.socket.send(str(pid).encode('utf-8'))
+          self.socket.send((str(pid)+";").encode('utf-8'))
           print("Sent '{}'".format(str(pid)))
         elif cmd.startswith('STOP'):
           self.stop(int(cmd[4:]))
         elif cmd.startswith('POLL'):
           end = self.poll(int(cmd[4:]))
-          self.socket.send(("1" if end else "0").encode('utf-8'))
+          self.socket.send(("1;" if end else "0;").encode('utf-8'))
           print("Sent '{}'".format("1" if end else "0"))
         elif cmd == '':
           self.connected = False

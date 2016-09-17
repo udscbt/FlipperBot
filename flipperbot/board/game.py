@@ -60,7 +60,7 @@ class Game (ThreadEx):
   robots = SharedVariable()
   controllers = SharedVariable()
   
-  def __init__(self, totemList, displayex=True, logging=True, debug=False, audioex=True):
+  def __init__(self, totemList, displayex=True, logging=True, debug=False, audioex=False):
     self.log = Log(filename="main.log", enabled=logging)
     self.debug = Debug(
       log=self.log,
