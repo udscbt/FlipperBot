@@ -339,7 +339,8 @@ class GameThread (ThreadEx):
     # Update display
     self.missing = self.deltaT() + self.lastHit - time()
     text = "{:02d}{:02d}".format(self.points%100, int(ceil(self.missing))%100)
-    self.game.display.show(text, [False, True, False, False])
+    if text != self.game.display.shown():
+      self.game.display.show(text, [False, True, False, False])
     
     # Almost out of time!
     if not self.game.totem._blink and self.missing < self.game.blinkT:

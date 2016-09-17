@@ -148,6 +148,17 @@ class ThreadEx (Thread):
     while not self.stopped():
       pass
   
+  def restart(self):
+    if self.started() or self.stopped():
+      self.stop()
+      self.wait()
+      self._paused = False
+      self._stopped = False
+      self._actually_stopped = False
+      self.run()
+    else:
+      self.start()
+  
   @running
   def addChild(self, child):
     self._children.append(child)
