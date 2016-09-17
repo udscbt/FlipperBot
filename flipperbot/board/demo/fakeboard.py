@@ -26,7 +26,7 @@ class FakeBoard (tk.Canvas):
       logging=game.debug.logging,
       stdout=game.debug.stdout,
       parent=self,
-      name="FakeBoard>".format(self.index)
+      name="FakeBoard".format(self.index)
     )
     self.debug("FakeBoard used")
     if master is None:

@@ -20,7 +20,7 @@ class FakeDisplay (tk.Canvas):
       logging=game.display.debug.logging,
       stdout=game.display.debug.stdout,
       parent=self,
-      name="FakeDisplay>"
+      name="FakeDisplay"
     )
     self.debug("FakeDisplay used")
     if master is None:

@@ -111,6 +111,8 @@ class SoundEffect:
   PL_OPTIONS = ["--play-and-exit"]
   
   running=[]
+
+  ID = 0
   
   def __init__(self, sound, debug=None):
     if debug is None:
@@ -121,8 +123,9 @@ class SoundEffect:
         logging=debug.logging,
         stdout=debug.stdout,
         parent=self,
-        name="SoundEffect"
+        name="SoundEffect<{}>".format(SoundEffect.ID)
       )
+    SoundEffect.ID = SoundEffect.ID + 1
     if isinstance(sound, list):
       self.sound = sound[int(random()*len(sound))]
     else:

@@ -295,7 +295,7 @@ class RobotThread (ThreadEx):
       self.last = time()
   
 class Server (ThreadEx):
-  address = '192.168.1.1'
+  address = '0.0.0.0'
   port = 10000
   
   def __init__(self, game, dbgFlag=False):

@@ -40,13 +40,13 @@ class Debug:
           termColors['BOLD'],
           self.name,
           termColors['END']
-        ), *args, **kwargs
+        ), *args, **{k:v for k,v in kwargs.items() if k != 'tags'}
       )
     if self.logging:
       s = " ".join([str(x) for x in args])
       tags = self.tags
       if 'tags' in kwargs:
-        tags = tags + self.kwargs
+        tags = tags + self.kwargs['tags']
       if self.name != "":
         tags = ["Name={}".format(self.name)]+tags
       self.log.write(s, *tags, caller=self.parent)

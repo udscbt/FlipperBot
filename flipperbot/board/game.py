@@ -3,6 +3,7 @@ from .totems import totems
 from .display import Display, DisplayEx
 from .everythingButton import EverythingButton
 from .audio import Audio, SoundEffect
+from . import audioex as AUDIOEX
 from ..robot import Robot
 from ..controller import Controller
 from .led import LED
@@ -59,7 +60,7 @@ class Game (ThreadEx):
   robots = SharedVariable()
   controllers = SharedVariable()
   
-  def __init__(self, totemList, displayex=True, logging=True, debug=False):
+  def __init__(self, totemList, displayex=True, logging=True, debug=False, audioex=True):
     self.log = Log(filename="main.log", enabled=logging)
     self.debug = Debug(
       log=self.log,
@@ -79,7 +80,15 @@ class Game (ThreadEx):
       self.debug("Using internal display")
       self.display = Display(self.updateF, self.scrollF, debug=self.debug)
     self.everythingButton = EverythingButton(self)
-    self.audio = Audio(debug=self.debug)
+    if audioex:
+      self.debug("Using external audio player")
+      self.audio = AUDIOEX.Audio(debug=self.debug)
+      global SoundEffect
+      SoundEffect = AUDIOEX.SoundEffect
+      SoundEffect.root = self.audio
+    else:
+      self.debug("Using internal audio player")
+      self.audio = Audio(debug=self.debug)
     self.menuThread  = MenuThread(self)
     self.msg = None
     self.gameThread  = GameThread(self)
@@ -196,6 +205,9 @@ class Game (ThreadEx):
     self.debug("Totem {} selected".format(self.totem.pos))
   
   def cleanup(self):
+    if getattr(self.audio, 'hardStop', None) is not None:
+      self.debug("Stopping audio server")
+      self.audio.hardStop()
     self.debug("Stopping all sound effects")
     SoundEffect.stopAll()
     self.debug("Sound effects stopped")
@@ -301,6 +313,7 @@ class GameThread (ThreadEx):
     self.game.audio.stop()
     sound.start()
     sound.wait()
+    self.game.menuThread.wait()
     sound = SoundEffect(self.game.audio.START, debug=self.debug)
     sound.start()
     

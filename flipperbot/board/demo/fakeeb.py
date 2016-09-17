@@ -24,7 +24,7 @@ class FakeEB (tk.Canvas):
       logging=game.debug.logging,
       stdout=game.debug.stdout,
       parent=self,
-      name="FakeEverythingButton>".format(self.index)
+      name="FakeEverythingButton".format(self.index)
     )
     self.debug("FakeEverythingButton used")
     if master is None:
