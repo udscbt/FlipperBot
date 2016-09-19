@@ -9,7 +9,7 @@ typedef unsigned char byte;
 
 const unsigned char L_MOTOR = 14;
 const unsigned char R_MOTOR = 16;
-const unsigned char HIT     = 05;
+//~ const unsigned char HIT     = 05;
 const unsigned char BUZ     = 04; //GREEN
 //const unsigned char LED     = 13; //RED
 const unsigned char LED     = 15; //RED
@@ -75,8 +75,8 @@ enum
   FREQ_FAST  = 10
 };
 
-bool hit = false;
-fbcp::string hitCmd;
+//~ bool hit = false;
+//~ fbcp::string hitCmd;
 fbcp::string kalCmd;
 
 typedef enum
@@ -352,65 +352,65 @@ typedef enum
     @VAR(t) = millis();
     @WHILE (mode == MODE_GAME && sockOut.connected())
     {
-      @VAR(cmd).command = &fbcp::Q_ROBOT_COMMAND;
+      //~ @VAR(cmd).command = &fbcp::Q_ROBOT_COMMAND;
 
-      if (digitalRead(HIT))
-      {
-        if (!hit)
-        {
-          hit = true;
-          sendStatus = SEND_NEW;
-        }
-      }
-      else
-      {
-        hit = false;
-      }
+      //~ if (digitalRead(HIT))
+      //~ {
+        //~ if (!hit)
+        //~ {
+          //~ hit = true;
+          //~ sendStatus = SEND_NEW;
+        //~ }
+      //~ }
+      //~ else
+      //~ {
+        //~ hit = false;
+      //~ }
       
-      @IF (sendStatus == SEND_BUSY || sendStatus == SEND_NEW || sendStatus == SEND_FAIL)
-      {
-        Serial.print("Sent: ");
-        Serial.println(hitCmd.c_str());
-        sockOut.flush();
-        sockOut.print(hitCmd.c_str());
+      //~ @IF (sendStatus == SEND_BUSY || sendStatus == SEND_NEW || sendStatus == SEND_FAIL)
+      //~ {
+        //~ Serial.print("Sent: ");
+        //~ Serial.println(hitCmd.c_str());
+        //~ sockOut.flush();
+        //~ sockOut.print(hitCmd.c_str());
 
-        @CALL(read_command;&sockOut;&@VAR(cmd);fbcp::SOFT_TIMEOUT):understood;
-        if (understood == READ_SUCCESS)
-        {
-          @VAR(t) = millis();
-          if (@VAR(cmd).command->code == fbcp::A_ACCEPT.code)
-          {
-            Serial.println("Command was accepted");
-            sendStatus = SEND_OK;
-          }
-          else if (@VAR(cmd).command->code == fbcp::A_REFUSE.code)
-          {
-            Serial.println("Command was refused");
-            sendStatus = SEND_BUSY;
-          }
-          else if (@VAR(cmd).command->code == fbcp::A_ERROR.code)
-          {
-            Serial.println("Server didn't understand command");
-            sendStatus = SEND_FAIL;
-          }
-          else
-          {
-            Serial.println("Server answered something strange");
-            sendStatus = SEND_FAIL;
-          }
-        }
-        else if (understood == READ_FAIL)
-        {
-          Serial.println("Server answered something strange");
-          sendStatus = SEND_FAIL;
-        }
-        else if (understood == READ_TIMEOUT)
-        {
-          sockOut.stop();
-          sendStatus = SEND_INIT;
-          @BREAK
-        }
-      }
+        //~ @CALL(read_command;&sockOut;&@VAR(cmd);fbcp::SOFT_TIMEOUT):understood;
+        //~ if (understood == READ_SUCCESS)
+        //~ {
+          //~ @VAR(t) = millis();
+          //~ if (@VAR(cmd).command->code == fbcp::A_ACCEPT.code)
+          //~ {
+            //~ Serial.println("Command was accepted");
+            //~ sendStatus = SEND_OK;
+          //~ }
+          //~ else if (@VAR(cmd).command->code == fbcp::A_REFUSE.code)
+          //~ {
+            //~ Serial.println("Command was refused");
+            //~ sendStatus = SEND_BUSY;
+          //~ }
+          //~ else if (@VAR(cmd).command->code == fbcp::A_ERROR.code)
+          //~ {
+            //~ Serial.println("Server didn't understand command");
+            //~ sendStatus = SEND_FAIL;
+          //~ }
+          //~ else
+          //~ {
+            //~ Serial.println("Server answered something strange");
+            //~ sendStatus = SEND_FAIL;
+          //~ }
+        //~ }
+        //~ else if (understood == READ_FAIL)
+        //~ {
+          //~ Serial.println("Server answered something strange");
+          //~ sendStatus = SEND_FAIL;
+        //~ }
+        //~ else if (understood == READ_TIMEOUT)
+        //~ {
+          //~ sockOut.stop();
+          //~ sendStatus = SEND_INIT;
+          //~ @BREAK
+        //~ }
+      //~ }
       
       @IF (millis() - @VAR(t) > fbcp::HARD_TIMEOUT/2)
       {
@@ -443,22 +443,22 @@ typedef enum
 
 bool manageDirection(fbcp::string direction)
 {
-  bool hit = digitalRead(HIT);
+  //~ bool hit = digitalRead(HIT);
   if (direction == fbcp::DIRECTION_FORWARD_LEFT.str)
   {
-    if (hit) return manageDirection(fbcp::DIRECTION_LEFT.str);
+    //~ if (hit) return manageDirection(fbcp::DIRECTION_LEFT.str);
     leftMotor.stop();
     rightMotor.forward();
   }
   else if (direction == fbcp::DIRECTION_FORWARD.str)
   {
-    if (hit) return manageDirection(fbcp::DIRECTION_STOP.str);
+    //~ if (hit) return manageDirection(fbcp::DIRECTION_STOP.str);
     leftMotor.forward();
     rightMotor.forward();
   }
   else if (direction == fbcp::DIRECTION_FORWARD_RIGHT.str)
   {
-    if (hit) return manageDirection(fbcp::DIRECTION_RIGHT.str);
+    //~ if (hit) return manageDirection(fbcp::DIRECTION_RIGHT.str);
     leftMotor.forward();
     rightMotor.stop();
   }
@@ -684,34 +684,34 @@ bool manageDirection(fbcp::string direction)
 
   @WHILE
   {
-    if (digitalRead(HIT))
-    {
-      bool left = false;
-      bool right = false;
-      if (leftMotor.getDirection() == Motor::Direction::DIR_FORWARD)
-        left = true;
-      if (rightMotor.getDirection() == Motor::Direction::DIR_FORWARD)
-        right = true;
-      if (left)
-      {
-        if (right)
-        {
-          leftMotor.stop();
-          rightMotor.stop();
-        }
-        else
-        {
-          rightMotor.backward();
-        }
-      }
-      else
-      {
-        if (right)
-        {
-          leftMotor.backward();
-        }
-      }
-    }
+    //~ if (digitalRead(HIT))
+    //~ {
+      //~ bool left = false;
+      //~ bool right = false;
+      //~ if (leftMotor.getDirection() == Motor::Direction::DIR_FORWARD)
+        //~ left = true;
+      //~ if (rightMotor.getDirection() == Motor::Direction::DIR_FORWARD)
+        //~ right = true;
+      //~ if (left)
+      //~ {
+        //~ if (right)
+        //~ {
+          //~ leftMotor.stop();
+          //~ rightMotor.stop();
+        //~ }
+        //~ else
+        //~ {
+          //~ rightMotor.backward();
+        //~ }
+      //~ }
+      //~ else
+      //~ {
+        //~ if (right)
+        //~ {
+          //~ leftMotor.backward();
+        //~ }
+      //~ }
+    //~ }
     
     ledFreq = FREQ_FAST;
     
@@ -782,14 +782,14 @@ void setup()
   // Initialise pins
   pinMode(LED, OUTPUT);
   pinMode(BUZ, OUTPUT);
-  pinMode(HIT, INPUT);
+  //~ pinMode(HIT, INPUT);
 
   analogWriteRange(100);
   pinMode(R_MOTOR, OUTPUT);
   analogWrite(R_MOTOR, 0);
   pinMode(L_MOTOR, OUTPUT);
   analogWrite(L_MOTOR, 0);
-  pinMode(HIT, INPUT);
+  //~ pinMode(HIT, INPUT);
   
   // FBCP
   Serial.println(F("FBCP"));
@@ -797,8 +797,8 @@ void setup()
   fbcp::serial += serial;
   mode = MODE_IDLE;
   fbcp::COMMAND_LINE cmd;
-  cmd.command = &fbcp::Q_HIT;
-  hitCmd = fbcp::writeCommand(cmd);
+  //~ cmd.command = &fbcp::Q_HIT;
+  //~ hitCmd = fbcp::writeCommand(cmd);
   cmd.command = &fbcp::Q_HEARTBEAT;
   kalCmd = fbcp::writeCommand(cmd);
   
