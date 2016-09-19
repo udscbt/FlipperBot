@@ -412,7 +412,10 @@ class PauseThread (ThreadEx):
   
   def cleanup(self):
     self.game.audio.stop()
-    self.game.display.setBlinkFreq(0)
+    try:
+      self.game.display.setBlinkFreq(0)
+    except:
+      pass
     self.debug("Stopped")
 
 class RandomThread (ThreadEx):
